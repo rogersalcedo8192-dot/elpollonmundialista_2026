@@ -143,6 +143,20 @@ interface UploadedAsset {
   resourceType?: "image" | "video" | "raw";
 }
 
+interface SponsorBanner {
+  id: string;
+  title: string;
+  sponsorName: string;
+  imageUrl: string;
+  linkUrl?: string;
+  placement: "home_top" | "sidebar" | "rules";
+  active: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface DatabaseSchema {
   torneo: TorneoConfig;
   users: User[];
@@ -155,6 +169,7 @@ interface DatabaseSchema {
   tournamentPredictions?: TournamentPredictions[];
   tournamentOutcomes?: TournamentOutcomes;
   assets?: UploadedAsset[];
+  sponsorBanners?: SponsorBanner[];
 }
 
 const DB_FILE = path.join(process.cwd(), "db_store.json");
@@ -294,7 +309,8 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
     sentReminders,
     tournamentPredictions,
     tournamentOutcome,
-    assets
+    assets,
+    sponsorBanners
   ] = await Promise.all([
     prisma.torneoConfig.findUnique({ where: { id: "default" } }),
     prisma.user.findMany(),
@@ -306,7 +322,8 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
     prisma.sentReminder.findMany(),
     prisma.tournamentPrediction.findMany(),
     prisma.tournamentOutcome.findUnique({ where: { id: "default" } }),
-    prisma.asset.findMany()
+    prisma.asset.findMany(),
+    prisma.sponsorBanner.findMany()
   ]);
 
   if (!torneo) return null;
@@ -443,6 +460,19 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       storageProvider: asset.storageProvider as UploadedAsset["storageProvider"],
       publicId: asset.publicId || undefined,
       resourceType: asset.resourceType as UploadedAsset["resourceType"]
+    })),
+    sponsorBanners: sponsorBanners.map((banner) => ({
+      id: banner.id,
+      title: banner.title,
+      sponsorName: banner.sponsorName,
+      imageUrl: banner.imageUrl,
+      linkUrl: banner.linkUrl || undefined,
+      placement: banner.placement as SponsorBanner["placement"],
+      active: banner.active,
+      startsAt: dateToIso(banner.startsAt) || undefined,
+      endsAt: dateToIso(banner.endsAt) || undefined,
+      createdAt: banner.createdAt.toISOString(),
+      updatedAt: banner.updatedAt.toISOString()
     }))
   };
 }
@@ -453,6 +483,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
 
   await prisma.$transaction(async (tx) => {
     await tx.asset.deleteMany();
+    await tx.sponsorBanner.deleteMany();
     await tx.tournamentPrediction.deleteMany();
     await tx.tournamentOutcome.deleteMany();
     await tx.sentReminder.deleteMany();
@@ -640,6 +671,24 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           storageProvider: asset.storageProvider || "local",
           publicId: asset.publicId || null,
           resourceType: asset.resourceType || getCloudinaryResourceType(asset.type)
+        }))
+      });
+    }
+
+    if (schema.sponsorBanners?.length) {
+      await tx.sponsorBanner.createMany({
+        data: schema.sponsorBanners.map((banner) => ({
+          id: banner.id,
+          title: banner.title,
+          sponsorName: banner.sponsorName,
+          imageUrl: banner.imageUrl,
+          linkUrl: banner.linkUrl || null,
+          placement: banner.placement,
+          active: banner.active,
+          startsAt: banner.startsAt ? new Date(banner.startsAt) : null,
+          endsAt: banner.endsAt ? new Date(banner.endsAt) : null,
+          createdAt: new Date(banner.createdAt),
+          updatedAt: new Date(banner.updatedAt)
         }))
       });
     }
@@ -976,6 +1025,7 @@ function loadDb(): DatabaseSchema {
       // Ensure all fields exist
       if (!dbState.sentReminders) dbState.sentReminders = [];
       if (!dbState.tournamentPredictions) dbState.tournamentPredictions = [];
+      if (!dbState.sponsorBanners) dbState.sponsorBanners = [];
       ensureAssetsDir();
       if (!dbState.assets) {
         dbState.assets = fs.readdirSync(ASSETS_DIR)
@@ -1044,6 +1094,7 @@ function loadDb(): DatabaseSchema {
     console.error("Error reading db file, seeding new one:", err);
   }
   dbState = createDefaultDb();
+  dbState.sponsorBanners = [];
   ensureAssetsDir();
   dbState.assets = fs.readdirSync(ASSETS_DIR)
     .filter((fileName) => !fileName.startsWith("~$"))
@@ -1312,6 +1363,23 @@ app.post("/api/torneo", (req, res) => {
   db.torneo = { ...db.torneo, ...req.body };
   saveDb(db);
   res.json({ message: "Configuración del torneo guardada con éxito.", torneo: db.torneo });
+});
+
+// API: Sponsor Banners
+function isBannerVisible(banner: SponsorBanner) {
+  if (!banner.active) return false;
+  const now = Date.now();
+  if (banner.startsAt && now < new Date(banner.startsAt).getTime()) return false;
+  if (banner.endsAt && now > new Date(banner.endsAt).getTime()) return false;
+  return true;
+}
+
+app.get("/api/banners", (req, res) => {
+  const db = loadDb();
+  const placement = req.query.placement as string | undefined;
+  let banners = (db.sponsorBanners || []).filter(isBannerVisible);
+  if (placement) banners = banners.filter((banner) => banner.placement === placement);
+  res.json(banners.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
 });
 
 // API: User Auths
@@ -1694,6 +1762,86 @@ app.delete("/api/admin/assets/:id", async (req, res) => {
   saveDb(db);
 
   res.json({ message: "Archivo eliminado correctamente." });
+});
+
+// Admin: Sponsor Banners
+app.get("/api/admin/banners", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  const db = loadDb();
+  res.json([...(db.sponsorBanners || [])].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+});
+
+app.post("/api/admin/banners", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  const { title, sponsorName, imageUrl, linkUrl, placement, active, startsAt, endsAt } = req.body;
+  if (!title || !sponsorName || !imageUrl) {
+    return res.status(400).json({ error: "Titulo, anunciante e imagen son obligatorios." });
+  }
+
+  const allowedPlacements: SponsorBanner["placement"][] = ["home_top", "sidebar", "rules"];
+  const normalizedPlacement = allowedPlacements.includes(placement) ? placement : "home_top";
+  const now = new Date().toISOString();
+
+  const banner: SponsorBanner = {
+    id: `banner-${Date.now()}`,
+    title,
+    sponsorName,
+    imageUrl,
+    linkUrl: linkUrl || undefined,
+    placement: normalizedPlacement,
+    active: active !== false,
+    startsAt: startsAt || undefined,
+    endsAt: endsAt || undefined,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  const db = loadDb();
+  if (!db.sponsorBanners) db.sponsorBanners = [];
+  db.sponsorBanners.push(banner);
+  saveDb(db);
+
+  res.json({ message: "Banner publicitario creado correctamente.", banner });
+});
+
+app.put("/api/admin/banners/:id", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  const db = loadDb();
+  const banner = db.sponsorBanners?.find((item) => item.id === req.params.id);
+  if (!banner) return res.status(404).json({ error: "Banner no encontrado." });
+
+  const { title, sponsorName, imageUrl, linkUrl, placement, active, startsAt, endsAt } = req.body;
+  if (title !== undefined) banner.title = title;
+  if (sponsorName !== undefined) banner.sponsorName = sponsorName;
+  if (imageUrl !== undefined) banner.imageUrl = imageUrl;
+  if (linkUrl !== undefined) banner.linkUrl = linkUrl || undefined;
+  if (["home_top", "sidebar", "rules"].includes(placement)) banner.placement = placement;
+  if (active !== undefined) banner.active = Boolean(active);
+  if (startsAt !== undefined) banner.startsAt = startsAt || undefined;
+  if (endsAt !== undefined) banner.endsAt = endsAt || undefined;
+  banner.updatedAt = new Date().toISOString();
+
+  saveDb(db);
+  res.json({ message: "Banner actualizado correctamente.", banner });
+});
+
+app.delete("/api/admin/banners/:id", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  const db = loadDb();
+  const before = db.sponsorBanners?.length || 0;
+  db.sponsorBanners = (db.sponsorBanners || []).filter((item) => item.id !== req.params.id);
+  if (db.sponsorBanners.length === before) return res.status(404).json({ error: "Banner no encontrado." });
+
+  saveDb(db);
+  res.json({ message: "Banner eliminado correctamente." });
 });
 
 // Admin: Reset Tournament to Real Pre-Tournament State (Pre-Mundial)

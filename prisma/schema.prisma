@@ -173,3 +173,17 @@ model Asset {
 
   uploader User? @relation("UploadedAssets", fields: [uploadedBy], references: [id], onDelete: SetNull)
 }
+
+model SponsorBanner {
+  id          String   @id
+  title       String
+  sponsorName String
+  imageUrl    String
+  linkUrl     String?
+  placement   String
+  active      Boolean  @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

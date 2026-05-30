@@ -150,3 +150,17 @@ export interface UploadedAsset {
   publicId?: string;
   resourceType?: "image" | "video" | "raw";
 }
+
+export interface SponsorBanner {
+  id: string;
+  title: string;
+  sponsorName: string;
+  imageUrl: string;
+  linkUrl?: string;
+  placement: "home_top" | "sidebar" | "rules";
+  active: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}

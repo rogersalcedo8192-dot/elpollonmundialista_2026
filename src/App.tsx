@@ -34,9 +34,11 @@ import {
   Upload,
   FileText,
   Image as ImageIcon,
-  Video
+  Video,
+  Megaphone,
+  ExternalLink
 } from "lucide-react";
-import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset } from "./types";
+import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 
@@ -883,6 +885,7 @@ export default function App() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [sponsorBanners, setSponsorBanners] = useState<SponsorBanner[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
 
@@ -915,6 +918,18 @@ export default function App() {
   // Admin users state list
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [uploadedAssets, setUploadedAssets] = useState<UploadedAsset[]>([]);
+  const [adminBanners, setAdminBanners] = useState<SponsorBanner[]>([]);
+  const [bannerForm, setBannerForm] = useState({
+    title: "",
+    sponsorName: "",
+    imageUrl: "",
+    linkUrl: "",
+    placement: "home_top" as SponsorBanner["placement"],
+    active: true,
+    startsAt: "",
+    endsAt: ""
+  });
+  const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [assetUploadBusy, setAssetUploadBusy] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
@@ -963,6 +978,9 @@ export default function App() {
       const aRes = await fetch("/api/announcements");
       if (aRes.ok) setAnnouncements(await aRes.json());
 
+      const bRes = await fetch("/api/banners");
+      if (bRes.ok) setSponsorBanners(await bRes.json());
+
       const toRes = await fetch("/api/tournament-outcomes");
       if (toRes.ok) setTournamentOutcomes(await toRes.json());
     } catch (err) {
@@ -999,6 +1017,7 @@ export default function App() {
         fetchAdminStats();
         fetchAdminUsers();
         fetchAdminAssets();
+        fetchAdminBanners();
       }
     } catch (err) {
       console.error("Error loading user explicit data:", err);
@@ -1027,6 +1046,15 @@ export default function App() {
     try {
       const res = await fetch("/api/admin/assets", { headers: getHeaders() });
       if (res.ok) setUploadedAssets(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchAdminBanners = async () => {
+    try {
+      const res = await fetch("/api/admin/banners", { headers: getHeaders() });
+      if (res.ok) setAdminBanners(await res.json());
     } catch (err) {
       console.error(err);
     }
@@ -1096,6 +1124,7 @@ export default function App() {
       setStats(null);
       setAdminUsers([]);
       setUploadedAssets([]);
+      setAdminBanners([]);
     }
   }, [currentUser]);
 
@@ -1569,6 +1598,98 @@ export default function App() {
     return <FileText className="w-4 h-4 text-amber-600" />;
   };
 
+  const resetBannerForm = () => {
+    setEditingBannerId(null);
+    setBannerForm({
+      title: "",
+      sponsorName: "",
+      imageUrl: "",
+      linkUrl: "",
+      placement: "home_top",
+      active: true,
+      startsAt: "",
+      endsAt: ""
+    });
+  };
+
+  const handleSaveBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const url = editingBannerId ? `/api/admin/banners/${editingBannerId}` : "/api/admin/banners";
+      const res = await fetch(url, {
+        method: editingBannerId ? "PUT" : "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(bannerForm)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo guardar el banner.");
+
+      showToast(data.message, "success");
+      resetBannerForm();
+      fetchAdminBanners();
+      fetchGlobalData();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
+  };
+
+  const handleEditBanner = (banner: SponsorBanner) => {
+    setEditingBannerId(banner.id);
+    setBannerForm({
+      title: banner.title,
+      sponsorName: banner.sponsorName,
+      imageUrl: banner.imageUrl,
+      linkUrl: banner.linkUrl || "",
+      placement: banner.placement,
+      active: banner.active,
+      startsAt: banner.startsAt ? banner.startsAt.slice(0, 16) : "",
+      endsAt: banner.endsAt ? banner.endsAt.slice(0, 16) : ""
+    });
+  };
+
+  const handleDeleteBanner = async (bannerId: string) => {
+    if (!confirm("Desea eliminar este banner publicitario?")) return;
+    try {
+      const res = await fetch(`/api/admin/banners/${bannerId}`, {
+        method: "DELETE",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo eliminar el banner.");
+
+      showToast(data.message, "success");
+      fetchAdminBanners();
+      fetchGlobalData();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
+  };
+
+  const renderSponsorBanner = (banner: SponsorBanner) => {
+    const content = (
+      <div className="group relative overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900 bg-slate-950 shadow-sm">
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-28 md:h-36 object-cover opacity-95 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent p-3 text-white">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-[9px] uppercase tracking-widest text-amber-300 font-bold">Pauta patrocinada</span>
+              <h3 className="text-sm font-black truncate">{banner.title}</h3>
+              <p className="text-[10px] text-slate-300 truncate">{banner.sponsorName}</p>
+            </div>
+            {banner.linkUrl && <ExternalLink className="w-4 h-4 text-amber-300 shrink-0" />}
+          </div>
+        </div>
+      </div>
+    );
+
+    if (!banner.linkUrl) return content;
+    return (
+      <a href={banner.linkUrl} target="_blank" rel="noreferrer" className="block">
+        {content}
+      </a>
+    );
+  };
+
   const handleLoadUserPredictions = async (user: User) => {
     try {
       const res = await fetch(`/api/predictions?userId=${user.id}`, { headers: getHeaders() });
@@ -1634,6 +1755,9 @@ export default function App() {
   });
 
   const unreadNotifications = notifications.filter((n) => !n.read);
+  const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
+  const sidebarBanners = sponsorBanners.filter((banner) => banner.placement === "sidebar");
+  const rulesBanners = sponsorBanners.filter((banner) => banner.placement === "rules");
 
   // SVG Sparkline drawing helper for User evolution points chart
   const renderSparkline = (pointsArray: number[]) => {
@@ -2119,6 +2243,14 @@ export default function App() {
                       </button>
 
                       <button
+                        onClick={() => { setActiveTab("admin-banners"); setMobileMenuOpen(false); }}
+                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-banners" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                      >
+                        <Megaphone className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        Banners de Pauta
+                      </button>
+
+                      <button
                         onClick={() => { setActiveTab("admin-config"); setMobileMenuOpen(false); }}
                         className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-config" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
@@ -2209,12 +2341,27 @@ export default function App() {
                     </div>
                   );
                 })()}
+
+                {sidebarBanners.length > 0 && (
+                  <div className="space-y-3">
+                    {sidebarBanners.slice(0, 2).map((banner) => (
+                      <div key={banner.id}>{renderSponsorBanner(banner)}</div>
+                    ))}
+                  </div>
+                )}
                 
               </div>
             </aside>
 
             {/* Content Area */}
             <section className="flex-1 min-w-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 md:p-6 overflow-hidden transition-colors">
+              {topBanners.length > 0 && activeTab !== "admin-banners" && (
+                <div className="mb-5 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {topBanners.slice(0, 2).map((banner) => (
+                    <div key={banner.id}>{renderSponsorBanner(banner)}</div>
+                  ))}
+                </div>
+              )}
               
               {/* 1. MÓDULO USER: DASHBOARD TAB */}
               {activeTab === "dashboard" && (
@@ -2699,6 +2846,14 @@ export default function App() {
                         <p className="text-xs text-slate-500 mt-1">{t("rules_desc", "Conoce las bases para calcular puntajes y llevar los reconocimientos del torneo")}</p>
                       </div>
                     </div>
+
+                    {rulesBanners.length > 0 && (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        {rulesBanners.slice(0, 2).map((banner) => (
+                          <div key={banner.id}>{renderSponsorBanner(banner)}</div>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* COLUMNS 1 & 2: TEXT DETAILS */}
@@ -3555,6 +3710,92 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeTab === "admin-banners" && currentUser.role === "admin" && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <Megaphone className="text-amber-500 w-5 h-5" /> Banners de Pauta
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Crea espacios publicitarios para patrocinadores. Usa URLs de imagen de Cloudinary desde la Biblioteca de Assets.</p>
+                  </div>
+
+                  <form onSubmit={handleSaveBanner} className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 space-y-4 text-xs">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Titulo del banner</label>
+                        <input className="w-full bg-white dark:bg-slate-900 border rounded p-2" value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} required placeholder="Ej. Promo Mundialista" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Anunciante</label>
+                        <input className="w-full bg-white dark:bg-slate-900 border rounded p-2" value={bannerForm.sponsorName} onChange={(e) => setBannerForm({ ...bannerForm, sponsorName: e.target.value })} required placeholder="Nombre de la marca" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">URL de imagen</label>
+                        <input className="w-full bg-white dark:bg-slate-900 border rounded p-2 font-mono" value={bannerForm.imageUrl} onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })} required placeholder="https://res.cloudinary.com/..." />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Link destino</label>
+                        <input className="w-full bg-white dark:bg-slate-900 border rounded p-2 font-mono" value={bannerForm.linkUrl} onChange={(e) => setBannerForm({ ...bannerForm, linkUrl: e.target.value })} placeholder="https://marca.com" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Ubicacion</label>
+                        <select className="w-full bg-white dark:bg-slate-900 border rounded p-2" value={bannerForm.placement} onChange={(e) => setBannerForm({ ...bannerForm, placement: e.target.value as SponsorBanner["placement"] })}>
+                          <option value="home_top">Superior principal</option>
+                          <option value="sidebar">Lateral</option>
+                          <option value="rules">Reglas y premiaciones</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Inicio opcional</label>
+                        <input type="datetime-local" className="w-full bg-white dark:bg-slate-900 border rounded p-2" value={bannerForm.startsAt} onChange={(e) => setBannerForm({ ...bannerForm, startsAt: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Fin opcional</label>
+                        <input type="datetime-local" className="w-full bg-white dark:bg-slate-900 border rounded p-2" value={bannerForm.endsAt} onChange={(e) => setBannerForm({ ...bannerForm, endsAt: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <label className="flex items-center gap-2 font-semibold text-slate-600 dark:text-slate-300">
+                        <input type="checkbox" checked={bannerForm.active} onChange={(e) => setBannerForm({ ...bannerForm, active: e.target.checked })} />
+                        Activo
+                      </label>
+                      <div className="flex gap-2">
+                        {editingBannerId && <button type="button" onClick={resetBannerForm} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold">Cancelar</button>}
+                        <button type="submit" className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5" /> {editingBannerId ? "Actualizar banner" : "Crear banner"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {adminBanners.length === 0 ? (
+                      <div className="md:col-span-2 border border-dashed rounded-xl p-8 text-center text-sm text-slate-500">Todavia no hay banners creados.</div>
+                    ) : adminBanners.map((banner) => (
+                      <div key={banner.id} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                        {renderSponsorBanner(banner)}
+                        <div className="p-3 text-xs space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-slate-100">{banner.sponsorName}</p>
+                              <p className="text-[10px] text-slate-500">{banner.placement} · {banner.active ? "Activo" : "Inactivo"}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => handleEditBanner(banner)} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800" title="Editar">
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button type="button" onClick={() => handleDeleteBanner(banner.id)} className="p-2 rounded-lg bg-rose-50 text-rose-700" title="Eliminar">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

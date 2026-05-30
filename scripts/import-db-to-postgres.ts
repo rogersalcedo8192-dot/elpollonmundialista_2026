@@ -27,6 +27,7 @@ async function main() {
 
   await prisma.$transaction(async (tx) => {
     await tx.asset.deleteMany();
+    await tx.sponsorBanner.deleteMany();
     await tx.tournamentPrediction.deleteMany();
     await tx.tournamentOutcome.deleteMany();
     await tx.sentReminder.deleteMany();
@@ -214,6 +215,24 @@ async function main() {
           storageProvider: asset.storageProvider || "local",
           publicId: asset.publicId || null,
           resourceType: asset.resourceType || null
+        }))
+      });
+    }
+
+    if ((db.sponsorBanners || []).length > 0) {
+      await tx.sponsorBanner.createMany({
+        data: db.sponsorBanners.map((banner: any) => ({
+          id: banner.id,
+          title: banner.title,
+          sponsorName: banner.sponsorName,
+          imageUrl: banner.imageUrl,
+          linkUrl: banner.linkUrl || null,
+          placement: banner.placement,
+          active: Boolean(banner.active),
+          startsAt: banner.startsAt ? asDate(banner.startsAt) : null,
+          endsAt: banner.endsAt ? asDate(banner.endsAt) : null,
+          createdAt: asDate(banner.createdAt),
+          updatedAt: asDate(banner.updatedAt)
         }))
       });
     }
