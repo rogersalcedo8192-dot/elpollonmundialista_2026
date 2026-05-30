@@ -144,7 +144,30 @@ export interface DashboardStats {
     draw10: number;
     participation5: number;
   };
-    stagesList: string[];
+  prizePool: {
+    entryFeeUsd: number;
+    paidParticipants: number;
+    grossPool: number;
+    bankCommissionRate: number;
+    bankCommission: number;
+    netPool: number;
+    prizePoolRate: number;
+    prizePool: number;
+    ownerProfitRate: number;
+    ownerGrossProfit: number;
+    ownerProfit: number;
+    payouts: {
+      first: number;
+      second: number;
+      third: number;
+    };
+    payoutRates: {
+      first: number;
+      second: number;
+      third: number;
+    };
+  };
+  stagesList: string[];
 }
 
 export interface UploadedAsset {

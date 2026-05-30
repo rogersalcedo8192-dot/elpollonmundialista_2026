@@ -538,6 +538,9 @@ const FLAGS_CODE_ALIAS_MAP: Record<string, string> = {
   "bosnia herzegovina": "ba",
   "bosnia and herzegovina": "ba",
   "bosnia y herzegovina": "ba",
+  "cape verde islands": "cv",
+  "cape verde": "cv",
+  "cabo verde": "cv",
   "qatar": "qa",
   "catar": "qa",
   "haiti": "ht",
@@ -1289,6 +1292,9 @@ export default function App() {
     if (reason === "draw") return ui("real_draw");
     return ui("participation");
   };
+
+  const formatUsd = (value: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
@@ -3695,6 +3701,62 @@ export default function App() {
                           <span className="text-sm font-bold block mt-2 font-mono text-slate-700">
                             {stats.finishedMatches} / {stats.pendingMatches}
                           </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 text-white rounded-xl border border-slate-800 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div>
+                            <h3 className="text-sm font-black flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-amber-400" />
+                              Bolsa de premios estimada
+                            </h3>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              Cuota fija {formatUsd(stats.prizePool.entryFeeUsd)} por participante. El 70% va a premios y la comisión bancaria fija {(stats.prizePool.bankCommissionRate * 100).toFixed(1)}% se descuenta de tu 30%.
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">Participantes cobrados</span>
+                            <span className="text-2xl font-black text-emerald-300">{stats.prizePool.paidParticipants}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Bruto</span>
+                            <span className="text-sm font-black">{formatUsd(stats.prizePool.grossPool)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Banco</span>
+                            <span className="text-sm font-black text-rose-300">-{formatUsd(stats.prizePool.bankCommission)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Tu bruto 30%</span>
+                            <span className="text-sm font-black">{formatUsd(stats.prizePool.ownerGrossProfit)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <span className="text-[9px] text-emerald-300 uppercase font-bold block">Premios 70%</span>
+                            <span className="text-sm font-black text-emerald-300">{formatUsd(stats.prizePool.prizePool)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <span className="text-[9px] text-amber-300 uppercase font-bold block">Tu neto</span>
+                            <span className="text-sm font-black text-amber-300">{formatUsd(stats.prizePool.ownerProfit)}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div className="p-3 rounded-lg bg-amber-400 text-slate-950">
+                            <span className="text-[10px] uppercase font-black block">1er puesto · 80%</span>
+                            <span className="text-xl font-black">{formatUsd(stats.prizePool.payouts.first)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-200 text-slate-950">
+                            <span className="text-[10px] uppercase font-black block">2do puesto · 15%</span>
+                            <span className="text-xl font-black">{formatUsd(stats.prizePool.payouts.second)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-orange-300 text-slate-950">
+                            <span className="text-[10px] uppercase font-black block">3er puesto · 5%</span>
+                            <span className="text-xl font-black">{formatUsd(stats.prizePool.payouts.third)}</span>
+                          </div>
                         </div>
                       </div>
 

@@ -196,6 +196,49 @@ const hasCloudinaryConfig = Boolean(
 );
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
+const ENTRY_FEE_USD = 25;
+const BANK_COMMISSION_RATE = 0.035;
+const PRIZE_POOL_RATE = 0.7;
+const OWNER_PROFIT_RATE = 0.3;
+const FIRST_PLACE_RATE = 0.8;
+const SECOND_PLACE_RATE = 0.15;
+const THIRD_PLACE_RATE = 0.05;
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function calculatePrizePool(paidParticipants: number) {
+  const grossPool = paidParticipants * ENTRY_FEE_USD;
+  const bankCommission = grossPool * BANK_COMMISSION_RATE;
+  const prizePool = grossPool * PRIZE_POOL_RATE;
+  const ownerGrossProfit = grossPool * OWNER_PROFIT_RATE;
+  const ownerNetProfit = ownerGrossProfit - bankCommission;
+
+  return {
+    entryFeeUsd: ENTRY_FEE_USD,
+    paidParticipants,
+    grossPool: roundMoney(grossPool),
+    bankCommissionRate: BANK_COMMISSION_RATE,
+    bankCommission: roundMoney(bankCommission),
+    netPool: roundMoney(grossPool - bankCommission),
+    prizePoolRate: PRIZE_POOL_RATE,
+    prizePool: roundMoney(prizePool),
+    ownerProfitRate: OWNER_PROFIT_RATE,
+    ownerGrossProfit: roundMoney(ownerGrossProfit),
+    ownerProfit: roundMoney(ownerNetProfit),
+    payouts: {
+      first: roundMoney(prizePool * FIRST_PLACE_RATE),
+      second: roundMoney(prizePool * SECOND_PLACE_RATE),
+      third: roundMoney(prizePool * THIRD_PLACE_RATE)
+    },
+    payoutRates: {
+      first: FIRST_PLACE_RATE,
+      second: SECOND_PLACE_RATE,
+      third: THIRD_PLACE_RATE
+    }
+  };
+}
 
 const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
   { id: 73, stage: "16avos de Final", dateLabel: "Domingo, 28 de junio 2026", localSlot: "2º Grupo A", visitorSlot: "2º Grupo B", stadium: "Estadio Los Ángeles" },
@@ -240,6 +283,8 @@ const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Brazil": "Brasil",
   "Cameroon": "Camerún",
   "Canada": "Canadá",
+  "Cape Verde Islands": "Cabo Verde",
+  "Cape Verde": "Cabo Verde",
   "Chile": "Chile",
   "Colombia": "Colombia",
   "Costa Rica": "Costa Rica",
@@ -2915,6 +2960,7 @@ app.get("/api/admin/stats", (req, res) => {
   const averagePoints = standardUsers.length > 0 
     ? (standardUsers.reduce((sum, u) => sum + u.points, 0) / standardUsers.length).toFixed(1)
     : "0.0";
+  const prizePool = calculatePrizePool(standardUsers.length);
 
   // Match phase breakdowns for nice filter previews
   const stagesList = Array.from(new Set(db.matches.map((m) => m.stage)));
@@ -2931,6 +2977,7 @@ app.get("/api/admin/stats", (req, res) => {
       draw10: pts15Count,
       participation5: pts5Count
     },
+    prizePool,
     stagesList
   });
 });
