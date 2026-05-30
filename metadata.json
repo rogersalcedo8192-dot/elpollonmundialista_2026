@@ -1,0 +1,6 @@
+{
+  "name": "Polla Mundialista 2026",
+  "description": "Aplicación web completa para gestionar pronósticos, predicciones, clasificaciones y estadísticas del Mundial FIFA 2026.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

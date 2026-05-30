@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TorneoConfig {
+  id                      String   @id @default("default")
+  title                   String
+  description             String
+  timezone                String
+  allowPublicRegistration Boolean  @default(true)
+  welcomeMessage          String
+  rulesText               String
+  prizesText              String
+  rulesImageUrl           String?
+  rulesImageUrlEn         String?
+  notificationConfig      Json
+  updatedAt               DateTime @updatedAt
+}
+
+model User {
+  id                 String   @id
+  email              String   @unique
+  password           String?
+  name               String
+  role               String
+  status             String
+  avatar             String
+  points             Int      @default(0)
+  exactCount         Int      @default(0)
+  drawCount          Int      @default(0)
+  predictCount       Int      @default(0)
+  historyPoints      Json
+  emailSubscribed    Boolean  @default(true)
+  groupPoints        Int?
+  knockoutPoints     Int?
+  finalistPoints     Int?
+  subchampionPoints  Int?
+  championPoints     Int?
+  totalBonusPoints   Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  predictions           Prediction[]
+  rankings              Ranking[]
+  notifications         Notification[]
+  tournamentPredictions TournamentPrediction[]
+  uploadedAssets        Asset[]                @relation("UploadedAssets")
+}
+
+model Match {
+  id           Int      @id
+  stage        String
+  local        String
+  visitor      String
+  date         DateTime
+  stadium      String
+  status       String
+  localScore   Int?
+  visitorScore Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  predictions Prediction[]
+}
+
+model Prediction {
+  id           String   @id
+  userId       String
+  matchId      Int
+  localScore   Int
+  visitorScore Int
+  pointsEarned Int?
+  reason       String?
+  dateCreated  DateTime
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+model Ranking {
+  id                String @id
+  userId            String
+  userName          String
+  userAvatar        String
+  points            Int
+  exactCount        Int
+  drawCount         Int
+  predictCount      Int
+  position          Int
+  prevPosition      Int
+  shift             String
+  groupPoints       Int?
+  knockoutPoints    Int?
+  finalistPoints    Int?
+  subchampionPoints Int?
+  championPoints    Int?
+  totalBonusPoints  Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id        String   @id
+  title     String
+  content   String
+  date      DateTime
+  urgent    Boolean
+  publishAt DateTime?
+}
+
+model Notification {
+  id      String   @id
+  userId  String
+  title   String
+  message String
+  type    String
+  date    DateTime
+  read    Boolean
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SentReminder {
+  key String @id
+}
+
+model TournamentPrediction {
+  userId          String   @id
+  groupWinners    Json
+  octavosTeams    Json
+  cuartosTeams    Json
+  semifinalTeams  Json
+  finalists       Json
+  subchampion     String
+  champion        String
+  lastUpdated     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TournamentOutcome {
+  id              String   @id @default("default")
+  groupWinners    Json
+  octavosTeams    Json
+  cuartosTeams    Json
+  semifinalTeams  Json
+  finalists       Json
+  subchampion     String
+  champion        String
+  updatedAt       DateTime @updatedAt
+}
+
+model Asset {
+  id           String   @id
+  originalName String
+  fileName     String
+  mimeType     String
+  type         String
+  size         Int
+  url          String
+  uploadedBy   String?
+  uploadedAt   DateTime
+
+  uploader User? @relation("UploadedAssets", fields: [uploadedBy], references: [id], onDelete: SetNull)
+}
