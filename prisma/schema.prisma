@@ -167,6 +167,9 @@ model Asset {
   url          String
   uploadedBy   String?
   uploadedAt   DateTime
+  storageProvider String   @default("local")
+  publicId     String?
+  resourceType String?
 
   uploader User? @relation("UploadedAssets", fields: [uploadedBy], references: [id], onDelete: SetNull)
 }

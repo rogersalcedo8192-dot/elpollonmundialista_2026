@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { PrismaClient } from "@prisma/client";
+import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 
 interface TorneoConfig {
   title: string;
@@ -137,6 +138,9 @@ interface UploadedAsset {
   url: string;
   uploadedBy: string;
   uploadedAt: string;
+  storageProvider?: "local" | "cloudinary";
+  publicId?: string;
+  resourceType?: "image" | "video" | "raw";
 }
 
 interface DatabaseSchema {
@@ -157,6 +161,21 @@ const DB_FILE = path.join(process.cwd(), "db_store.json");
 const ASSETS_DIR = path.join(process.cwd(), "assets", "assets");
 const prisma = process.env.DATABASE_URL ? new PrismaClient() : null;
 let postgresPersistTimer: NodeJS.Timeout | null = null;
+
+const hasCloudinaryConfig = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (hasCloudinaryConfig) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+}
 
 function ensureAssetsDir() {
   if (!fs.existsSync(ASSETS_DIR)) {
@@ -180,6 +199,12 @@ function getAssetType(mimeType: string, fileName: string): UploadedAsset["type"]
     return "document";
   }
   return "other";
+}
+
+function getCloudinaryResourceType(assetType: UploadedAsset["type"]): UploadedAsset["resourceType"] {
+  if (assetType === "image") return "image";
+  if (assetType === "video") return "video";
+  return "raw";
 }
 
 function sanitizeFileName(fileName: string) {
@@ -222,7 +247,9 @@ function createAssetRecordFromFile(fileName: string, uploadedBy = "system"): Upl
     size: stat.size,
     url: `/uploads/${encodeURIComponent(fileName)}`,
     uploadedBy,
-    uploadedAt: stat.mtime.toISOString()
+    uploadedAt: stat.mtime.toISOString(),
+    storageProvider: "local",
+    resourceType: getCloudinaryResourceType(getAssetType(mimeType, fileName))
   };
 }
 
@@ -390,7 +417,10 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       size: asset.size,
       url: asset.url,
       uploadedBy: asset.uploadedBy || "system",
-      uploadedAt: asset.uploadedAt.toISOString()
+      uploadedAt: asset.uploadedAt.toISOString(),
+      storageProvider: asset.storageProvider as UploadedAsset["storageProvider"],
+      publicId: asset.publicId || undefined,
+      resourceType: asset.resourceType as UploadedAsset["resourceType"]
     }))
   };
 }
@@ -584,7 +614,10 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           size: asset.size,
           url: asset.url,
           uploadedBy: userIds.has(asset.uploadedBy) ? asset.uploadedBy : null,
-          uploadedAt: new Date(asset.uploadedAt)
+          uploadedAt: new Date(asset.uploadedAt),
+          storageProvider: asset.storageProvider || "local",
+          publicId: asset.publicId || null,
+          resourceType: asset.resourceType || getCloudinaryResourceType(asset.type)
         }))
       });
     }
@@ -1512,7 +1545,7 @@ app.get("/api/admin/assets", (req, res) => {
   res.json([...(db.assets || [])].sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()));
 });
 
-app.post("/api/admin/assets", (req, res) => {
+app.post("/api/admin/assets", async (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
@@ -1541,12 +1574,38 @@ app.post("/api/admin/assets", (req, res) => {
     return res.status(400).json({ error: "El archivo supera el limite de 75 MB." });
   }
 
-  ensureAssetsDir();
   const safeName = sanitizeFileName(fileName);
-  const finalFileName = `${Date.now()}-${safeName}`;
-  const targetPath = path.join(ASSETS_DIR, finalFileName);
+  const assetType = getAssetType(mimeType, fileName);
+  const resourceType = getCloudinaryResourceType(assetType);
+  let finalFileName = `${Date.now()}-${safeName}`;
+  let url = `/uploads/${encodeURIComponent(finalFileName)}`;
+  let publicId: string | undefined;
+  let storageProvider: UploadedAsset["storageProvider"] = "local";
 
-  fs.writeFileSync(targetPath, buffer);
+  if (hasCloudinaryConfig) {
+    try {
+      const uploadResult: UploadApiResponse = await cloudinary.uploader.upload(data, {
+        folder: "polla-mundialista-2026/assets",
+        resource_type: resourceType,
+        public_id: path.basename(safeName, path.extname(safeName)),
+        use_filename: true,
+        unique_filename: true,
+        overwrite: false
+      });
+
+      finalFileName = uploadResult.original_filename || safeName;
+      url = uploadResult.secure_url;
+      publicId = uploadResult.public_id;
+      storageProvider = "cloudinary";
+    } catch (err) {
+      console.error("Error uploading to Cloudinary:", err);
+      return res.status(500).json({ error: "No se pudo cargar el archivo en Cloudinary." });
+    }
+  } else {
+    ensureAssetsDir();
+    const targetPath = path.join(ASSETS_DIR, finalFileName);
+    fs.writeFileSync(targetPath, buffer);
+  }
 
   const db = loadDb();
   if (!db.assets) db.assets = [];
@@ -1556,11 +1615,14 @@ app.post("/api/admin/assets", (req, res) => {
     originalName: fileName,
     fileName: finalFileName,
     mimeType,
-    type: getAssetType(mimeType, fileName),
+    type: assetType,
     size: buffer.length,
-    url: `/uploads/${encodeURIComponent(finalFileName)}`,
+    url,
     uploadedBy: admin.id,
-    uploadedAt: new Date().toISOString()
+    uploadedAt: new Date().toISOString(),
+    storageProvider,
+    publicId,
+    resourceType
   };
 
   db.assets.push(asset);
@@ -1569,7 +1631,7 @@ app.post("/api/admin/assets", (req, res) => {
   res.json({ message: "Archivo cargado correctamente.", asset });
 });
 
-app.delete("/api/admin/assets/:id", (req, res) => {
+app.delete("/api/admin/assets/:id", async (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
@@ -1577,13 +1639,24 @@ app.delete("/api/admin/assets/:id", (req, res) => {
   const asset = db.assets?.find((item) => item.id === req.params.id);
   if (!asset) return res.status(404).json({ error: "Archivo no encontrado." });
 
-  const targetPath = path.resolve(ASSETS_DIR, asset.fileName);
-  if (!targetPath.startsWith(path.resolve(ASSETS_DIR))) {
-    return res.status(400).json({ error: "Ruta de archivo invalida." });
-  }
+  if (asset.storageProvider === "cloudinary" && asset.publicId && hasCloudinaryConfig) {
+    try {
+      await cloudinary.uploader.destroy(asset.publicId, {
+        resource_type: asset.resourceType || getCloudinaryResourceType(asset.type)
+      });
+    } catch (err) {
+      console.error("Error deleting Cloudinary asset:", err);
+      return res.status(500).json({ error: "No se pudo eliminar el archivo en Cloudinary." });
+    }
+  } else {
+    const targetPath = path.resolve(ASSETS_DIR, asset.fileName);
+    if (!targetPath.startsWith(path.resolve(ASSETS_DIR))) {
+      return res.status(400).json({ error: "Ruta de archivo invalida." });
+    }
 
-  if (fs.existsSync(targetPath)) {
-    fs.unlinkSync(targetPath);
+    if (fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath);
+    }
   }
 
   db.assets = (db.assets || []).filter((item) => item.id !== asset.id);

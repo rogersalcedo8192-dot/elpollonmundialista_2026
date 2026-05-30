@@ -146,4 +146,7 @@ export interface UploadedAsset {
   url: string;
   uploadedBy: string;
   uploadedAt: string;
+  storageProvider?: "local" | "cloudinary";
+  publicId?: string;
+  resourceType?: "image" | "video" | "raw";
 }

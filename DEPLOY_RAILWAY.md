@@ -59,6 +59,14 @@ Cambia esa clave al entrar en produccion.
 
 ## Assets
 
-La metadata de assets queda en Postgres, pero los archivos fisicos siguen guardandose en `assets/assets`.
+La metadata de assets queda en Postgres.
 
-Para produccion seria mejor mover los archivos a Cloudinary, Firebase Storage, Supabase Storage o S3/R2. Railway no debe ser tratado como storage permanente para imagenes, videos y PDF.
+Para produccion, configura Cloudinary en Railway:
+
+```env
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
+
+Con esas variables, las nuevas cargas desde la Biblioteca de Assets se guardan en Cloudinary. Los assets viejos que ya apunten a `/uploads/...` seguiran funcionando como archivos locales si existen en el deploy, pero los nuevos ya no dependeran del filesystem de Railway.

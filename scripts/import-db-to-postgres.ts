@@ -210,7 +210,10 @@ async function main() {
           size: asset.size,
           url: asset.url,
           uploadedBy: userIds.has(asset.uploadedBy) ? asset.uploadedBy : null,
-          uploadedAt: asDate(asset.uploadedAt)
+          uploadedAt: asDate(asset.uploadedAt),
+          storageProvider: asset.storageProvider || "local",
+          publicId: asset.publicId || null,
+          resourceType: asset.resourceType || null
         }))
       });
     }

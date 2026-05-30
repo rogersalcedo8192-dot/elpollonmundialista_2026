@@ -3521,7 +3521,7 @@ export default function App() {
 
                             <div className="flex items-center justify-between text-[10px] text-slate-500">
                               <span>{formatAssetSize(asset.size)}</span>
-                              <span>{new Date(asset.uploadedAt).toLocaleDateString()}</span>
+                              <span>{asset.storageProvider === "cloudinary" ? "Cloudinary" : "Local"} · {new Date(asset.uploadedAt).toLocaleDateString()}</span>
                             </div>
 
                             <div className="flex items-center gap-2">
