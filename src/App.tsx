@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Trophy,
   Users,
@@ -1335,6 +1335,7 @@ export default function App() {
 
   // Notifications bell toggle
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const notificationPanelRef = useRef<HTMLDivElement | null>(null);
 
   // General Toast notifications
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -2214,6 +2215,30 @@ export default function App() {
     };
   }, [sponsorBanners, bannerRotationIndex]);
 
+  useEffect(() => {
+    if (!showNotificationPanel) return;
+
+    const closeOnOutsideInteraction = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (target && notificationPanelRef.current?.contains(target)) return;
+      setShowNotificationPanel(false);
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowNotificationPanel(false);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideInteraction);
+    document.addEventListener("touchstart", closeOnOutsideInteraction);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideInteraction);
+      document.removeEventListener("touchstart", closeOnOutsideInteraction);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showNotificationPanel]);
+
   const getRotatingBanner = (banners: SponsorBanner[], placement: SponsorBanner["placement"]) => {
     if (banners.length === 0) return null;
     return banners[bannerRotationIndex[placement] % banners.length];
@@ -2371,7 +2396,7 @@ export default function App() {
             {currentUser ? (
               <div className="flex items-center gap-2 md:gap-3">
                 {/* Notification Bell Trigger */}
-                <div className="relative">
+                <div className="relative" ref={notificationPanelRef}>
                   <button
                     onClick={() => setShowNotificationPanel(!showNotificationPanel)}
                     className="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative"
