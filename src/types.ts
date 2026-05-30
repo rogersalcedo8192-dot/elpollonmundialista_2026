@@ -70,6 +70,8 @@ export interface Match {
   status: "pending" | "in_progress" | "finished";
   localScore: number | null;
   visitorScore: number | null;
+  externalSource?: string;
+  externalSourceId?: string;
 }
 
 export interface Prediction {

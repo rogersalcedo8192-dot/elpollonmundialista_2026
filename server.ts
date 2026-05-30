@@ -77,6 +77,8 @@ interface Match {
   status: "pending" | "in_progress" | "finished";
   localScore: number | null;
   visitorScore: number | null;
+  externalSource?: string;
+  externalSourceId?: string;
 }
 
 interface Prediction {
@@ -183,6 +185,110 @@ const hasCloudinaryConfig = Boolean(
   process.env.CLOUDINARY_API_KEY &&
   process.env.CLOUDINARY_API_SECRET
 );
+
+const FOOTBALL_DATA_SOURCE = "football-data.org";
+
+const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
+  "Argentina": "Argentina",
+  "Australia": "Australia",
+  "Austria": "Austria",
+  "Belgium": "Bélgica",
+  "Brazil": "Brasil",
+  "Cameroon": "Camerún",
+  "Canada": "Canadá",
+  "Chile": "Chile",
+  "Colombia": "Colombia",
+  "Costa Rica": "Costa Rica",
+  "Côte d'Ivoire": "Costa de Marfil",
+  "Cote d'Ivoire": "Costa de Marfil",
+  "Croatia": "Croacia",
+  "Czechia": "Rep. Checa",
+  "Czech Republic": "Rep. Checa",
+  "Denmark": "Dinamarca",
+  "Ecuador": "Ecuador",
+  "Egypt": "Egipto",
+  "England": "Inglaterra",
+  "France": "Francia",
+  "Germany": "Alemania",
+  "Ghana": "Ghana",
+  "Iran": "RI de Irán",
+  "IR Iran": "RI de Irán",
+  "Iraq": "Irak",
+  "Italy": "Italia",
+  "Japan": "Japón",
+  "Korea Republic": "Rep. de Corea",
+  "Korea, Republic of": "Rep. de Corea",
+  "Mexico": "México",
+  "Morocco": "Marruecos",
+  "Netherlands": "Países Bajos",
+  "New Zealand": "Nueva Zelanda",
+  "Nigeria": "Nigeria",
+  "Norway": "Noruega",
+  "Panama": "Panamá",
+  "Paraguay": "Paraguay",
+  "Poland": "Polonia",
+  "Portugal": "Portugal",
+  "Saudi Arabia": "Arabia Saudí",
+  "Scotland": "Escocia",
+  "Senegal": "Senegal",
+  "South Africa": "Sudáfrica",
+  "Spain": "España",
+  "Sweden": "Suecia",
+  "Switzerland": "Suiza",
+  "Turkey": "Turquía",
+  "Türkiye": "Turquía",
+  "Ukraine": "Ucrania",
+  "United States": "Estados Unidos",
+  "USA": "Estados Unidos",
+  "Uruguay": "Uruguay",
+  "Venezuela": "Venezuela"
+};
+
+function normalizeExternalTeamName(name: string | null | undefined) {
+  if (!name) return "Por definir";
+  return FOOTBALL_DATA_TEAM_NAME_MAP[name] || name;
+}
+
+function mapFootballDataStage(stage?: string | null, group?: string | null) {
+  if (stage === "GROUP_STAGE") {
+    const groupLetter = group?.match(/GROUP_([A-L])/i)?.[1] || "";
+    return groupLetter ? `Grupo ${groupLetter.toUpperCase()}` : "Grupo A";
+  }
+
+  const stageMap: Record<string, string> = {
+    LAST_32: "16avos de Final",
+    ROUND_OF_32: "16avos de Final",
+    ROUND_OF_16: "Octavos de Final",
+    LAST_16: "Octavos de Final",
+    QUARTER_FINALS: "Cuartos de Final",
+    SEMI_FINALS: "Semifinal",
+    THIRD_PLACE: "Tercer Puesto",
+    FINAL: "Final"
+  };
+
+  return stageMap[stage || ""] || stage || "Grupo A";
+}
+
+function mapFootballDataStatus(status?: string | null): Match["status"] {
+  if (status === "FINISHED") return "finished";
+  if (status === "LIVE" || status === "IN_PLAY" || status === "PAUSED") return "in_progress";
+  return "pending";
+}
+
+function getFootballDataScore(match: any) {
+  const fullTime = match?.score?.fullTime || {};
+  return {
+    localScore: typeof fullTime.home === "number" ? fullTime.home : null,
+    visitorScore: typeof fullTime.away === "number" ? fullTime.away : null
+  };
+}
+
+function isSameFixtureCandidate(existing: Match, incoming: Match) {
+  const existingDate = new Date(existing.date).getTime();
+  const incomingDate = new Date(incoming.date).getTime();
+  const withinSameWindow = Number.isFinite(existingDate) && Number.isFinite(incomingDate) && Math.abs(existingDate - incomingDate) < 12 * 60 * 60 * 1000;
+  return withinSameWindow && existing.local === incoming.local && existing.visitor === incoming.visitor;
+}
 
 if (hasCloudinaryConfig) {
   cloudinary.config({
@@ -372,7 +478,9 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       stadium: m.stadium,
       status: m.status as Match["status"],
       localScore: m.localScore,
-      visitorScore: m.visitorScore
+      visitorScore: m.visitorScore,
+      externalSource: m.externalSource || undefined,
+      externalSourceId: m.externalSourceId || undefined
     })),
     predictions: predictions.map((p) => ({
       id: p.id,
@@ -550,7 +658,9 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           stadium: m.stadium,
           status: m.status,
           localScore: m.localScore,
-          visitorScore: m.visitorScore
+          visitorScore: m.visitorScore,
+          externalSource: m.externalSource || null,
+          externalSourceId: m.externalSourceId || null
         }))
       });
     }
@@ -1941,6 +2051,115 @@ app.post("/api/matches", (req, res) => {
   db.matches.push(newMatch);
   saveDb(db);
   res.json({ message: "Partido registrado exitosamente.", match: newMatch });
+});
+
+app.post("/api/admin/matches/sync-football-data", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  const token = process.env.FOOTBALL_DATA_API_TOKEN;
+  if (!token) {
+    return res.status(400).json({
+      error: "Falta configurar FOOTBALL_DATA_API_TOKEN en las variables de entorno."
+    });
+  }
+
+  const competitionCode = process.env.FOOTBALL_DATA_COMPETITION || "WC";
+  const season = process.env.FOOTBALL_DATA_SEASON || "2026";
+  const url = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/matches`);
+  url.searchParams.set("season", season);
+
+  try {
+    const apiRes = await fetch(url, {
+      headers: {
+        "X-Auth-Token": token,
+        "Accept": "application/json"
+      }
+    });
+
+    const payload = await apiRes.json().catch(() => ({}));
+    if (!apiRes.ok) {
+      return res.status(apiRes.status).json({
+        error: payload.message || payload.error || "No se pudo consultar football-data.org."
+      });
+    }
+
+    const apiMatches = Array.isArray(payload.matches) ? payload.matches : [];
+    const db = loadDb();
+    let created = 0;
+    let updated = 0;
+    let ignored = 0;
+    let resultChanged = false;
+    let nextId = db.matches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
+
+    apiMatches.forEach((apiMatch: any) => {
+      const homeName = normalizeExternalTeamName(apiMatch?.homeTeam?.name);
+      const awayName = normalizeExternalTeamName(apiMatch?.awayTeam?.name);
+      if (!apiMatch?.id || homeName === "Por definir" || awayName === "Por definir") {
+        ignored += 1;
+        return;
+      }
+
+      const scores = getFootballDataScore(apiMatch);
+      const incoming: Match = {
+        id: nextId,
+        stage: mapFootballDataStage(apiMatch.stage, apiMatch.group),
+        local: homeName,
+        visitor: awayName,
+        date: apiMatch.utcDate || new Date().toISOString(),
+        stadium: apiMatch.venue || "Por definir",
+        status: mapFootballDataStatus(apiMatch.status),
+        localScore: scores.localScore,
+        visitorScore: scores.visitorScore,
+        externalSource: FOOTBALL_DATA_SOURCE,
+        externalSourceId: String(apiMatch.id)
+      };
+
+      const existing = db.matches.find((match) =>
+        match.externalSource === FOOTBALL_DATA_SOURCE &&
+        match.externalSourceId === incoming.externalSourceId
+      ) || db.matches.find((match) => isSameFixtureCandidate(match, incoming));
+
+      if (!existing) {
+        db.matches.push({ ...incoming, id: nextId });
+        nextId += 1;
+        created += 1;
+        if (incoming.status === "finished") resultChanged = true;
+        return;
+      }
+
+      const previousResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
+      existing.stage = incoming.stage;
+      existing.local = incoming.local;
+      existing.visitor = incoming.visitor;
+      existing.date = incoming.date;
+      existing.stadium = incoming.stadium;
+      existing.status = incoming.status;
+      existing.localScore = incoming.localScore;
+      existing.visitorScore = incoming.visitorScore;
+      existing.externalSource = FOOTBALL_DATA_SOURCE;
+      existing.externalSourceId = incoming.externalSourceId;
+      updated += 1;
+
+      const nextResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
+      if (previousResult !== nextResult && existing.status === "finished") {
+        resultChanged = true;
+      }
+    });
+
+    saveDb(db);
+    if (resultChanged) recalculateScoresAndRankings();
+
+    res.json({
+      message: `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos.`,
+      created,
+      updated,
+      ignored,
+      recalculated: resultChanged
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Error sincronizando partidos desde football-data.org." });
+  }
 });
 
 app.put("/api/matches/:id", (req, res) => {

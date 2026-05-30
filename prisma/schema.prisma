@@ -53,19 +53,23 @@ model User {
 }
 
 model Match {
-  id           Int      @id
-  stage        String
-  local        String
-  visitor      String
-  date         DateTime
-  stadium      String
-  status       String
-  localScore   Int?
-  visitorScore Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               Int      @id
+  stage            String
+  local            String
+  visitor          String
+  date             DateTime
+  stadium          String
+  status           String
+  localScore       Int?
+  visitorScore     Int?
+  externalSource   String?
+  externalSourceId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   predictions Prediction[]
+
+  @@unique([externalSource, externalSourceId])
 }
 
 model Prediction {

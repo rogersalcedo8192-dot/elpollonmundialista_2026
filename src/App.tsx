@@ -1322,6 +1322,7 @@ export default function App() {
     rules: 0
   });
   const [assetUploadBusy, setAssetUploadBusy] = useState(false);
+  const [matchSyncBusy, setMatchSyncBusy] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
   const [userPredictionsView, setUserPredictionsView] = useState<Prediction[]>([]);
@@ -1911,6 +1912,27 @@ export default function App() {
       fetchUserSpecificData();
     } catch (err: any) {
       showToast(err.message, "error");
+    }
+  };
+
+  const handleSyncMatchesFromApi = async () => {
+    if (!confirm("Esto sincronizará partidos y resultados desde football-data.org sin borrar tus predicciones. ¿Continuar?")) return;
+    setMatchSyncBusy(true);
+    try {
+      const res = await fetch("/api/admin/matches/sync-football-data", {
+        method: "POST",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo sincronizar la API de partidos.");
+
+      showToast(data.message, "success");
+      fetchGlobalData();
+      fetchAdminStats();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setMatchSyncBusy(false);
     }
   };
 
@@ -3859,12 +3881,22 @@ export default function App() {
                       <p className="text-xs text-slate-500 mt-1">Cargar y editar partidos del Mundial 2026. Introducir puntajes reales para calcular escalafones.</p>
                     </div>
 
-                    <button
-                      onClick={() => setMatchForm({ stage: STAGES[1], local: "", visitor: "", stadium: "", date: new Date().toISOString() })}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Registrar de Cero
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={handleSyncMatchesFromApi}
+                        disabled={matchSyncBusy}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 shadow ${matchSyncBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
+                        title="Sincroniza calendario y resultados desde football-data.org"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${matchSyncBusy ? "animate-spin" : ""}`} /> {matchSyncBusy ? "Sincronizando..." : "Sincronizar API"}
+                      </button>
+                      <button
+                        onClick={() => setMatchForm({ stage: STAGES[1], local: "", visitor: "", stadium: "", date: new Date().toISOString() })}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Registrar de Cero
+                      </button>
+                    </div>
                   </div>
 
                   {/* Edit/Add Match Form panel */}
@@ -4008,6 +4040,11 @@ export default function App() {
                         <div key={m.id} className="p-3 transition-colors hover:bg-slate-50 flex items-center justify-between gap-4 flex-wrap text-xs">
                           <div>
                             <span className="font-bold text-slate-900">Partido #{m.id} ({m.stage})</span>
+                            {m.externalSource && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 text-[9px] font-bold uppercase">
+                                API
+                              </span>
+                            )}
                             <span className="block text-[10px] text-slate-400 italic mt-0.5">{m.stadium} • {formatMatchDate(m.date)}</span>
                           </div>
 

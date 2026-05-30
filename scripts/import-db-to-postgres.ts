@@ -92,7 +92,9 @@ async function main() {
           stadium: match.stadium,
           status: match.status,
           localScore: match.localScore ?? null,
-          visitorScore: match.visitorScore ?? null
+          visitorScore: match.visitorScore ?? null,
+          externalSource: match.externalSource || null,
+          externalSourceId: match.externalSourceId || null
         }))
       });
     }

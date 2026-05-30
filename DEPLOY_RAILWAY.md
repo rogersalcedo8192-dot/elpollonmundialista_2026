@@ -70,3 +70,22 @@ CLOUDINARY_API_SECRET=...
 ```
 
 Con esas variables, las nuevas cargas desde la Biblioteca de Assets se guardan en Cloudinary. Los assets viejos que ya apunten a `/uploads/...` seguiran funcionando como archivos locales si existen en el deploy, pero los nuevos ya no dependeran del filesystem de Railway.
+
+## API dinamica de partidos
+
+La app puede sincronizar calendario y resultados desde football-data.org. Crea una cuenta, genera tu token y agrega estas variables al servicio web en Railway:
+
+```env
+FOOTBALL_DATA_API_TOKEN=tu_token
+FOOTBALL_DATA_COMPETITION=WC
+FOOTBALL_DATA_SEASON=2026
+```
+
+Luego entra como admin a `Gestion de Partidos` y usa `Sincronizar API`.
+
+Notas:
+
+- La app no borra partidos ni predicciones existentes.
+- Los partidos sincronizados quedan marcados con origen `API`.
+- Si un partido llega como finalizado con marcador, se recalcula el ranking automaticamente.
+- Si agregas `externalSource` y `externalSourceId` al modelo `Match`, ejecuta de nuevo `npm run db:push` en Railway para actualizar Postgres.
