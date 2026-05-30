@@ -38,7 +38,8 @@ import {
   Video,
   Megaphone,
   ExternalLink,
-  Copy
+  Copy,
+  CreditCard
 } from "lucide-react";
 import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
@@ -1361,6 +1362,7 @@ export default function App() {
   const [assetUploadBusy, setAssetUploadBusy] = useState(false);
   const [matchSyncBusy, setMatchSyncBusy] = useState(false);
   const [matchDedupeBusy, setMatchDedupeBusy] = useState(false);
+  const [paymentBusy, setPaymentBusy] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
   const [userPredictionsView, setUserPredictionsView] = useState<Prediction[]>([]);
@@ -1572,6 +1574,48 @@ export default function App() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const sessionId = params.get("session_id");
+
+    if (paymentStatus === "cancelled") {
+      showToast("Pago cancelado. Puedes intentarlo nuevamente cuando quieras.", "info");
+      window.history.replaceState({}, "", window.location.pathname);
+      setActiveTab("participate");
+      return;
+    }
+
+    if (paymentStatus !== "success" || !sessionId) return;
+
+    const confirmPayment = async () => {
+      setPaymentBusy(true);
+      try {
+        const res = await fetch("/api/payments/confirm-checkout-session", {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ sessionId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "No se pudo confirmar el pago.");
+
+        localStorage.setItem("polla_user_session", JSON.stringify(data.user));
+        setCurrentUser(data.user);
+        showToast(data.message, "success");
+        setActiveTab("participate");
+        fetchGlobalData();
+      } catch (err: any) {
+        showToast(err.message, "error");
+      } finally {
+        setPaymentBusy(false);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    };
+
+    confirmPayment();
+  }, [currentUser?.id]);
+
   // Actions implementations
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1656,6 +1700,23 @@ export default function App() {
     setCurrentUser(null);
     setActiveTab("dashboard");
     showToast("Sesión cerrada correctamente", "info");
+  };
+
+  const handleStartPayment = async () => {
+    setPaymentBusy(true);
+    try {
+      const res = await fetch("/api/payments/create-checkout-session", {
+        method: "POST",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo iniciar el pago.");
+      if (!data.url) throw new Error("Stripe no devolvio una URL de pago.");
+      window.location.href = data.url;
+    } catch (err: any) {
+      showToast(err.message, "error");
+      setPaymentBusy(false);
+    }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -2751,6 +2812,7 @@ export default function App() {
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
                     {activeTab === "dashboard" ? (lang === "es" ? "Resumen" : "Summary") :
                      activeTab === "predictions" ? (lang === "es" ? "Pronósticos" : "Predictions") :
+                     activeTab === "participate" ? "Participar" :
                      activeTab === "ranking" ? "Ranking" :
                      activeTab === "rules-prizes" ? (lang === "es" ? "Reglas" : "Rules") : "Menú"}
                   </span>
@@ -2802,6 +2864,17 @@ export default function App() {
                   >
                     <Calendar className="w-4 h-4 shrink-0" />
                     {t("tab_predictions", "Calendario & Pronósticos")}
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("participate"); setMobileMenuOpen(false); }}
+                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "participate" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <CreditCard className="w-4 h-4 shrink-0" />
+                    Participar en Polla
+                    {currentUser.paymentStatus === "paid" && (
+                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">Pago</span>
+                    )}
                   </button>
 
                   <button
@@ -3120,6 +3193,84 @@ export default function App() {
               )}
 
               {/* 2. MÓDULO USER: CALENDAR & FORECASTS TAB */}
+              {activeTab === "participate" && (
+                <div className="space-y-5">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <CreditCard className="text-emerald-600 w-5 h-5" /> Participar en Polla
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Activa tu inscripción oficial para competir por la bolsa de premios.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-black">Inscripción oficial</span>
+                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatUsd(25)}</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pago único para entrar a la Polla Mundialista 2026.</p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${currentUser.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
+                          {currentUser.paymentStatus === "paid" ? "Pago confirmado" : "Pago pendiente"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Premios</span>
+                          <span className="font-black text-slate-900 dark:text-slate-100">70% del bruto</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Banco</span>
+                          <span className="font-black text-slate-900 dark:text-slate-100">3.5% sale del admin</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Top 3</span>
+                          <span className="font-black text-slate-900 dark:text-slate-100">80% / 15% / 5%</span>
+                        </div>
+                      </div>
+
+                      {currentUser.paymentStatus === "paid" ? (
+                        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 font-semibold">
+                          Tu inscripción ya está confirmada. Ya puedes registrar pronósticos y competir por premios.
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleStartPayment}
+                          disabled={paymentBusy}
+                          className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow ${paymentBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          {paymentBusy ? "Conectando con Stripe..." : "Pagar inscripción con Stripe"}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-3">
+                      <h3 className="text-sm font-black flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        Distribución del premio
+                      </h3>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between border-b border-white/10 pb-2">
+                          <span>1er puesto</span>
+                          <b>80%</b>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-2">
+                          <span>2do puesto</span>
+                          <b>15%</b>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>3er puesto</span>
+                          <b>5%</b>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. El dashboard admin calcula los valores reales según pagos confirmados.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeTab === "predictions" && (
                 <div className="space-y-4">
                   <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between gap-4 flex-wrap">

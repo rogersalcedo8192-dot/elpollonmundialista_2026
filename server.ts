@@ -37,6 +37,10 @@ interface User {
   predictCount: number;
   historyPoints: number[]; // Points over time (e.g. index represents matches finalized)
   emailSubscribed: boolean;
+  paymentStatus?: "pending" | "paid" | "failed";
+  paidAt?: string;
+  stripeCheckoutSessionId?: string;
+  stripePaymentIntentId?: string;
   groupPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
@@ -197,6 +201,7 @@ const hasCloudinaryConfig = Boolean(
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
 const ENTRY_FEE_USD = 25;
+const ENTRY_FEE_CENTS = ENTRY_FEE_USD * 100;
 const BANK_COMMISSION_RATE = 0.035;
 const PRIZE_POOL_RATE = 0.7;
 const OWNER_PROFIT_RATE = 0.3;
@@ -238,6 +243,43 @@ function calculatePrizePool(paidParticipants: number) {
       third: THIRD_PLACE_RATE
     }
   };
+}
+
+function getRequestOrigin(req: express.Request) {
+  const configuredUrl = process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
+  if (configuredUrl) {
+    return configuredUrl.startsWith("http") ? configuredUrl : `https://${configuredUrl}`;
+  }
+  const proto = req.headers["x-forwarded-proto"] || req.protocol;
+  return `${proto}://${req.get("host")}`;
+}
+
+async function stripeRequest(pathname: string, params?: URLSearchParams, method = "POST") {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("Falta configurar STRIPE_SECRET_KEY en Railway.");
+  }
+
+  const response = await fetch(`https://api.stripe.com/v1/${pathname}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      ...(params ? { "Content-Type": "application/x-www-form-urlencoded" } : {})
+    },
+    body: params
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error?.message || "Stripe no pudo procesar la solicitud.");
+  }
+  return payload;
+}
+
+function markUserAsPaid(user: User, session: any) {
+  user.paymentStatus = "paid";
+  user.paidAt = new Date().toISOString();
+  user.stripeCheckoutSessionId = session.id || user.stripeCheckoutSessionId;
+  user.stripePaymentIntentId = session.payment_intent || user.stripePaymentIntentId;
 }
 
 const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
@@ -772,6 +814,10 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       predictCount: u.predictCount,
       historyPoints: u.historyPoints as number[],
       emailSubscribed: u.emailSubscribed,
+      paymentStatus: (u.paymentStatus as User["paymentStatus"]) || "pending",
+      paidAt: dateToIso(u.paidAt) || undefined,
+      stripeCheckoutSessionId: u.stripeCheckoutSessionId || undefined,
+      stripePaymentIntentId: u.stripePaymentIntentId || undefined,
       groupPoints: u.groupPoints || undefined,
       knockoutPoints: u.knockoutPoints || undefined,
       finalistPoints: u.finalistPoints || undefined,
@@ -947,6 +993,10 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           predictCount: u.predictCount,
           historyPoints: u.historyPoints,
           emailSubscribed: u.emailSubscribed,
+          paymentStatus: u.paymentStatus || "pending",
+          paidAt: u.paidAt ? new Date(u.paidAt) : null,
+          stripeCheckoutSessionId: u.stripeCheckoutSessionId || null,
+          stripePaymentIntentId: u.stripePaymentIntentId || null,
           groupPoints: u.groupPoints ?? null,
           knockoutPoints: u.knockoutPoints ?? null,
           finalistPoints: u.finalistPoints ?? null,
@@ -1850,7 +1900,8 @@ app.post("/api/auth/register", (req, res) => {
     drawCount: 0,
     predictCount: 0,
     historyPoints: [0],
-    emailSubscribed: true
+    emailSubscribed: true,
+    paymentStatus: "pending"
   };
 
   db.users.push(newUser);
@@ -1956,6 +2007,72 @@ app.post("/api/auth/recover-password", (req, res) => {
   res.json({ message: "Se ha enviado un código de recuperación simulado a su dirección de correo y se registró una alerta en su panel." });
 });
 
+app.post("/api/payments/create-checkout-session", async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (user.role === "admin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
+  if (user.paymentStatus === "paid") return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
+
+  const origin = getRequestOrigin(req);
+  const params = new URLSearchParams();
+  params.set("mode", "payment");
+  params.set("customer_email", user.email);
+  params.set("success_url", `${origin}/?payment=success&session_id={CHECKOUT_SESSION_ID}`);
+  params.set("cancel_url", `${origin}/?payment=cancelled`);
+  params.set("line_items[0][quantity]", "1");
+  params.set("line_items[0][price_data][currency]", "usd");
+  params.set("line_items[0][price_data][unit_amount]", String(ENTRY_FEE_CENTS));
+  params.set("line_items[0][price_data][product_data][name]", "Inscripcion Polla Mundialista 2026");
+  params.set("line_items[0][price_data][product_data][description]", "Participacion oficial en la Polla Mundialista 2026");
+  params.set("metadata[userId]", user.id);
+  params.set("metadata[email]", user.email);
+
+  try {
+    const session = await stripeRequest("checkout/sessions", params);
+    const db = loadDb();
+    const dbUser = db.users.find((u) => u.id === user.id);
+    if (dbUser) {
+      dbUser.paymentStatus = "pending";
+      dbUser.stripeCheckoutSessionId = session.id;
+      saveDb(db);
+    }
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "No se pudo crear la pasarela de pago." });
+  }
+});
+
+app.post("/api/payments/confirm-checkout-session", async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+
+  const { sessionId } = req.body;
+  if (!sessionId) return res.status(400).json({ error: "Falta el identificador de sesion de Stripe." });
+
+  try {
+    const session = await stripeRequest(`checkout/sessions/${encodeURIComponent(String(sessionId))}`, undefined, "GET");
+    if (session.payment_status !== "paid") {
+      return res.status(400).json({ error: "El pago todavia no aparece confirmado en Stripe." });
+    }
+
+    const metadataUserId = session.metadata?.userId;
+    if (metadataUserId && metadataUserId !== user.id) {
+      return res.status(403).json({ error: "Esta sesion de pago no pertenece a tu usuario." });
+    }
+
+    const db = loadDb();
+    const dbUser = db.users.find((u) => u.id === user.id);
+    if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
+
+    markUserAsPaid(dbUser, session);
+    saveDb(db);
+    const { password: _, ...cleanUser } = dbUser;
+    res.json({ message: "Pago confirmado. Ya estas participando oficialmente.", user: cleanUser });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "No se pudo confirmar el pago." });
+  }
+});
+
 // Admin: Retrieve Users List
 app.get("/api/admin/users", (req, res) => {
   const admin = getAuthenticatedUser(req);
@@ -1974,6 +2091,9 @@ app.get("/api/admin/users", (req, res) => {
     exactCount: u.exactCount,
     drawCount: u.drawCount,
     predictCount: u.predictCount,
+    paymentStatus: u.paymentStatus || "pending",
+    paidAt: u.paidAt,
+    stripeCheckoutSessionId: u.stripeCheckoutSessionId,
     password: u.password // accessible for administrator manual reset view
   })));
 });
@@ -2005,7 +2125,9 @@ app.post("/api/admin/users", (req, res) => {
     drawCount: 0,
     predictCount: 0,
     historyPoints: [0],
-    emailSubscribed: true
+    emailSubscribed: true,
+    paymentStatus: role === "admin" ? "paid" : "pending",
+    paidAt: role === "admin" ? new Date().toISOString() : undefined
   };
 
   db.users.push(newUser);
@@ -2960,7 +3082,8 @@ app.get("/api/admin/stats", (req, res) => {
   const averagePoints = standardUsers.length > 0 
     ? (standardUsers.reduce((sum, u) => sum + u.points, 0) / standardUsers.length).toFixed(1)
     : "0.0";
-  const prizePool = calculatePrizePool(standardUsers.length);
+  const paidUsers = standardUsers.filter((u) => u.paymentStatus === "paid");
+  const prizePool = calculatePrizePool(paidUsers.length);
 
   // Match phase breakdowns for nice filter previews
   const stagesList = Array.from(new Set(db.matches.map((m) => m.stage)));

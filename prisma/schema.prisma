@@ -36,6 +36,10 @@ model User {
   predictCount       Int      @default(0)
   historyPoints      Json
   emailSubscribed    Boolean  @default(true)
+  paymentStatus      String   @default("pending")
+  paidAt             DateTime?
+  stripeCheckoutSessionId String?
+  stripePaymentIntentId   String?
   groupPoints        Int?
   knockoutPoints     Int?
   finalistPoints     Int?

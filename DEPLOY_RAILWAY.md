@@ -89,3 +89,26 @@ Notas:
 - Los partidos sincronizados quedan marcados con origen `API`.
 - Si un partido llega como finalizado con marcador, se recalcula el ranking automaticamente.
 - Si agregas `externalSource` y `externalSourceId` al modelo `Match`, ejecuta de nuevo `npm run db:push` en Railway para actualizar Postgres.
+
+## Pagos con Stripe
+
+La seccion `Participar en Polla` crea una sesion de Stripe Checkout por 25 USD.
+
+Configura estas variables en Railway:
+
+```env
+STRIPE_SECRET_KEY=sk_live_...
+PUBLIC_APP_URL=https://tu-dominio.up.railway.app
+```
+
+Luego ejecuta:
+
+```bash
+npm run db:push
+```
+
+Notas:
+
+- La bolsa de premios cuenta solo usuarios con `paymentStatus=paid`.
+- El retorno exitoso de Stripe confirma la sesion y marca el usuario como pagado.
+- Para produccion completa, el siguiente paso recomendado es agregar webhook de Stripe para confirmar pagos aunque el usuario cierre el navegador antes de volver a la app.

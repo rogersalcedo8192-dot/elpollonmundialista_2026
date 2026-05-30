@@ -30,6 +30,10 @@ export interface User {
   historyPoints: number[];
   emailSubscribed: boolean;
   password?: string;
+  paymentStatus?: "pending" | "paid" | "failed";
+  paidAt?: string;
+  stripeCheckoutSessionId?: string;
+  stripePaymentIntentId?: string;
   groupPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
