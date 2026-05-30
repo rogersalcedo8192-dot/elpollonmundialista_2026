@@ -412,6 +412,27 @@ function mergeDuplicateMatches(db: DatabaseSchema) {
   return merged;
 }
 
+function pruneNonApiMatches(db: DatabaseSchema) {
+  const idsToRemove = new Set(
+    db.matches
+      .filter((match) => match.externalSource !== FOOTBALL_DATA_SOURCE || !match.externalSourceId)
+      .map((match) => match.id)
+  );
+
+  if (!idsToRemove.size) {
+    return { pruned: 0, predictionsRemoved: 0 };
+  }
+
+  const previousPredictionCount = db.predictions.length;
+  db.matches = db.matches.filter((match) => !idsToRemove.has(match.id));
+  db.predictions = db.predictions.filter((prediction) => !idsToRemove.has(prediction.matchId));
+
+  return {
+    pruned: idsToRemove.size,
+    predictionsRemoved: previousPredictionCount - db.predictions.length
+  };
+}
+
 if (hasCloudinaryConfig) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -2178,6 +2199,7 @@ app.post("/api/matches", (req, res) => {
 app.post("/api/admin/matches/sync-football-data", async (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  const apiOnly = Boolean(req.body?.apiOnly);
 
   const token = process.env.FOOTBALL_DATA_API_TOKEN;
   if (!token) {
@@ -2270,16 +2292,21 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
     });
 
     const merged = mergeDuplicateMatches(db);
+    const apiOnlyCleanup = apiOnly ? pruneNonApiMatches(db) : { pruned: 0, predictionsRemoved: 0 };
     saveDb(db);
-    if (resultChanged || merged > 0) recalculateScoresAndRankings();
+    if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0) recalculateScoresAndRankings();
 
     res.json({
-      message: `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos, ${merged} duplicados fusionados.`,
+      message: apiOnly
+        ? `API oficial aplicada: ${created} creados, ${updated} actualizados, ${merged} duplicados fusionados, ${apiOnlyCleanup.pruned} partidos manuales eliminados.`
+        : `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos, ${merged} duplicados fusionados.`,
       created,
       updated,
       ignored,
       merged,
-      recalculated: resultChanged || merged > 0
+      pruned: apiOnlyCleanup.pruned,
+      predictionsRemoved: apiOnlyCleanup.predictionsRemoved,
+      recalculated: resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Error sincronizando partidos desde football-data.org." });

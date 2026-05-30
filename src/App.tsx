@@ -1917,12 +1917,13 @@ export default function App() {
   };
 
   const handleSyncMatchesFromApi = async () => {
-    if (!confirm("Esto sincronizará partidos y resultados desde football-data.org sin borrar tus predicciones. ¿Continuar?")) return;
+    if (!confirm("Esto dejará football-data.org como fuente oficial, actualizará partidos desde la API y eliminará partidos manuales que sobren. ¿Continuar?")) return;
     setMatchSyncBusy(true);
     try {
       const res = await fetch("/api/admin/matches/sync-football-data", {
         method: "POST",
-        headers: getHeaders()
+        headers: getHeaders(),
+        body: JSON.stringify({ apiOnly: true })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo sincronizar la API de partidos.");
@@ -3909,9 +3910,9 @@ export default function App() {
                         onClick={handleSyncMatchesFromApi}
                         disabled={matchSyncBusy}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 shadow ${matchSyncBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
-                        title="Sincroniza calendario y resultados desde football-data.org"
+                        title="Reemplaza el calendario manual y deja football-data.org como fuente oficial"
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 ${matchSyncBusy ? "animate-spin" : ""}`} /> {matchSyncBusy ? "Sincronizando..." : "Sincronizar API"}
+                        <RefreshCw className={`w-3.5 h-3.5 ${matchSyncBusy ? "animate-spin" : ""}`} /> {matchSyncBusy ? "Sincronizando..." : "Usar solo API"}
                       </button>
                       <button
                         onClick={handleDedupeMatches}
@@ -3920,12 +3921,6 @@ export default function App() {
                         title="Fusiona partidos duplicados creados por diferencias de nombres entre proveedores"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${matchDedupeBusy ? "animate-spin" : ""}`} /> {matchDedupeBusy ? "Limpiando..." : "Limpiar duplicados"}
-                      </button>
-                      <button
-                        onClick={() => setMatchForm({ stage: STAGES[1], local: "", visitor: "", stadium: "", date: new Date().toISOString() })}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Registrar de Cero
                       </button>
                     </div>
                   </div>
