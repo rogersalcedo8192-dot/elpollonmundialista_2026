@@ -238,15 +238,67 @@ const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Turkey": "Turquía",
   "Türkiye": "Turquía",
   "Ukraine": "Ucrania",
+  "Uzbekistan": "Uzbekistán",
   "United States": "Estados Unidos",
   "USA": "Estados Unidos",
   "Uruguay": "Uruguay",
-  "Venezuela": "Venezuela"
+  "Venezuela": "Venezuela",
+  "Congo DR": "RD Congo",
+  "DR Congo": "RD Congo",
+  "Democratic Republic of the Congo": "RD Congo"
 };
 
 function normalizeExternalTeamName(name: string | null | undefined) {
   if (!name) return "Por definir";
   return FOOTBALL_DATA_TEAM_NAME_MAP[name] || name;
+}
+
+function normalizeFixtureTeamName(name: string) {
+  const normalized = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
+  const aliases: Record<string, string> = {
+    "uzbekistan": "uzbekistan",
+    "congo dr": "rd congo",
+    "dr congo": "rd congo",
+    "rd congo": "rd congo",
+    "democratic republic of the congo": "rd congo",
+    "cote d ivoire": "costa de marfil",
+    "costa de marfil": "costa de marfil",
+    "ivory coast": "costa de marfil",
+    "usa": "estados unidos",
+    "united states": "estados unidos",
+    "usmnt": "estados unidos",
+    "korea republic": "rep de corea",
+    "republica de corea": "rep de corea",
+    "corea del sur": "rep de corea",
+    "iran": "ri de iran",
+    "ir iran": "ri de iran",
+    "paises bajos": "paises bajos",
+    "netherlands": "paises bajos",
+    "saudi arabia": "arabia saudi",
+    "arabia saudi": "arabia saudi",
+    "turkiye": "turquia",
+    "turkey": "turquia"
+  };
+
+  return aliases[normalized] || normalized;
+}
+
+function getFixtureKey(match: Match) {
+  const matchTime = new Date(match.date).getTime();
+  const dateKey = Number.isFinite(matchTime) ? new Date(matchTime).toISOString().slice(0, 16) : match.date.slice(0, 16);
+  return [
+    dateKey,
+    match.stage,
+    normalizeFixtureTeamName(match.local),
+    normalizeFixtureTeamName(match.visitor)
+  ].join("|");
 }
 
 function mapFootballDataStage(stage?: string | null, group?: string | null) {
@@ -287,7 +339,77 @@ function isSameFixtureCandidate(existing: Match, incoming: Match) {
   const existingDate = new Date(existing.date).getTime();
   const incomingDate = new Date(incoming.date).getTime();
   const withinSameWindow = Number.isFinite(existingDate) && Number.isFinite(incomingDate) && Math.abs(existingDate - incomingDate) < 12 * 60 * 60 * 1000;
-  return withinSameWindow && existing.local === incoming.local && existing.visitor === incoming.visitor;
+  return (
+    withinSameWindow &&
+    existing.stage === incoming.stage &&
+    normalizeFixtureTeamName(existing.local) === normalizeFixtureTeamName(incoming.local) &&
+    normalizeFixtureTeamName(existing.visitor) === normalizeFixtureTeamName(incoming.visitor)
+  );
+}
+
+function mergeDuplicateMatches(db: DatabaseSchema) {
+  const groupedMatches = new Map<string, Match[]>();
+  db.matches.forEach((match) => {
+    const key = getFixtureKey(match);
+    const list = groupedMatches.get(key) || [];
+    list.push(match);
+    groupedMatches.set(key, list);
+  });
+
+  const idsToRemove = new Set<number>();
+  let merged = 0;
+
+  groupedMatches.forEach((duplicates) => {
+    if (duplicates.length <= 1) return;
+
+    duplicates.sort((a, b) => {
+      const aPredictionCount = db.predictions.filter((p) => p.matchId === a.id).length;
+      const bPredictionCount = db.predictions.filter((p) => p.matchId === b.id).length;
+      if (aPredictionCount !== bPredictionCount) return bPredictionCount - aPredictionCount;
+      const aHasVenue = a.stadium && a.stadium !== "Por definir" ? 1 : 0;
+      const bHasVenue = b.stadium && b.stadium !== "Por definir" ? 1 : 0;
+      if (aHasVenue !== bHasVenue) return bHasVenue - aHasVenue;
+      return a.id - b.id;
+    });
+
+    const keeper = duplicates[0];
+    duplicates.slice(1).forEach((duplicate) => {
+      if ((!keeper.externalSource || !keeper.externalSourceId) && duplicate.externalSource && duplicate.externalSourceId) {
+        keeper.externalSource = duplicate.externalSource;
+        keeper.externalSourceId = duplicate.externalSourceId;
+      }
+      if ((!keeper.stadium || keeper.stadium === "Por definir") && duplicate.stadium && duplicate.stadium !== "Por definir") {
+        keeper.stadium = duplicate.stadium;
+      }
+      if (duplicate.status === "finished" && keeper.status !== "finished") {
+        keeper.status = duplicate.status;
+        keeper.localScore = duplicate.localScore;
+        keeper.visitorScore = duplicate.visitorScore;
+      }
+
+      db.predictions.forEach((prediction) => {
+        if (prediction.matchId !== duplicate.id) return;
+        const existingPredictionForKeeper = db.predictions.find((candidate) =>
+          candidate.matchId === keeper.id && candidate.userId === prediction.userId
+        );
+        if (existingPredictionForKeeper) {
+          prediction.matchId = -1;
+        } else {
+          prediction.matchId = keeper.id;
+        }
+      });
+
+      idsToRemove.add(duplicate.id);
+      merged += 1;
+    });
+  });
+
+  if (idsToRemove.size) {
+    db.matches = db.matches.filter((match) => !idsToRemove.has(match.id));
+    db.predictions = db.predictions.filter((prediction) => prediction.matchId !== -1);
+  }
+
+  return merged;
 }
 
 if (hasCloudinaryConfig) {
@@ -2147,19 +2269,38 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
       }
     });
 
+    const merged = mergeDuplicateMatches(db);
     saveDb(db);
-    if (resultChanged) recalculateScoresAndRankings();
+    if (resultChanged || merged > 0) recalculateScoresAndRankings();
 
     res.json({
-      message: `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos.`,
+      message: `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos, ${merged} duplicados fusionados.`,
       created,
       updated,
       ignored,
-      recalculated: resultChanged
+      merged,
+      recalculated: resultChanged || merged > 0
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Error sincronizando partidos desde football-data.org." });
   }
+});
+
+app.post("/api/admin/matches/dedupe", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  const db = loadDb();
+  const merged = mergeDuplicateMatches(db);
+  if (merged > 0) {
+    saveDb(db);
+    recalculateScoresAndRankings();
+  }
+
+  res.json({
+    message: merged > 0 ? `Se fusionaron ${merged} partidos duplicados.` : "No se encontraron partidos duplicados.",
+    merged
+  });
 });
 
 app.put("/api/matches/:id", (req, res) => {

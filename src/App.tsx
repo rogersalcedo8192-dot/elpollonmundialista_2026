@@ -1323,6 +1323,7 @@ export default function App() {
   });
   const [assetUploadBusy, setAssetUploadBusy] = useState(false);
   const [matchSyncBusy, setMatchSyncBusy] = useState(false);
+  const [matchDedupeBusy, setMatchDedupeBusy] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
   const [userPredictionsView, setUserPredictionsView] = useState<Prediction[]>([]);
@@ -1933,6 +1934,28 @@ export default function App() {
       showToast(err.message, "error");
     } finally {
       setMatchSyncBusy(false);
+    }
+  };
+
+  const handleDedupeMatches = async () => {
+    if (!confirm("Esto fusionará partidos duplicados por fecha, etapa y equipos equivalentes. ¿Continuar?")) return;
+    setMatchDedupeBusy(true);
+    try {
+      const res = await fetch("/api/admin/matches/dedupe", {
+        method: "POST",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudieron limpiar duplicados.");
+
+      showToast(data.message, "success");
+      fetchGlobalData();
+      fetchUserSpecificData();
+      fetchAdminStats();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setMatchDedupeBusy(false);
     }
   };
 
@@ -3889,6 +3912,14 @@ export default function App() {
                         title="Sincroniza calendario y resultados desde football-data.org"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${matchSyncBusy ? "animate-spin" : ""}`} /> {matchSyncBusy ? "Sincronizando..." : "Sincronizar API"}
+                      </button>
+                      <button
+                        onClick={handleDedupeMatches}
+                        disabled={matchDedupeBusy}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 shadow ${matchDedupeBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-slate-800 hover:bg-slate-700 text-white"}`}
+                        title="Fusiona partidos duplicados creados por diferencias de nombres entre proveedores"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${matchDedupeBusy ? "animate-spin" : ""}`} /> {matchDedupeBusy ? "Limpiando..." : "Limpiar duplicados"}
                       </button>
                       <button
                         onClick={() => setMatchForm({ stage: STAGES[1], local: "", visitor: "", stadium: "", date: new Date().toISOString() })}
