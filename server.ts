@@ -1397,6 +1397,21 @@ app.post("/api/auth/register", (req, res) => {
     return res.status(400).json({ error: "Todos los campos obligatorios (nombre, correo, contraseña) son necesarios." });
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+    return res.status(400).json({ error: "Ingrese un correo electrónico válido." });
+  }
+  if (String(name).trim().length < 3) {
+    return res.status(400).json({ error: "El nombre público debe tener al menos 3 caracteres." });
+  }
+  if (
+    String(password).length < 8 ||
+    !/[A-ZÁÉÍÓÚÑ]/.test(String(password)) ||
+    !/[a-záéíóúñ]/.test(String(password)) ||
+    !/\d/.test(String(password))
+  ) {
+    return res.status(400).json({ error: "La contraseña debe tener 8 caracteres, mayúscula, minúscula y número." });
+  }
+
   const existing = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (existing) {
     return res.status(400).json({ error: "Este correo electrónico ya está registrado en la polla." });

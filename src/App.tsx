@@ -30,6 +30,7 @@ import {
   Globe,
   Download,
   Eye,
+  EyeOff,
   Maximize2,
   Upload,
   FileText,
@@ -898,9 +899,12 @@ export default function App() {
   // Authentication Fields
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
+  const [authConfirmPassword, setAuthConfirmPassword] = useState("");
   const [authName, setAuthName] = useState("");
   const [authAvatar, setAuthAvatar] = useState(AVATARS[0]);
   const [authMode, setAuthMode] = useState<"login" | "register" | "recover">("login");
+  const [showAuthPassword, setShowAuthPassword] = useState(false);
+  const [showAuthConfirmPassword, setShowAuthConfirmPassword] = useState(false);
   
   // Forecast Forms
   const [predScores, setPredScores] = useState<Record<number, { local: number; visitor: number }>>({});
@@ -967,6 +971,16 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
+
+  const passwordChecks = [
+    { label: "Mínimo 8 caracteres", valid: authPassword.length >= 8 },
+    { label: "Una mayúscula", valid: /[A-ZÁÉÍÓÚÑ]/.test(authPassword) },
+    { label: "Una minúscula", valid: /[a-záéíóúñ]/.test(authPassword) },
+    { label: "Un número", valid: /\d/.test(authPassword) },
+    { label: "Las contraseñas coinciden", valid: authConfirmPassword.length > 0 && authPassword === authConfirmPassword }
+  ];
+  const isRegisterPasswordValid = passwordChecks.every((check) => check.valid);
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authEmail);
 
   const fetchGlobalData = async () => {
     try {
@@ -1158,6 +1172,18 @@ export default function App() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isEmailValid) {
+      showToast("Ingresa un correo válido.", "error");
+      return;
+    }
+    if (!authName.trim() || authName.trim().length < 3) {
+      showToast("El nombre público debe tener al menos 3 caracteres.", "error");
+      return;
+    }
+    if (!isRegisterPasswordValid) {
+      showToast("Revisa los requisitos de la contraseña antes de registrarte.", "error");
+      return;
+    }
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -1176,6 +1202,7 @@ export default function App() {
       setCurrentUser(data.user);
       showToast(`¡Tu cuenta ha sido creada y registrada! Bienvenido, ${data.user.name}.`, "success");
       setAuthPassword("");
+      setAuthConfirmPassword("");
       setAuthEmail("");
       setAuthName("");
     } catch (err: any) {
@@ -2064,15 +2091,17 @@ export default function App() {
               {authMode === "register" && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_fullname", "Nombre Completo")}</label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_public_name", "Nombre público para el ranking")}</label>
                     <input
                       type="text"
                       className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      placeholder="Ej. Luis Fernando Díaz"
+                      placeholder="Ej. PipeDiaz10"
                       value={authName}
                       onChange={(e) => setAuthName(e.target.value)}
+                      minLength={3}
                       required
                     />
+                    <p className="text-[10px] text-slate-400 mt-1">Será el nombre visible en la tabla de posiciones.</p>
                   </div>
 
                   <div>
@@ -2114,14 +2143,59 @@ export default function App() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                     <input
-                      type="password"
-                      className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      type={showAuthPassword ? "text" : "password"}
+                      className="w-full pl-9 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       placeholder="••••••••"
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowAuthPassword(!showAuthPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                      title={showAuthPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showAuthPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+                  {authMode === "register" && (
+                    <>
+                      <div className="mt-3">
+                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Confirmar contraseña</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type={showAuthConfirmPassword ? "text" : "password"}
+                            className="w-full pl-9 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            placeholder="Repite tu contraseña"
+                            value={authConfirmPassword}
+                            onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowAuthConfirmPassword(!showAuthConfirmPassword)}
+                            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                            title={showAuthConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          >
+                            {showAuthConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                        {passwordChecks.map((check) => (
+                          <div key={check.label} className={`flex items-center gap-2 text-[11px] font-medium ${check.valid ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"}`}>
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${check.valid ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700" : "bg-slate-200 dark:bg-slate-800 text-slate-500"}`}>
+                              {check.valid ? "✓" : "•"}
+                            </span>
+                            {check.label}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                   {authMode === "login" && (
                     <button
                       type="button"
@@ -2136,7 +2210,8 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-md transition-colors cursor-pointer"
+                disabled={authMode === "register" && (!isEmailValid || !isRegisterPasswordValid || authName.trim().length < 3)}
+                className={`w-full py-2.5 rounded-xl text-sm font-semibold shadow-md transition-colors ${authMode === "register" && (!isEmailValid || !isRegisterPasswordValid || authName.trim().length < 3) ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"}`}
               >
                 {authMode === "login" ? t("auth_btn_login", "Ingresar a la Polla") : authMode === "register" ? t("auth_btn_register", "Crear Cuenta de Participante") : t("auth_btn_recover", "Recuperar Contraseña")}
               </button>
