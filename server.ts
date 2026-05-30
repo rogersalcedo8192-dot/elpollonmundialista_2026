@@ -1576,7 +1576,7 @@ app.post("/api/admin/assets", async (req, res) => {
 
   const safeName = sanitizeFileName(fileName);
   const assetType = getAssetType(mimeType, fileName);
-  const resourceType = getCloudinaryResourceType(assetType);
+  let resourceType = getCloudinaryResourceType(assetType);
   let finalFileName = `${Date.now()}-${safeName}`;
   let url = `/uploads/${encodeURIComponent(finalFileName)}`;
   let publicId: string | undefined;
@@ -1586,20 +1586,21 @@ app.post("/api/admin/assets", async (req, res) => {
     try {
       const uploadResult: UploadApiResponse = await cloudinary.uploader.upload(data, {
         folder: "polla-mundialista-2026/assets",
-        resource_type: resourceType,
-        public_id: path.basename(safeName, path.extname(safeName)),
+        resource_type: "auto",
         use_filename: true,
         unique_filename: true,
         overwrite: false
-      });
+      } as any);
 
       finalFileName = uploadResult.original_filename || safeName;
       url = uploadResult.secure_url;
       publicId = uploadResult.public_id;
+      resourceType = (uploadResult.resource_type as UploadedAsset["resourceType"]) || resourceType;
       storageProvider = "cloudinary";
     } catch (err) {
       console.error("Error uploading to Cloudinary:", err);
-      return res.status(500).json({ error: "No se pudo cargar el archivo en Cloudinary." });
+      const cloudinaryMessage = err instanceof Error ? err.message : "Error desconocido de Cloudinary";
+      return res.status(500).json({ error: `No se pudo cargar el archivo en Cloudinary: ${cloudinaryMessage}` });
     }
   } else {
     ensureAssetsDir();
