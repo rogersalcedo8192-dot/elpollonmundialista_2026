@@ -74,6 +74,15 @@ export interface Match {
   externalSourceId?: string;
 }
 
+export interface KnockoutFixture {
+  id: number;
+  stage: "16avos de Final" | "Octavos de Final" | "Cuartos de Final" | "Semifinal" | "Tercer Puesto" | "Final";
+  dateLabel: string;
+  localSlot: string;
+  visitorSlot: string;
+  stadium: string;
+}
+
 export interface Prediction {
   id: string;
   userId: string;

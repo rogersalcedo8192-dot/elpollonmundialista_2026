@@ -40,7 +40,7 @@ import {
   ExternalLink,
   Copy
 } from "lucide-react";
-import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner } from "./types";
+import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 
@@ -1284,6 +1284,7 @@ export default function App() {
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
   const [torneo, setTorneo] = useState<TorneoConfig | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [knockoutFixtures, setKnockoutFixtures] = useState<KnockoutFixture[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -1292,7 +1293,7 @@ export default function App() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
 
   // Tournament Favorites states
-  const [predictionsMode, setPredictionsMode] = useState<"matches" | "favorites">("matches");
+  const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
   const [tournamentPredictions, setTournamentPredictions] = useState<TournamentPredictions | null>(null);
   const [tournamentOutcomes, setTournamentOutcomes] = useState<TournamentOutcomes | null>(null);
 
@@ -1395,6 +1396,9 @@ export default function App() {
         const matchesData: Match[] = await mRes.json();
         setMatches(matchesData);
       }
+
+      const kRes = await fetch("/api/knockout-fixtures");
+      if (kRes.ok) setKnockoutFixtures(await kRes.json());
 
       const rRes = await fetch("/api/rankings");
       if (rRes.ok) setRankings(await rRes.json());
@@ -3132,6 +3136,17 @@ export default function App() {
                       {t("mode_individual_matches", "Partidos Individuales")}
                     </button>
                     <button
+                      onClick={() => setPredictionsMode("knockout")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        predictionsMode === "knockout"
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      Eliminación directa
+                    </button>
+                    <button
                       onClick={() => setPredictionsMode("favorites")}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                         predictionsMode === "favorites"
@@ -3152,6 +3167,43 @@ export default function App() {
                       tournamentOutcomes={tournamentOutcomes}
                       onSave={handleSaveTournamentPredictions}
                     />
+                  ) : predictionsMode === "knockout" ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl">
+                        <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-amber-500" />
+                          Fixture de eliminación directa
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Cruces oficiales de partidos 73 al 104 según el documento base. Se muestran aparte porque dependen de posiciones de grupo y mejores terceros.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        {knockoutFixtures.map((fixture) => (
+                          <div key={fixture.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                Partido #{fixture.id} • {fixture.stage}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono text-right">{fixture.dateLabel}</span>
+                            </div>
+
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-xs">
+                              <div className="p-2 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-100 dark:border-slate-800 font-semibold text-slate-800 dark:text-slate-100 text-right">
+                                {fixture.localSlot}
+                              </div>
+                              <span className="text-slate-400 font-black">vs</span>
+                              <div className="p-2 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-100 dark:border-slate-800 font-semibold text-slate-800 dark:text-slate-100">
+                                {fixture.visitorSlot}
+                              </div>
+                            </div>
+
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500">{fixture.stadium}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   ) : (
                     <>
                       {/* Filters bar */}

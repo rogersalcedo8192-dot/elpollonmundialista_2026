@@ -81,6 +81,15 @@ interface Match {
   externalSourceId?: string;
 }
 
+interface KnockoutFixture {
+  id: number;
+  stage: "16avos de Final" | "Octavos de Final" | "Cuartos de Final" | "Semifinal" | "Tercer Puesto" | "Final";
+  dateLabel: string;
+  localSlot: string;
+  visitorSlot: string;
+  stadium: string;
+}
+
 interface Prediction {
   id: string;
   userId: string;
@@ -187,6 +196,41 @@ const hasCloudinaryConfig = Boolean(
 );
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
+
+const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
+  { id: 73, stage: "16avos de Final", dateLabel: "Domingo, 28 de junio 2026", localSlot: "2º Grupo A", visitorSlot: "2º Grupo B", stadium: "Estadio Los Ángeles" },
+  { id: 74, stage: "16avos de Final", dateLabel: "Lunes, 29 de junio 2026", localSlot: "1º Grupo E", visitorSlot: "3º Grupo A/B/C/D/F", stadium: "Estadio Boston" },
+  { id: 75, stage: "16avos de Final", dateLabel: "Lunes, 29 de junio 2026", localSlot: "1º Grupo F", visitorSlot: "2º Grupo C", stadium: "Estadio Monterrey" },
+  { id: 76, stage: "16avos de Final", dateLabel: "Lunes, 29 de junio 2026", localSlot: "1º Grupo C", visitorSlot: "2º Grupo F", stadium: "Estadio Houston" },
+  { id: 77, stage: "16avos de Final", dateLabel: "Martes, 30 de junio 2026", localSlot: "1º Grupo I", visitorSlot: "3º Grupo C/D/F/G/H", stadium: "Estadio Nueva York Nueva Jersey" },
+  { id: 78, stage: "16avos de Final", dateLabel: "Martes, 30 de junio 2026", localSlot: "2º Grupo E", visitorSlot: "2º Grupo I", stadium: "Estadio Dallas" },
+  { id: 79, stage: "16avos de Final", dateLabel: "Martes, 30 de junio 2026", localSlot: "1º Grupo A", visitorSlot: "3º Grupo C/E/F/H/I", stadium: "Estadio Ciudad de México" },
+  { id: 80, stage: "16avos de Final", dateLabel: "Miércoles, 1 de julio 2026", localSlot: "1º Grupo L", visitorSlot: "3º Grupo E/H/I/J/K", stadium: "Estadio Atlanta" },
+  { id: 81, stage: "16avos de Final", dateLabel: "Miércoles, 1 de julio 2026", localSlot: "1º Grupo D", visitorSlot: "3º Grupo B/E/F/I/J", stadium: "Estadio Bahía de San Francisco" },
+  { id: 82, stage: "16avos de Final", dateLabel: "Miércoles, 1 de julio 2026", localSlot: "1º Grupo G", visitorSlot: "3º Grupo A/E/H/I/J", stadium: "Estadio Seattle" },
+  { id: 83, stage: "16avos de Final", dateLabel: "Jueves, 2 de julio 2026", localSlot: "2º Grupo K", visitorSlot: "2º Grupo L", stadium: "Estadio Toronto" },
+  { id: 84, stage: "16avos de Final", dateLabel: "Jueves, 2 de julio 2026", localSlot: "1º Grupo H", visitorSlot: "2º Grupo J", stadium: "Estadio Los Ángeles" },
+  { id: 85, stage: "16avos de Final", dateLabel: "Jueves, 2 de julio 2026", localSlot: "1º Grupo B", visitorSlot: "3º Grupo E/F/G/I/J", stadium: "Estadio BC Place Vancouver" },
+  { id: 86, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "1º Grupo J", visitorSlot: "2º Grupo H", stadium: "Estadio Miami" },
+  { id: 87, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "1º Grupo K", visitorSlot: "3º Grupo D/E/I/J/L", stadium: "Estadio Kansas City" },
+  { id: 88, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "2º Grupo D", visitorSlot: "2º Grupo G", stadium: "Estadio Dallas" },
+  { id: 89, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 74", visitorSlot: "Ganador Partido 77", stadium: "Estadio Filadelfia" },
+  { id: 90, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 73", visitorSlot: "Ganador Partido 75", stadium: "Estadio Houston" },
+  { id: 91, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 76", visitorSlot: "Ganador Partido 78", stadium: "Estadio Nueva York Nueva Jersey" },
+  { id: 92, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 79", visitorSlot: "Ganador Partido 80", stadium: "Estadio Ciudad de México" },
+  { id: 93, stage: "Octavos de Final", dateLabel: "Lunes, 6 de julio 2026", localSlot: "Ganador Partido 83", visitorSlot: "Ganador Partido 84", stadium: "Estadio Dallas" },
+  { id: 94, stage: "Octavos de Final", dateLabel: "Lunes, 6 de julio 2026", localSlot: "Ganador Partido 81", visitorSlot: "Ganador Partido 82", stadium: "Estadio Seattle" },
+  { id: 95, stage: "Octavos de Final", dateLabel: "Martes, 7 de julio 2026", localSlot: "Ganador Partido 86", visitorSlot: "Ganador Partido 88", stadium: "Estadio Atlanta" },
+  { id: 96, stage: "Octavos de Final", dateLabel: "Martes, 7 de julio 2026", localSlot: "Ganador Partido 85", visitorSlot: "Ganador Partido 87", stadium: "Estadio BC Place Vancouver" },
+  { id: 97, stage: "Cuartos de Final", dateLabel: "Jueves, 9 de julio 2026", localSlot: "Ganador Partido 89", visitorSlot: "Ganador Partido 90", stadium: "Estadio Boston" },
+  { id: 98, stage: "Cuartos de Final", dateLabel: "Viernes, 10 de julio 2026", localSlot: "Ganador Partido 93", visitorSlot: "Ganador Partido 94", stadium: "Estadio Los Ángeles" },
+  { id: 99, stage: "Cuartos de Final", dateLabel: "Sábado, 11 de julio 2026", localSlot: "Ganador Partido 91", visitorSlot: "Ganador Partido 92", stadium: "Estadio Miami" },
+  { id: 100, stage: "Cuartos de Final", dateLabel: "Sábado, 11 de julio 2026", localSlot: "Ganador Partido 95", visitorSlot: "Ganador Partido 96", stadium: "Estadio Kansas City" },
+  { id: 101, stage: "Semifinal", dateLabel: "Martes, 14 de julio 2026", localSlot: "Ganador Partido 97", visitorSlot: "Ganador Partido 98", stadium: "Estadio Dallas" },
+  { id: 102, stage: "Semifinal", dateLabel: "Miércoles, 15 de julio 2026", localSlot: "Ganador Partido 99", visitorSlot: "Ganador Partido 100", stadium: "Estadio Atlanta" },
+  { id: 103, stage: "Tercer Puesto", dateLabel: "Sábado, 18 de julio 2026", localSlot: "Perdedor Partido 101", visitorSlot: "Perdedor Partido 102", stadium: "Estadio Miami" },
+  { id: 104, stage: "Final", dateLabel: "Domingo, 19 de julio 2026", localSlot: "Ganador Partido 101", visitorSlot: "Ganador Partido 102", stadium: "Estadio Nueva York Nueva Jersey" }
+];
 
 const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Argentina": "Argentina",
@@ -2236,6 +2280,10 @@ app.post("/api/admin/reset-tournament", (req, res) => {
 app.get("/api/matches", (req, res) => {
   const db = loadDb();
   res.json(db.matches);
+});
+
+app.get("/api/knockout-fixtures", (req, res) => {
+  res.json(KNOCKOUT_FIXTURES);
 });
 
 // Admin: Add or Edit Match
