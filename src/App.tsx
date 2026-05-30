@@ -61,6 +61,338 @@ const STAGES = [
   "16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal", "Tercer Puesto", "Final"
 ];
 
+const DATE_LOCALES: Record<string, string> = {
+  es: "es-CO",
+  en: "en-US",
+  pt: "pt-BR",
+  fr: "fr-FR",
+  it: "it-IT",
+  de: "de-DE",
+  ar: "ar",
+  ja: "ja-JP",
+  ko: "ko-KR",
+  ru: "ru-RU"
+};
+
+const UI_COPY_BY_LANG: Record<string, Record<string, string>> = {
+  es: {
+    all: "Todos",
+    group: "Grupo",
+    round32: "16avos de Final",
+    round16: "Octavos de Final",
+    quarterfinal: "Cuartos de Final",
+    semifinal: "Semifinal",
+    third_place: "Tercer Puesto",
+    final: "Final",
+    finished: "Finalizado",
+    live_locked: "En curso / Bloqueado",
+    locked: "Bloqueado",
+    closes_in_min: "Cierra en {value} min",
+    closes_in_hours: "Cierra en {value} horas",
+    closes_in_days: "Cierra en {value} días",
+    next_3_matches: "Próximos 3 Partidos",
+    live_ticker: "En Vivo",
+    match_number: "Partido #{id}",
+    exact_score: "Marcador Exacto",
+    real_draw: "Resultado Acertado",
+    participation: "Participación",
+    unknown: "Desconocido",
+    bogota: "Bogotá"
+  },
+  en: {
+    all: "All",
+    group: "Group",
+    round32: "Round of 32",
+    round16: "Round of 16",
+    quarterfinal: "Quarterfinals",
+    semifinal: "Semifinal",
+    third_place: "Third Place",
+    final: "Final",
+    finished: "Finished",
+    live_locked: "Live / Locked",
+    locked: "Locked",
+    closes_in_min: "Closes in {value} min",
+    closes_in_hours: "Closes in {value} hours",
+    closes_in_days: "Closes in {value} days",
+    next_3_matches: "Next 3 Matches",
+    live_ticker: "Live Ticker",
+    match_number: "Match #{id}",
+    exact_score: "Exact Score",
+    real_draw: "Correct Outcome",
+    participation: "Participation",
+    unknown: "Unknown",
+    bogota: "Bogota"
+  },
+  pt: {
+    all: "Todos",
+    group: "Grupo",
+    round32: "16 avos de final",
+    round16: "Oitavas de final",
+    quarterfinal: "Quartas de final",
+    semifinal: "Semifinal",
+    third_place: "Terceiro lugar",
+    final: "Final",
+    finished: "Finalizado",
+    live_locked: "Em andamento / Bloqueado",
+    locked: "Bloqueado",
+    closes_in_min: "Fecha em {value} min",
+    closes_in_hours: "Fecha em {value} horas",
+    closes_in_days: "Fecha em {value} dias",
+    next_3_matches: "Próximas 3 partidas",
+    live_ticker: "Ao vivo",
+    match_number: "Partida #{id}",
+    exact_score: "Placar exato",
+    real_draw: "Resultado correto",
+    participation: "Participação",
+    unknown: "Desconhecido",
+    bogota: "Bogotá"
+  },
+  fr: {
+    all: "Tous",
+    group: "Groupe",
+    round32: "Seizièmes de finale",
+    round16: "Huitièmes de finale",
+    quarterfinal: "Quarts de finale",
+    semifinal: "Demi-finale",
+    third_place: "Troisième place",
+    final: "Finale",
+    finished: "Terminé",
+    live_locked: "En cours / Verrouillé",
+    locked: "Verrouillé",
+    closes_in_min: "Ferme dans {value} min",
+    closes_in_hours: "Ferme dans {value} h",
+    closes_in_days: "Ferme dans {value} jours",
+    next_3_matches: "3 prochains matchs",
+    live_ticker: "En direct",
+    match_number: "Match #{id}",
+    exact_score: "Score exact",
+    real_draw: "Résultat correct",
+    participation: "Participation",
+    unknown: "Inconnu",
+    bogota: "Bogotá"
+  },
+  it: {
+    all: "Tutti",
+    group: "Gruppo",
+    round32: "Sedicesimi di finale",
+    round16: "Ottavi di finale",
+    quarterfinal: "Quarti di finale",
+    semifinal: "Semifinale",
+    third_place: "Terzo posto",
+    final: "Finale",
+    finished: "Terminato",
+    live_locked: "In corso / Bloccato",
+    locked: "Bloccato",
+    closes_in_min: "Chiude tra {value} min",
+    closes_in_hours: "Chiude tra {value} ore",
+    closes_in_days: "Chiude tra {value} giorni",
+    next_3_matches: "Prossime 3 partite",
+    live_ticker: "Live",
+    match_number: "Partita #{id}",
+    exact_score: "Risultato esatto",
+    real_draw: "Esito corretto",
+    participation: "Partecipazione",
+    unknown: "Sconosciuto",
+    bogota: "Bogotà"
+  },
+  de: {
+    all: "Alle",
+    group: "Gruppe",
+    round32: "Runde der 32",
+    round16: "Achtelfinale",
+    quarterfinal: "Viertelfinale",
+    semifinal: "Halbfinale",
+    third_place: "Spiel um Platz 3",
+    final: "Finale",
+    finished: "Beendet",
+    live_locked: "Live / Gesperrt",
+    locked: "Gesperrt",
+    closes_in_min: "Schließt in {value} Min.",
+    closes_in_hours: "Schließt in {value} Std.",
+    closes_in_days: "Schließt in {value} Tagen",
+    next_3_matches: "Nächste 3 Spiele",
+    live_ticker: "Live",
+    match_number: "Spiel #{id}",
+    exact_score: "Exaktes Ergebnis",
+    real_draw: "Richtiges Ergebnis",
+    participation: "Teilnahme",
+    unknown: "Unbekannt",
+    bogota: "Bogotá"
+  },
+  ar: {
+    all: "الكل",
+    group: "المجموعة",
+    round32: "دور الـ32",
+    round16: "دور الـ16",
+    quarterfinal: "ربع النهائي",
+    semifinal: "نصف النهائي",
+    third_place: "المركز الثالث",
+    final: "النهائي",
+    finished: "انتهت",
+    live_locked: "جارية / مقفلة",
+    locked: "مقفلة",
+    closes_in_min: "يغلق خلال {value} دقيقة",
+    closes_in_hours: "يغلق خلال {value} ساعة",
+    closes_in_days: "يغلق خلال {value} يوم",
+    next_3_matches: "المباريات الثلاث القادمة",
+    live_ticker: "مباشر",
+    match_number: "المباراة #{id}",
+    exact_score: "نتيجة دقيقة",
+    real_draw: "نتيجة صحيحة",
+    participation: "مشاركة",
+    unknown: "غير معروف",
+    bogota: "بوغوتا"
+  },
+  ja: {
+    all: "すべて",
+    group: "グループ",
+    round32: "ラウンド32",
+    round16: "ラウンド16",
+    quarterfinal: "準々決勝",
+    semifinal: "準決勝",
+    third_place: "3位決定戦",
+    final: "決勝",
+    finished: "終了",
+    live_locked: "進行中 / ロック中",
+    locked: "ロック中",
+    closes_in_min: "{value}分で締切",
+    closes_in_hours: "{value}時間で締切",
+    closes_in_days: "{value}日で締切",
+    next_3_matches: "次の3試合",
+    live_ticker: "ライブ",
+    match_number: "試合 #{id}",
+    exact_score: "スコア的中",
+    real_draw: "結果的中",
+    participation: "参加",
+    unknown: "不明",
+    bogota: "ボゴタ"
+  },
+  ko: {
+    all: "전체",
+    group: "조",
+    round32: "32강",
+    round16: "16강",
+    quarterfinal: "8강",
+    semifinal: "준결승",
+    third_place: "3위 결정전",
+    final: "결승",
+    finished: "종료",
+    live_locked: "진행 중 / 잠김",
+    locked: "잠김",
+    closes_in_min: "{value}분 후 마감",
+    closes_in_hours: "{value}시간 후 마감",
+    closes_in_days: "{value}일 후 마감",
+    next_3_matches: "다음 3경기",
+    live_ticker: "라이브",
+    match_number: "경기 #{id}",
+    exact_score: "정확한 점수",
+    real_draw: "정확한 결과",
+    participation: "참여",
+    unknown: "알 수 없음",
+    bogota: "보고타"
+  },
+  ru: {
+    all: "Все",
+    group: "Группа",
+    round32: "1/16 финала",
+    round16: "1/8 финала",
+    quarterfinal: "Четвертьфинал",
+    semifinal: "Полуфинал",
+    third_place: "Матч за 3-е место",
+    final: "Финал",
+    finished: "Завершен",
+    live_locked: "Идет / Закрыто",
+    locked: "Закрыто",
+    closes_in_min: "Закроется через {value} мин",
+    closes_in_hours: "Закроется через {value} ч",
+    closes_in_days: "Закроется через {value} дн.",
+    next_3_matches: "Следующие 3 матча",
+    live_ticker: "Онлайн",
+    match_number: "Матч #{id}",
+    exact_score: "Точный счет",
+    real_draw: "Верный исход",
+    participation: "Участие",
+    unknown: "Неизвестно",
+    bogota: "Богота"
+  }
+};
+
+const TEAM_COUNTRY_CODES: Record<string, string> = {
+  "alemania": "DE",
+  "arabia saudita": "SA",
+  "arabia saudi": "SA",
+  "argelia": "DZ",
+  "argentina": "AR",
+  "australia": "AU",
+  "austria": "AT",
+  "belgica": "BE",
+  "bosnia y herzegovina": "BA",
+  "brasil": "BR",
+  "cabo verde": "CV",
+  "camerun": "CM",
+  "canada": "CA",
+  "catar": "QA",
+  "chile": "CL",
+  "colombia": "CO",
+  "corea del sur": "KR",
+  "costa de marfil": "CI",
+  "costa rica": "CR",
+  "croacia": "HR",
+  "curazao": "CW",
+  "dinamarca": "DK",
+  "ecuador": "EC",
+  "egipto": "EG",
+  "espana": "ES",
+  "estados unidos": "US",
+  "francia": "FR",
+  "ghana": "GH",
+  "haiti": "HT",
+  "honduras": "HN",
+  "irak": "IQ",
+  "iran": "IR",
+  "jamaica": "JM",
+  "japon": "JP",
+  "jordania": "JO",
+  "marruecos": "MA",
+  "mexico": "MX",
+  "nigeria": "NG",
+  "noruega": "NO",
+  "nueva zelanda": "NZ",
+  "paises bajos": "NL",
+  "panama": "PA",
+  "paraguay": "PY",
+  "polonia": "PL",
+  "portugal": "PT",
+  "rd congo": "CD",
+  "republica checa": "CZ",
+  "rep de corea": "KR",
+  "rep checa": "CZ",
+  "ri de iran": "IR",
+  "senegal": "SN",
+  "sudafrica": "ZA",
+  "suecia": "SE",
+  "suiza": "CH",
+  "tunez": "TN",
+  "turquia": "TR",
+  "ucrania": "UA",
+  "uruguay": "UY",
+  "uzbekistan": "UZ",
+  "venezuela": "VE"
+};
+
+const TEAM_MANUAL_TRANSLATIONS: Record<string, Record<string, string>> = {
+  england: { es: "Inglaterra", en: "England", pt: "Inglaterra", fr: "Angleterre", it: "Inghilterra", de: "England", ar: "إنجلترا", ja: "イングランド", ko: "잉글랜드", ru: "Англия" },
+  scotland: { es: "Escocia", en: "Scotland", pt: "Escócia", fr: "Écosse", it: "Scozia", de: "Schottland", ar: "اسكتلندا", ja: "スコットランド", ko: "스코틀랜드", ru: "Шотландия" }
+};
+
+const normalizeLookupKey = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\./g, "")
+    .toLowerCase()
+    .trim();
+
 const FLAGS_MAP: Record<string, string> = {
   "Estados Unidos": "🇺🇸",
   "Panamá": "🇵🇦",
@@ -805,9 +1137,27 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
 };
 
 // Tool to shorten long names to brief counterparts
+export function getTeamDisplayName(name: string, lang: string = "es"): string {
+  if (!name) return "";
+  const norm = normalizeLookupKey(name);
+  const manualKey = norm === "inglaterra" ? "england" : norm === "escocia" ? "scotland" : "";
+  if (manualKey) return TEAM_MANUAL_TRANSLATIONS[manualKey]?.[lang] || TEAM_MANUAL_TRANSLATIONS[manualKey]?.en || name;
+
+  const countryCode = TEAM_COUNTRY_CODES[norm];
+  if (!countryCode || lang === "es") return name;
+
+  try {
+    const displayNames = new Intl.DisplayNames([DATE_LOCALES[lang] || lang], { type: "region" });
+    return displayNames.of(countryCode) || name;
+  } catch {
+    return name;
+  }
+}
+
 export function getShortTeamName(name: string, lang: string = "es"): string {
   if (!name) return "";
   const norm = name.trim();
+  const displayName = getTeamDisplayName(name, lang);
   
   const translations: Record<string, { es: string; en: string }> = {
     "Estados Unidos": { es: "USA", en: "USA" },
@@ -852,7 +1202,7 @@ export function getShortTeamName(name: string, lang: string = "es"): string {
   if (item) {
     return lang === "es" ? item.es : item.en;
   }
-  return norm;
+  return displayName.length > 16 ? displayName.slice(0, 14).trimEnd() + "." : displayName;
 }
 
 export default function App() {
@@ -878,6 +1228,36 @@ export default function App() {
     const dict = TRANSLATIONS[lang];
     if (!dict) return fallback || key;
     return dict[key] || fallback || key;
+  };
+
+  const ui = (key: string, replacements: Record<string, string | number> = {}) => {
+    const dict = UI_COPY_BY_LANG[lang] || UI_COPY_BY_LANG.es;
+    let value = dict[key] || UI_COPY_BY_LANG.en[key] || key;
+    Object.entries(replacements).forEach(([token, replacement]) => {
+      value = value.replace(`{${token}}`, String(replacement));
+    });
+    return value;
+  };
+
+  const getStageLabel = (stage: string) => {
+    const groupMatch = stage.match(/^Grupo\s+([A-L])$/i);
+    if (groupMatch) return `${ui("group")} ${groupMatch[1]}`;
+    const stageKeyMap: Record<string, string> = {
+      Todos: "all",
+      "16avos de Final": "round32",
+      "Octavos de Final": "round16",
+      "Cuartos de Final": "quarterfinal",
+      Semifinal: "semifinal",
+      "Tercer Puesto": "third_place",
+      Final: "final"
+    };
+    return ui(stageKeyMap[stage] || stage);
+  };
+
+  const getPredictionReasonLabel = (reason: Prediction["reason"]) => {
+    if (reason === "exact") return ui("exact_score");
+    if (reason === "draw") return ui("real_draw");
+    return ui("participation");
   };
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
@@ -1760,7 +2140,7 @@ export default function App() {
       hour12: false,
       timeZone: "America/Bogota"
     };
-    return d.toLocaleString("es-CO", options) + " (Bogotá)";
+    return d.toLocaleString(DATE_LOCALES[lang] || "es-CO", options) + ` (${ui("bogota")})`;
   };
 
   // Checks block 15 mins before kick-off
@@ -1775,14 +2155,14 @@ export default function App() {
     const matchTime = new Date(match.date).getTime();
     const diff = matchTime - Date.now();
     if (diff < 0) {
-      return match.status === "finished" ? "Finalizado" : "En curso / Bloqueado";
+      return match.status === "finished" ? ui("finished") : ui("live_locked");
     }
     const diffMinutes = Math.floor(diff / 60000);
-    if (diffMinutes < 15) return "🔒 Bloqueado";
-    if (diffMinutes < 60) return `Cierra en ${diffMinutes} min`;
+    if (diffMinutes < 15) return `🔒 ${ui("locked")}`;
+    if (diffMinutes < 60) return ui("closes_in_min", { value: diffMinutes });
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `Cierra en ${diffHours} horas`;
-    return `Cierra en ${Math.floor(diffHours / 24)} días`;
+    if (diffHours < 24) return ui("closes_in_hours", { value: diffHours });
+    return ui("closes_in_days", { value: Math.floor(diffHours / 24) });
   };
 
   // Filtered lists
@@ -1796,6 +2176,9 @@ export default function App() {
     const contentMatch =
       m.local.toLowerCase().includes(searchText) ||
       m.visitor.toLowerCase().includes(searchText) ||
+      getTeamDisplayName(m.local, lang).toLowerCase().includes(searchText) ||
+      getTeamDisplayName(m.visitor, lang).toLowerCase().includes(searchText) ||
+      getStageLabel(m.stage).toLowerCase().includes(searchText) ||
       m.stadium.toLowerCase().includes(searchText) ||
       m.stage.toLowerCase().includes(searchText);
     return stageMatch && statusMatch && contentMatch;
@@ -2403,10 +2786,10 @@ export default function App() {
                       <div className="flex items-center justify-between">
                         <h4 className="text-[10px] font-extrabold text-amber-350 uppercase tracking-widest flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> 
-                          {lang === "es" ? "Próximos 3 Partidos" : "Next 3 Matches"}
+                          {ui("next_3_matches")}
                         </h4>
                         <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold uppercase tracking-wider">
-                          {lang === "es" ? "En Vivo" : "Live Ticker"}
+                          {ui("live_ticker")}
                         </span>
                       </div>
 
@@ -2424,7 +2807,7 @@ export default function App() {
                             >
                               <div className="flex items-center justify-between text-[9px] text-slate-400 font-medium">
                                 <span className="bg-slate-800/80 px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-wider uppercase text-emerald-300 border border-slate-705">
-                                  {m.stage}
+                                  {getStageLabel(m.stage)}
                                 </span>
                                 <span className="truncate max-w-[110px] text-slate-400 font-mono" title={m.stadium}>
                                   📍 {m.stadium}
@@ -2453,7 +2836,7 @@ export default function App() {
 
                               <div className="flex items-center justify-between text-[9px] px-0.5">
                                 <span className="text-emerald-300 font-medium font-mono">
-                                  📅 {formatMatchDate(m.date).replace(" (Bogotá)", "")}
+                                  📅 {formatMatchDate(m.date).replace(` (${ui("bogota")})`, "")}
                                 </span>
                                 <span className={`px-1.5 py-0.5 rounded-full font-bold uppercase text-[8px] tracking-wide ${
                                   isPending 
@@ -2689,7 +3072,7 @@ export default function App() {
                         value={selectedStage}
                         onChange={(e) => setSelectedStage(e.target.value)}
                       >
-                        {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {STAGES.map((s) => <option key={s} value={s}>{getStageLabel(s)}</option>)}
                       </select>
                     </div>
 
@@ -2739,7 +3122,7 @@ export default function App() {
                             {/* Match Header stage & details */}
                             <div className="w-full md:w-1/3 space-y-1">
                               <span className="inline-block bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                Partido #{m.id} • {m.stage}
+                                {ui("match_number", { id: m.id })} • {getStageLabel(m.stage)}
                               </span>
                               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 mt-1">
                                 <Clock className="w-3.5 h-3.5" />
@@ -2751,7 +3134,7 @@ export default function App() {
                             {/* Teams & Prediction Scoring Board Inputs */}
                             <div className="w-full md:w-2/5 flex items-center justify-center gap-3">
                               {/* HOME TEAM */}
-                              <div className="w-24 text-right font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={m.local}>
+                              <div className="w-24 text-right font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={getTeamDisplayName(m.local, lang)}>
                                 {getShortTeamName(m.local, lang)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span>
                               </div>
                               
@@ -2774,7 +3157,7 @@ export default function App() {
                                     </span>
                                   ) : (
                                     <span className="text-[9px] bg-amber-500/10 text-amber-600 border border-amber-500/20 px-1 rounded uppercase font-bold">
-                                      {t("pred_locked", "Bloqueado")}
+                                      {ui("locked")}
                                     </span>
                                   )}
                                 </div>
@@ -2814,7 +3197,7 @@ export default function App() {
                               )}
                               
                               {/* VISITOR TEAM */}
-                              <div className="w-24 text-left font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={m.visitor}>
+                              <div className="w-24 text-left font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={getTeamDisplayName(m.visitor, lang)}>
                                 <span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getShortTeamName(m.visitor, lang)}
                               </div>
                             </div>
@@ -2838,7 +3221,7 @@ export default function App() {
                                             +{pred.pointsEarned} Pts!!
                                           </span>
                                           <span className="block text-[9px] text-slate-400 capitalize">
-                                            {pred.reason === "exact" ? "🎯 Marcador Exacto" : pred.reason === "draw" ? "🤝 Empate Real" : "⚽ Participación"}
+                                            {pred.reason === "exact" ? "🎯 " : pred.reason === "draw" ? "🤝 " : "⚽ "}{getPredictionReasonLabel(pred.reason)}
                                           </span>
                                         </div>
                                       ) : (
