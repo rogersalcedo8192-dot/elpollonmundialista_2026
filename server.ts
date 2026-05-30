@@ -433,6 +433,72 @@ function pruneNonApiMatches(db: DatabaseSchema) {
   };
 }
 
+function replaceMatchesWithApiSource(db: DatabaseSchema, incomingMatches: Match[]) {
+  const oldMatches = [...db.matches];
+  const usedOldIds = new Set<number>();
+  const idRemap = new Map<number, number>();
+  const nextMatchId = (() => {
+    let nextId = oldMatches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
+    return () => nextId++;
+  })();
+
+  const authoritativeMatches = incomingMatches.map((incoming) => {
+    const existing = oldMatches.find((match) =>
+      !usedOldIds.has(match.id) &&
+      match.externalSource === FOOTBALL_DATA_SOURCE &&
+      match.externalSourceId === incoming.externalSourceId
+    ) || oldMatches.find((match) =>
+      !usedOldIds.has(match.id) &&
+      isSameFixtureCandidate(match, incoming)
+    );
+
+    if (!existing) {
+      return { ...incoming, id: nextMatchId() };
+    }
+
+    usedOldIds.add(existing.id);
+    idRemap.set(existing.id, existing.id);
+    return { ...incoming, id: existing.id };
+  });
+
+  oldMatches.forEach((oldMatch) => {
+    if (usedOldIds.has(oldMatch.id)) return;
+    const replacement = authoritativeMatches.find((match) => isSameFixtureCandidate(oldMatch, match));
+    if (replacement) idRemap.set(oldMatch.id, replacement.id);
+  });
+
+  let predictionsRemoved = 0;
+  db.predictions = db.predictions.flatMap((prediction) => {
+    const remappedMatchId = idRemap.get(prediction.matchId);
+    if (!remappedMatchId) {
+      predictionsRemoved += 1;
+      return [];
+    }
+
+    const duplicatePrediction = db.predictions.find((candidate) =>
+      candidate !== prediction &&
+      candidate.userId === prediction.userId &&
+      candidate.matchId === remappedMatchId
+    );
+    if (duplicatePrediction && prediction.matchId !== remappedMatchId) {
+      predictionsRemoved += 1;
+      return [];
+    }
+
+    return [{ ...prediction, matchId: remappedMatchId }];
+  });
+
+  const previousCount = db.matches.length;
+  db.matches = authoritativeMatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  return {
+    previousCount,
+    finalCount: db.matches.length,
+    removed: Math.max(0, previousCount - db.matches.length),
+    predictionsRemoved
+  };
+}
+
 if (hasCloudinaryConfig) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -2235,6 +2301,7 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
     let ignored = 0;
     let resultChanged = false;
     let nextId = db.matches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
+    const incomingMatches: Match[] = [];
 
     apiMatches.forEach((apiMatch: any) => {
       const homeName = normalizeExternalTeamName(apiMatch?.homeTeam?.name);
@@ -2258,6 +2325,7 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
         externalSource: FOOTBALL_DATA_SOURCE,
         externalSourceId: String(apiMatch.id)
       };
+      incomingMatches.push(incoming);
 
       const existing = db.matches.find((match) =>
         match.externalSource === FOOTBALL_DATA_SOURCE &&
@@ -2291,8 +2359,13 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
       }
     });
 
-    const merged = mergeDuplicateMatches(db);
-    const apiOnlyCleanup = apiOnly ? pruneNonApiMatches(db) : { pruned: 0, predictionsRemoved: 0 };
+    const strictApiReplacement = apiOnly
+      ? replaceMatchesWithApiSource(db, incomingMatches)
+      : null;
+    const merged = apiOnly ? 0 : mergeDuplicateMatches(db);
+    const apiOnlyCleanup = apiOnly
+      ? { pruned: strictApiReplacement?.removed || 0, predictionsRemoved: strictApiReplacement?.predictionsRemoved || 0 }
+      : { pruned: 0, predictionsRemoved: 0 };
     saveDb(db);
     if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0) recalculateScoresAndRankings();
 
@@ -2306,6 +2379,7 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
       merged,
       pruned: apiOnlyCleanup.pruned,
       predictionsRemoved: apiOnlyCleanup.predictionsRemoved,
+      finalCount: strictApiReplacement?.finalCount ?? db.matches.length,
       recalculated: resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0
     });
   } catch (err: any) {
