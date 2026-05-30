@@ -207,6 +207,28 @@ function getCloudinaryResourceType(assetType: UploadedAsset["type"]): UploadedAs
   return "raw";
 }
 
+function getCloudinaryErrorMessage(err: unknown) {
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === "object") {
+    const anyErr = err as any;
+    const message =
+      anyErr.message ||
+      anyErr.error?.message ||
+      anyErr.response?.body?.error?.message ||
+      anyErr.response?.text ||
+      anyErr.http_code && `HTTP ${anyErr.http_code}`;
+
+    if (message) return String(message);
+
+    try {
+      return JSON.stringify(anyErr);
+    } catch {
+      return String(anyErr);
+    }
+  }
+  return String(err || "Error desconocido de Cloudinary");
+}
+
 function sanitizeFileName(fileName: string) {
   const ext = path.extname(fileName).toLowerCase();
   const base = path.basename(fileName, ext)
@@ -1584,6 +1606,14 @@ app.post("/api/admin/assets", async (req, res) => {
 
   if (hasCloudinaryConfig) {
     try {
+      if (
+        !process.env.CLOUDINARY_CLOUD_NAME?.trim() ||
+        !process.env.CLOUDINARY_API_KEY?.trim() ||
+        !process.env.CLOUDINARY_API_SECRET?.trim()
+      ) {
+        return res.status(500).json({ error: "Cloudinary no esta configurado correctamente en Railway." });
+      }
+
       const uploadResult: UploadApiResponse = await cloudinary.uploader.upload(data, {
         folder: "polla-mundialista-2026/assets",
         resource_type: "auto",
@@ -1599,7 +1629,7 @@ app.post("/api/admin/assets", async (req, res) => {
       storageProvider = "cloudinary";
     } catch (err) {
       console.error("Error uploading to Cloudinary:", err);
-      const cloudinaryMessage = err instanceof Error ? err.message : "Error desconocido de Cloudinary";
+      const cloudinaryMessage = getCloudinaryErrorMessage(err);
       return res.status(500).json({ error: `No se pudo cargar el archivo en Cloudinary: ${cloudinaryMessage}` });
     }
   } else {
