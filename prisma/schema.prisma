@@ -68,8 +68,6 @@ model Match {
   updatedAt        DateTime @updatedAt
 
   predictions Prediction[]
-
-  @@unique([externalSource, externalSourceId])
 }
 
 model Prediction {
