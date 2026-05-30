@@ -527,10 +527,30 @@ const FLAGS_CODE_MAP: Record<string, string> = {
   "Uzbekistán": "uz"
 };
 
+const FLAGS_CODE_ALIAS_MAP: Record<string, string> = {
+  "south korea": "kr",
+  "korea republic": "kr",
+  "rep de corea": "kr",
+  "republica de corea": "kr",
+  "czech republic": "cz",
+  "czechia": "cz",
+  "rep checa": "cz",
+  "bosnia herzegovina": "ba",
+  "bosnia and herzegovina": "ba",
+  "bosnia y herzegovina": "ba",
+  "qatar": "qa",
+  "catar": "qa",
+  "haiti": "ht",
+  "rd congo": "cd",
+  "congo dr": "cd",
+  "dr congo": "cd",
+  "uzbekistan": "uz"
+};
+
 export function getTeamFlag(teamName: string): React.ReactNode {
   if (!teamName) return <span className="select-none">🏳️</span>;
   const norm = teamName.trim();
-  const code = FLAGS_CODE_MAP[norm];
+  const code = FLAGS_CODE_MAP[norm] || FLAGS_CODE_ALIAS_MAP[normalizeLookupKey(norm)];
   if (code) {
     return (
       <span className="inline-flex items-center justify-center select-none" style={{ verticalAlign: "middle" }}>

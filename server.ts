@@ -218,6 +218,7 @@ const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Japan": "Japón",
   "Korea Republic": "Rep. de Corea",
   "Korea, Republic of": "Rep. de Corea",
+  "South Korea": "Rep. de Corea",
   "Mexico": "México",
   "Morocco": "Marruecos",
   "Netherlands": "Países Bajos",
@@ -228,6 +229,7 @@ const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Paraguay": "Paraguay",
   "Poland": "Polonia",
   "Portugal": "Portugal",
+  "Qatar": "Catar",
   "Saudi Arabia": "Arabia Saudí",
   "Scotland": "Escocia",
   "Senegal": "Senegal",
@@ -243,6 +245,9 @@ const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "USA": "Estados Unidos",
   "Uruguay": "Uruguay",
   "Venezuela": "Venezuela",
+  "Bosnia-Herzegovina": "Bosnia y Herzegovina",
+  "Bosnia and Herzegovina": "Bosnia y Herzegovina",
+  "Haiti": "Haití",
   "Congo DR": "RD Congo",
   "DR Congo": "RD Congo",
   "Democratic Republic of the Congo": "RD Congo"
@@ -437,12 +442,10 @@ function replaceMatchesWithApiSource(db: DatabaseSchema, incomingMatches: Match[
   const oldMatches = [...db.matches];
   const usedOldIds = new Set<number>();
   const idRemap = new Map<number, number>();
-  const nextMatchId = (() => {
-    let nextId = oldMatches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
-    return () => nextId++;
-  })();
 
-  const authoritativeMatches = incomingMatches.map((incoming) => {
+  const matchedIncoming = [...incomingMatches]
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((incoming) => {
     const existing = oldMatches.find((match) =>
       !usedOldIds.has(match.id) &&
       match.externalSource === FOOTBALL_DATA_SOURCE &&
@@ -453,12 +456,17 @@ function replaceMatchesWithApiSource(db: DatabaseSchema, incomingMatches: Match[
     );
 
     if (!existing) {
-      return { ...incoming, id: nextMatchId() };
+      return { incoming, oldId: null as number | null };
     }
 
     usedOldIds.add(existing.id);
-    idRemap.set(existing.id, existing.id);
-    return { ...incoming, id: existing.id };
+    return { incoming, oldId: existing.id };
+  });
+
+  const authoritativeMatches = matchedIncoming.map(({ incoming, oldId }, index) => {
+    const nextId = index + 1;
+    if (oldId !== null) idRemap.set(oldId, nextId);
+    return { ...incoming, id: nextId };
   });
 
   oldMatches.forEach((oldMatch) => {
@@ -468,6 +476,7 @@ function replaceMatchesWithApiSource(db: DatabaseSchema, incomingMatches: Match[
   });
 
   let predictionsRemoved = 0;
+  const seenPredictions = new Set<string>();
   db.predictions = db.predictions.flatMap((prediction) => {
     const remappedMatchId = idRemap.get(prediction.matchId);
     if (!remappedMatchId) {
@@ -475,21 +484,18 @@ function replaceMatchesWithApiSource(db: DatabaseSchema, incomingMatches: Match[
       return [];
     }
 
-    const duplicatePrediction = db.predictions.find((candidate) =>
-      candidate !== prediction &&
-      candidate.userId === prediction.userId &&
-      candidate.matchId === remappedMatchId
-    );
-    if (duplicatePrediction && prediction.matchId !== remappedMatchId) {
+    const predictionKey = `${prediction.userId}:${remappedMatchId}`;
+    if (seenPredictions.has(predictionKey)) {
       predictionsRemoved += 1;
       return [];
     }
+    seenPredictions.add(predictionKey);
 
     return [{ ...prediction, matchId: remappedMatchId }];
   });
 
   const previousCount = db.matches.length;
-  db.matches = authoritativeMatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  db.matches = authoritativeMatches;
 
   return {
     previousCount,
