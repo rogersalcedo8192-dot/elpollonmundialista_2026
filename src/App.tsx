@@ -544,6 +544,16 @@ const FLAGS_CODE_ALIAS_MAP: Record<string, string> = {
   "rd congo": "cd",
   "congo dr": "cd",
   "dr congo": "cd",
+  "tunisia": "tn",
+  "curacao": "cw",
+  "curazao": "cw",
+  "ivory coast": "ci",
+  "cote d ivoire": "ci",
+  "costa de marfil": "ci",
+  "jordan": "jo",
+  "jordania": "jo",
+  "algeria": "dz",
+  "argelia": "dz",
   "uzbekistan": "uz"
 };
 
