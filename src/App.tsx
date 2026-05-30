@@ -36,7 +36,8 @@ import {
   Image as ImageIcon,
   Video,
   Megaphone,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from "lucide-react";
 import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
@@ -926,10 +927,16 @@ export default function App() {
     linkUrl: "",
     placement: "home_top" as SponsorBanner["placement"],
     active: true,
+    rotationSeconds: 5 as 5 | 10,
     startsAt: "",
     endsAt: ""
   });
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
+  const [bannerRotationIndex, setBannerRotationIndex] = useState<Record<SponsorBanner["placement"], number>>({
+    home_top: 0,
+    sidebar: 0,
+    rules: 0
+  });
   const [assetUploadBusy, setAssetUploadBusy] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
@@ -1607,6 +1614,7 @@ export default function App() {
       linkUrl: "",
       placement: "home_top",
       active: true,
+      rotationSeconds: 5,
       startsAt: "",
       endsAt: ""
     });
@@ -1642,10 +1650,22 @@ export default function App() {
       linkUrl: banner.linkUrl || "",
       placement: banner.placement,
       active: banner.active,
+      rotationSeconds: banner.rotationSeconds || 5,
       startsAt: banner.startsAt ? banner.startsAt.slice(0, 16) : "",
       endsAt: banner.endsAt ? banner.endsAt.slice(0, 16) : ""
     });
   };
+
+  const copyTextToClipboard = async (text: string, successMessage = "URL copiada al portapapeles") => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(successMessage, "success");
+    } catch {
+      showToast("No se pudo copiar automaticamente. Selecciona y copia la URL manualmente.", "error");
+    }
+  };
+
+  const imageAssets = uploadedAssets.filter((asset) => asset.type === "image");
 
   const handleDeleteBanner = async (bannerId: string) => {
     if (!confirm("Desea eliminar este banner publicitario?")) return;
@@ -1758,6 +1778,40 @@ export default function App() {
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
   const sidebarBanners = sponsorBanners.filter((banner) => banner.placement === "sidebar");
   const rulesBanners = sponsorBanners.filter((banner) => banner.placement === "rules");
+
+  useEffect(() => {
+    const placements: SponsorBanner["placement"][] = ["home_top", "sidebar", "rules"];
+    const timers = placements.map((placement) => {
+      const bannersForPlacement = sponsorBanners.filter((banner) => banner.placement === placement);
+      if (bannersForPlacement.length <= 1) return null;
+
+      const currentIndex = bannerRotationIndex[placement] % bannersForPlacement.length;
+      const currentBanner = bannersForPlacement[currentIndex];
+      const delay = (currentBanner.rotationSeconds || 5) * 1000;
+
+      return window.setTimeout(() => {
+        setBannerRotationIndex((prev) => ({
+          ...prev,
+          [placement]: ((prev[placement] || 0) + 1) % bannersForPlacement.length
+        }));
+      }, delay);
+    });
+
+    return () => {
+      timers.forEach((timer) => {
+        if (timer) window.clearTimeout(timer);
+      });
+    };
+  }, [sponsorBanners, bannerRotationIndex]);
+
+  const getRotatingBanner = (banners: SponsorBanner[], placement: SponsorBanner["placement"]) => {
+    if (banners.length === 0) return null;
+    return banners[bannerRotationIndex[placement] % banners.length];
+  };
+
+  const activeTopBanner = getRotatingBanner(topBanners, "home_top");
+  const activeSidebarBanner = getRotatingBanner(sidebarBanners, "sidebar");
+  const activeRulesBanner = getRotatingBanner(rulesBanners, "rules");
 
   // SVG Sparkline drawing helper for User evolution points chart
   const renderSparkline = (pointsArray: number[]) => {
@@ -2342,11 +2396,9 @@ export default function App() {
                   );
                 })()}
 
-                {sidebarBanners.length > 0 && (
+                {activeSidebarBanner && (
                   <div className="space-y-3">
-                    {sidebarBanners.slice(0, 2).map((banner) => (
-                      <div key={banner.id}>{renderSponsorBanner(banner)}</div>
-                    ))}
+                    {renderSponsorBanner(activeSidebarBanner)}
                   </div>
                 )}
                 
@@ -2355,11 +2407,9 @@ export default function App() {
 
             {/* Content Area */}
             <section className="flex-1 min-w-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 md:p-6 overflow-hidden transition-colors">
-              {topBanners.length > 0 && activeTab !== "admin-banners" && (
-                <div className="mb-5 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {topBanners.slice(0, 2).map((banner) => (
-                    <div key={banner.id}>{renderSponsorBanner(banner)}</div>
-                  ))}
+              {activeTopBanner && activeTab !== "admin-banners" && (
+                <div className="mb-5">
+                  {renderSponsorBanner(activeTopBanner)}
                 </div>
               )}
               
@@ -2847,11 +2897,9 @@ export default function App() {
                       </div>
                     </div>
 
-                    {rulesBanners.length > 0 && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        {rulesBanners.slice(0, 2).map((banner) => (
-                          <div key={banner.id}>{renderSponsorBanner(banner)}</div>
-                        ))}
+                    {activeRulesBanner && (
+                      <div>
+                        {renderSponsorBanner(activeRulesBanner)}
                       </div>
                     )}
 
@@ -3698,6 +3746,14 @@ export default function App() {
                               </a>
                               <button
                                 type="button"
+                                onClick={() => copyTextToClipboard(asset.url)}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-xs font-bold"
+                                title="Copiar URL"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => handleDeleteAsset(asset.id)}
                                 className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold"
                                 title="Eliminar"
@@ -3734,7 +3790,27 @@ export default function App() {
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">URL de imagen</label>
-                        <input className="w-full bg-white dark:bg-slate-900 border rounded p-2 font-mono" value={bannerForm.imageUrl} onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })} required placeholder="https://res.cloudinary.com/..." />
+                        <div className="flex gap-2">
+                          <input className="w-full bg-white dark:bg-slate-900 border rounded p-2 font-mono" value={bannerForm.imageUrl} onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })} required placeholder="https://res.cloudinary.com/..." />
+                          <button type="button" onClick={() => bannerForm.imageUrl && copyTextToClipboard(bannerForm.imageUrl)} className="px-3 py-2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" title="Copiar URL">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+                        {imageAssets.length > 0 && (
+                          <select
+                            className="mt-2 w-full bg-white dark:bg-slate-900 border rounded p-2 text-[11px]"
+                            value=""
+                            onChange={(e) => {
+                              const selected = imageAssets.find((asset) => asset.id === e.target.value);
+                              if (selected) setBannerForm({ ...bannerForm, imageUrl: selected.url });
+                            }}
+                          >
+                            <option value="">Usar imagen ya subida...</option>
+                            {imageAssets.map((asset) => (
+                              <option key={asset.id} value={asset.id}>{asset.originalName} - {asset.storageProvider === "cloudinary" ? "Cloudinary" : "Local"}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                       <div>
                         <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Link destino</label>
@@ -3746,6 +3822,13 @@ export default function App() {
                           <option value="home_top">Superior principal</option>
                           <option value="sidebar">Lateral</option>
                           <option value="rules">Reglas y premiaciones</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Rotacion</label>
+                        <select className="w-full bg-white dark:bg-slate-900 border rounded p-2" value={bannerForm.rotationSeconds} onChange={(e) => setBannerForm({ ...bannerForm, rotationSeconds: Number(e.target.value) as 5 | 10 })}>
+                          <option value={5}>Cada 5 segundos</option>
+                          <option value={10}>Cada 10 segundos</option>
                         </select>
                       </div>
                       <div>
@@ -3781,7 +3864,7 @@ export default function App() {
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="font-bold text-slate-900 dark:text-slate-100">{banner.sponsorName}</p>
-                              <p className="text-[10px] text-slate-500">{banner.placement} · {banner.active ? "Activo" : "Inactivo"}</p>
+                              <p className="text-[10px] text-slate-500">{banner.placement} · {banner.active ? "Activo" : "Inactivo"} · {banner.rotationSeconds || 5}s</p>
                             </div>
                             <div className="flex gap-2">
                               <button type="button" onClick={() => handleEditBanner(banner)} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800" title="Editar">

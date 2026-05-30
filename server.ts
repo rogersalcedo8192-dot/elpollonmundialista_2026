@@ -151,6 +151,7 @@ interface SponsorBanner {
   linkUrl?: string;
   placement: "home_top" | "sidebar" | "rules";
   active: boolean;
+  rotationSeconds: 5 | 10;
   startsAt?: string;
   endsAt?: string;
   createdAt: string;
@@ -469,6 +470,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       linkUrl: banner.linkUrl || undefined,
       placement: banner.placement as SponsorBanner["placement"],
       active: banner.active,
+      rotationSeconds: banner.rotationSeconds === 10 ? 10 : 5,
       startsAt: dateToIso(banner.startsAt) || undefined,
       endsAt: dateToIso(banner.endsAt) || undefined,
       createdAt: banner.createdAt.toISOString(),
@@ -685,6 +687,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           linkUrl: banner.linkUrl || null,
           placement: banner.placement,
           active: banner.active,
+          rotationSeconds: banner.rotationSeconds || 5,
           startsAt: banner.startsAt ? new Date(banner.startsAt) : null,
           endsAt: banner.endsAt ? new Date(banner.endsAt) : null,
           createdAt: new Date(banner.createdAt),
@@ -1777,7 +1780,7 @@ app.post("/api/admin/banners", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
-  const { title, sponsorName, imageUrl, linkUrl, placement, active, startsAt, endsAt } = req.body;
+  const { title, sponsorName, imageUrl, linkUrl, placement, active, rotationSeconds, startsAt, endsAt } = req.body;
   if (!title || !sponsorName || !imageUrl) {
     return res.status(400).json({ error: "Titulo, anunciante e imagen son obligatorios." });
   }
@@ -1794,6 +1797,7 @@ app.post("/api/admin/banners", (req, res) => {
     linkUrl: linkUrl || undefined,
     placement: normalizedPlacement,
     active: active !== false,
+    rotationSeconds: Number(rotationSeconds) === 10 ? 10 : 5,
     startsAt: startsAt || undefined,
     endsAt: endsAt || undefined,
     createdAt: now,
@@ -1816,13 +1820,14 @@ app.put("/api/admin/banners/:id", (req, res) => {
   const banner = db.sponsorBanners?.find((item) => item.id === req.params.id);
   if (!banner) return res.status(404).json({ error: "Banner no encontrado." });
 
-  const { title, sponsorName, imageUrl, linkUrl, placement, active, startsAt, endsAt } = req.body;
+  const { title, sponsorName, imageUrl, linkUrl, placement, active, rotationSeconds, startsAt, endsAt } = req.body;
   if (title !== undefined) banner.title = title;
   if (sponsorName !== undefined) banner.sponsorName = sponsorName;
   if (imageUrl !== undefined) banner.imageUrl = imageUrl;
   if (linkUrl !== undefined) banner.linkUrl = linkUrl || undefined;
   if (["home_top", "sidebar", "rules"].includes(placement)) banner.placement = placement;
   if (active !== undefined) banner.active = Boolean(active);
+  if (rotationSeconds !== undefined) banner.rotationSeconds = Number(rotationSeconds) === 10 ? 10 : 5;
   if (startsAt !== undefined) banner.startsAt = startsAt || undefined;
   if (endsAt !== undefined) banner.endsAt = endsAt || undefined;
   banner.updatedAt = new Date().toISOString();

@@ -229,6 +229,7 @@ async function main() {
           linkUrl: banner.linkUrl || null,
           placement: banner.placement,
           active: Boolean(banner.active),
+          rotationSeconds: banner.rotationSeconds === 10 ? 10 : 5,
           startsAt: banner.startsAt ? asDate(banner.startsAt) : null,
           endsAt: banner.endsAt ? asDate(banner.endsAt) : null,
           createdAt: asDate(banner.createdAt),

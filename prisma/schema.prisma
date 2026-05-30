@@ -182,6 +182,7 @@ model SponsorBanner {
   linkUrl     String?
   placement   String
   active      Boolean  @default(true)
+  rotationSeconds Int   @default(5)
   startsAt    DateTime?
   endsAt      DateTime?
   createdAt   DateTime @default(now())

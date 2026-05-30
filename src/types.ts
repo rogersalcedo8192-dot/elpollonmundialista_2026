@@ -159,6 +159,7 @@ export interface SponsorBanner {
   linkUrl?: string;
   placement: "home_top" | "sidebar" | "rules";
   active: boolean;
+  rotationSeconds: 5 | 10;
   startsAt?: string;
   endsAt?: string;
   createdAt: string;
