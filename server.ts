@@ -28,6 +28,7 @@ interface User {
   email: string;
   password?: string;
   name: string;
+  country?: string;
   role: "admin" | "standard";
   status: "active" | "suspended";
   avatar: string;
@@ -109,6 +110,7 @@ interface Ranking {
   userId: string;
   userName: string;
   userAvatar: string;
+  userCountry?: string;
   points: number;
   exactCount: number;
   drawCount: number;
@@ -805,6 +807,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       email: u.email,
       password: u.password || undefined,
       name: u.name,
+      country: u.country || "Colombia",
       role: u.role as User["role"],
       status: u.status as User["status"],
       avatar: u.avatar,
@@ -852,6 +855,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       userId: r.userId,
       userName: r.userName,
       userAvatar: r.userAvatar,
+      userCountry: r.userCountry || undefined,
       points: r.points,
       exactCount: r.exactCount,
       drawCount: r.drawCount,
@@ -984,6 +988,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           email: u.email,
           password: u.password || null,
           name: u.name,
+          country: u.country || "Colombia",
           role: u.role,
           status: u.status,
           avatar: u.avatar,
@@ -1047,6 +1052,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           userId: r.userId,
           userName: r.userName,
           userAvatar: r.userAvatar,
+          userCountry: r.userCountry || null,
           points: r.points,
           exactCount: r.exactCount,
           drawCount: r.drawCount,
@@ -1423,6 +1429,7 @@ function createDefaultDb(): DatabaseSchema {
       userId: u.id,
       userName: u.name,
       userAvatar: u.avatar,
+      userCountry: u.country || "Colombia",
       points: totPoints,
       exactCount,
       drawCount,
@@ -1726,6 +1733,7 @@ function recalculateScoresAndRankings() {
       userId: u.id,
       name: u.name,
       avatar: u.avatar,
+      country: u.country || "Colombia",
       points: totalPoints,
       exactCount: exactHits,
       drawCount: drawHits,
@@ -1783,6 +1791,7 @@ function recalculateScoresAndRankings() {
       userId: ru.userId,
       userName: ru.name,
       userAvatar: ru.avatar,
+      userCountry: ru.country || "Colombia",
       points: ru.points,
       exactCount: ru.exactCount,
       drawCount: ru.drawCount,
@@ -1872,7 +1881,7 @@ app.post("/api/auth/register", (req, res) => {
     return res.status(400).json({ error: "El registro público de nuevos participantes está desactivado por el administrador." });
   }
 
-  const { email, password, name, avatar } = req.body;
+  const { email, password, name, avatar, country } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "Todos los campos obligatorios (nombre, correo, contraseña) son necesarios." });
   }
@@ -1902,6 +1911,7 @@ app.post("/api/auth/register", (req, res) => {
     email: email.toLowerCase(),
     password,
     name,
+    country: String(country || "Colombia").trim() || "Colombia",
     role: "standard",
     status: "active",
     avatar: avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120",
@@ -1972,7 +1982,7 @@ app.put("/api/auth/profile", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
 
-  const { name, avatar, emailSubscribed, newPassword } = req.body;
+  const { name, avatar, country, emailSubscribed, newPassword } = req.body;
   
   const db = loadDb();
   const dbUser = db.users.find((u) => u.id === user.id);
@@ -1980,6 +1990,7 @@ app.put("/api/auth/profile", (req, res) => {
 
   if (name) dbUser.name = name;
   if (avatar) dbUser.avatar = avatar;
+  if (country !== undefined) dbUser.country = String(country || "Colombia").trim() || "Colombia";
   if (emailSubscribed !== undefined) dbUser.emailSubscribed = emailSubscribed;
   if (newPassword) dbUser.password = newPassword;
 
@@ -2094,6 +2105,7 @@ app.get("/api/admin/users", (req, res) => {
     id: u.id,
     email: u.email,
     name: u.name,
+    country: u.country || "Colombia",
     role: u.role,
     status: u.status,
     avatar: u.avatar,
@@ -2113,7 +2125,7 @@ app.post("/api/admin/users", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
-  const { name, email, password, role, status, avatar } = req.body;
+  const { name, email, password, role, status, avatar, country } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Datos del usuario incompletos." });
   }
@@ -2127,6 +2139,7 @@ app.post("/api/admin/users", (req, res) => {
     email: email.toLowerCase(),
     password,
     name,
+    country: String(country || "Colombia").trim() || "Colombia",
     role: role || "standard",
     status: status || "active",
     avatar: avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120",
@@ -2153,7 +2166,7 @@ app.put("/api/admin/users/:id", (req, res) => {
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
   const { id } = req.params;
-  const { name, email, role, status, password, avatar } = req.body;
+  const { name, email, role, status, password, avatar, country } = req.body;
 
   const db = loadDb();
   const dbUser = db.users.find((u) => u.id === id);
@@ -2161,6 +2174,7 @@ app.put("/api/admin/users/:id", (req, res) => {
 
   if (name) dbUser.name = name;
   if (email) dbUser.email = email.toLowerCase();
+  if (country !== undefined) dbUser.country = String(country || "Colombia").trim() || "Colombia";
   if (role) dbUser.role = role;
   if (status) dbUser.status = status;
   if (password) dbUser.password = password;
@@ -2990,7 +3004,11 @@ app.post("/api/tournament-outcomes", (req, res) => {
 // API: Leaderboards
 app.get("/api/rankings", (req, res) => {
   const db = loadDb();
-  res.json(db.rankings);
+  const usersById = new Map(db.users.map((u) => [u.id, u]));
+  res.json(db.rankings.map((ranking) => ({
+    ...ranking,
+    userCountry: ranking.userCountry || usersById.get(ranking.userId)?.country || "Colombia"
+  })));
 });
 
 // API: Announcements / Comunicados

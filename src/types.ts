@@ -20,6 +20,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  country?: string;
   role: "admin" | "standard";
   status: "active" | "suspended";
   avatar: string;
@@ -102,6 +103,7 @@ export interface Ranking {
   userId: string;
   userName: string;
   userAvatar: string;
+  userCountry?: string;
   points: number;
   exactCount: number;
   drawCount: number;

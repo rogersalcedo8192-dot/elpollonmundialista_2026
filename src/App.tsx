@@ -55,6 +55,24 @@ const AVATARS = [
   "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120"
 ];
 
+const COUNTRY_OPTIONS = [
+  "Colombia",
+  "Estados Unidos",
+  "México",
+  "Argentina",
+  "Brasil",
+  "Chile",
+  "Perú",
+  "Ecuador",
+  "Venezuela",
+  "Uruguay",
+  "Paraguay",
+  "Bolivia",
+  "España",
+  "Canadá",
+  "Otro"
+];
+
 const STAGES = [
   "Todos",
   "Grupo A", "Grupo B", "Grupo C", "Grupo D",
@@ -1321,6 +1339,7 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState("");
   const [authConfirmPassword, setAuthConfirmPassword] = useState("");
   const [authName, setAuthName] = useState("");
+  const [authCountry, setAuthCountry] = useState("Colombia");
   const [authAvatar, setAuthAvatar] = useState(AVATARS[0]);
   const [authMode, setAuthMode] = useState<"login" | "register" | "recover">("login");
   const [showAuthPassword, setShowAuthPassword] = useState(false);
@@ -1336,6 +1355,7 @@ export default function App() {
 
   // Manage Profiles states
   const [profileName, setProfileName] = useState("");
+  const [profileCountry, setProfileCountry] = useState("Colombia");
   const [profileAvatar, setProfileAvatar] = useState("");
   const [profileEmailSubscribed, setProfileEmailSubscribed] = useState(true);
   const [profileNewPass, setProfileNewPass] = useState("");
@@ -1569,6 +1589,7 @@ export default function App() {
     if (currentUser) {
       fetchUserSpecificData();
       setProfileName(currentUser.name);
+      setProfileCountry(currentUser.country || "Colombia");
       setProfileAvatar(currentUser.avatar);
       setProfileEmailSubscribed(currentUser.emailSubscribed || false);
     } else {
@@ -1666,6 +1687,7 @@ export default function App() {
           email: authEmail,
           password: authPassword,
           name: authName,
+          country: authCountry,
           avatar: authAvatar
         })
       });
@@ -1679,6 +1701,7 @@ export default function App() {
       setAuthConfirmPassword("");
       setAuthEmail("");
       setAuthName("");
+      setAuthCountry("Colombia");
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -1731,6 +1754,7 @@ export default function App() {
     try {
       const reqPayload: any = {
         name: profileName,
+        country: profileCountry,
         avatar: profileAvatar,
         emailSubscribed: profileEmailSubscribed
       };
@@ -2000,9 +2024,9 @@ export default function App() {
   const handleExportRankingCSV = () => {
     try {
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "Posicion,Nombre,Puntos,Exactos(15pts),Empates(10pts),Partidos Predichos\n";
+      csvContent += "Posicion,Nombre,Pais,Puntos,Exactos(15pts),Empates(10pts),Partidos Predichos\n";
       rankings.forEach((r) => {
-        csvContent += `${r.position},"${r.userName}",${r.points},${r.exactCount},${r.drawCount},${r.predictCount}\n`;
+        csvContent += `${r.position},"${r.userName}","${r.userCountry || "Colombia"}",${r.points},${r.exactCount},${r.drawCount},${r.predictCount}\n`;
       });
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -2711,6 +2735,21 @@ export default function App() {
                   </div>
 
                   <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">País</label>
+                    <select
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      value={authCountry}
+                      onChange={(e) => setAuthCountry(e.target.value)}
+                      required
+                    >
+                      {COUNTRY_OPTIONS.map((country) => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 mt-1">Se mostrará en la tabla de clasificación.</p>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_choose_avatar", "Elige un Avatar")}</label>
                     <div className="grid grid-cols-6 gap-2 pt-1">
                       {AVATARS.map((av, idx) => (
@@ -3261,6 +3300,20 @@ export default function App() {
                         </div>
 
                         <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">País</label>
+                          <select
+                            className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                            value={profileCountry}
+                            onChange={(e) => setProfileCountry(e.target.value)}
+                            required
+                          >
+                            {COUNTRY_OPTIONS.map((country) => (
+                              <option key={country} value={country}>{country}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
                           <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("db_label_pass", "Nueva Contraseña (Dejar vacío para conservar actual)")}</label>
                           <input
                             type="password"
@@ -3717,6 +3770,7 @@ export default function App() {
                           <tr>
                             <th className="py-2.5 px-3 w-12 text-center">{t("rank_col_pos", "Pos")}</th>
                             <th className="py-2.5 px-3">{t("rank_col_name", "Nombre")}</th>
+                            <th className="py-2.5 px-3 hidden md:table-cell">País</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_pts", "Pts Totales")}</th>
                             <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_exact", "Aciertos 15pts")}</th>
                             <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_draw", "Empates 10pts")}</th>
@@ -3751,6 +3805,12 @@ export default function App() {
                                       {r.userName} {isSelf && <span className="bg-emerald-600 text-white text-[9px] px-1 rounded ml-1">{t("rank_you", "Tú (Mi Cuenta)")}</span>}
                                     </span>
                                   </div>
+                                </td>
+                                <td className="py-2.5 px-3 hidden md:table-cell text-slate-600 dark:text-slate-300">
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
+                                    <Globe className="w-3 h-3 text-emerald-600" />
+                                    {r.userCountry || "Colombia"}
+                                  </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">{r.points}</td>
                                 <td className="py-2.5 px-3 text-center hidden sm:table-cell text-emerald-700 dark:text-emerald-400">{r.exactCount}</td>
@@ -4110,7 +4170,7 @@ export default function App() {
                     </div>
 
                     <button
-                      onClick={() => setEditingUser({ name: "", email: "", password: "user", role: "standard", status: "active", avatar: AVATARS[0] })}
+                      onClick={() => setEditingUser({ name: "", email: "", country: "Colombia", password: "user", role: "standard", status: "active", avatar: AVATARS[0] })}
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow"
                     >
                       <Plus className="w-3.5 h-3.5" /> Registrar Participante
@@ -4153,6 +4213,19 @@ export default function App() {
                             value={editingUser.email || ""}
                             onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                           />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-slate-500">País</label>
+                          <select
+                            className="bg-white border rounded p-1.5 text-xs w-full mt-1"
+                            value={editingUser.country || "Colombia"}
+                            onChange={(e) => setEditingUser({ ...editingUser, country: e.target.value })}
+                          >
+                            {COUNTRY_OPTIONS.map((country) => (
+                              <option key={country} value={country}>{country}</option>
+                            ))}
+                          </select>
                         </div>
 
                         {!editingUser.id && (
@@ -4217,6 +4290,7 @@ export default function App() {
                       <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
                         <tr>
                           <th className="py-2.5 px-3">Participante</th>
+                          <th className="py-2.5 px-3">País</th>
                           <th className="py-2.5 px-3">Email</th>
                           <th className="py-2.5 px-3 text-center">Estatus Cuenta</th>
                           <th className="py-2.5 px-3 text-center">Rol</th>
@@ -4226,7 +4300,11 @@ export default function App() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {adminUsers
-                          .filter((u) => u.name.toLowerCase().includes(searchUser.toLowerCase()) || u.email.toLowerCase().includes(searchUser.toLowerCase()))
+                          .filter((u) =>
+                            u.name.toLowerCase().includes(searchUser.toLowerCase()) ||
+                            u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
+                            (u.country || "").toLowerCase().includes(searchUser.toLowerCase())
+                          )
                           .map((u) => (
                             <tr key={u.id} className="hover:bg-slate-50/50">
                               <td className="py-2.5 px-3">
@@ -4235,6 +4313,7 @@ export default function App() {
                                   <span className="font-semibold text-slate-900">{u.name}</span>
                                 </div>
                               </td>
+                              <td className="py-2.5 px-3 text-[11px] text-slate-600">{u.country || "Colombia"}</td>
                               <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">{u.email}</td>
                               <td className="py-2.5 px-3 text-center">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${

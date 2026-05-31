@@ -27,6 +27,7 @@ model User {
   email              String   @unique
   password           String?
   name               String
+  country            String   @default("Colombia")
   role               String
   status             String
   avatar             String
@@ -95,6 +96,7 @@ model Ranking {
   userId            String
   userName          String
   userAvatar        String
+  userCountry       String?
   points            Int
   exactCount        Int
   drawCount         Int
