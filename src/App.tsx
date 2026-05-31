@@ -2697,6 +2697,28 @@ export default function App() {
     );
   };
 
+  const renderFormattedText = (text?: string, fallback = "") => {
+    const value = text || fallback;
+    return value.split("\n").map((line, lineIndex) => {
+      const parts = line.split(/(\*\*[^*]+\*\*)/g);
+      const isBullet = line.trim().startsWith("-");
+      const cleanLine = isBullet ? line.replace(/^\s*-\s*/, "") : line;
+      const cleanParts = cleanLine.split(/(\*\*[^*]+\*\*)/g);
+
+      return (
+        <p key={`${lineIndex}-${line}`} className={`${line.trim() === "" ? "h-2" : ""} ${isBullet ? "pl-4 relative" : ""}`}>
+          {isBullet && <span className="absolute left-0 text-emerald-600 dark:text-emerald-400">-</span>}
+          {(isBullet ? cleanParts : parts).map((part, partIndex) => {
+            if (part.startsWith("**") && part.endsWith("**")) {
+              return <strong key={partIndex} className="font-black text-slate-950 dark:text-white">{part.slice(2, -2)}</strong>;
+            }
+            return <React.Fragment key={partIndex}>{part}</React.Fragment>;
+          })}
+        </p>
+      );
+    });
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans relative antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
       
@@ -2720,8 +2742,13 @@ export default function App() {
       <header className="bg-slate-900 text-white shadow-md border-b border-emerald-800 shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="bg-emerald-600 p-2.5 rounded-xl shadow-inner border border-emerald-400">
-              <Trophy className="w-6 h-6 text-amber-300" id="header_trophy_icon" />
+            <div className="w-11 h-11 bg-white rounded-xl shadow-inner border border-emerald-400 overflow-hidden flex items-center justify-center">
+              <img
+                src="/favicon.png"
+                alt="El Pollon Mundialista"
+                className="w-full h-full object-contain p-1"
+                id="header_trophy_icon"
+              />
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -4139,18 +4166,18 @@ export default function App() {
                           <h3 className="font-bold text-sm text-emerald-900 dark:text-emerald-350 flex items-center gap-2">
                             <Trophy className="w-4.5 h-4.5 text-emerald-600" /> {t("rules_dist_pt", "Distribución de Puntos")}
                           </h3>
-                          <pre className="text-xs text-emerald-950 dark:text-emerald-200 font-sans whitespace-pre-wrap leading-relaxed">
-                            {torneo?.rulesText || "REGLAS DE PUNTUACIÓN:\n- Empate Real: 10 pts\n- Marcador Exacto: 15 pts\n- Participación con resultado erróneo: 5 pts"}
-                          </pre>
+                          <div className="text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed space-y-1">
+                            {renderFormattedText(torneo?.rulesText, "REGLAS DE PUNTUACION:\n- **Empate exacto:** 25 puntos\n- **Marcador exacto con ganador:** 15 puntos\n- **Resultado acertado:** 10 puntos\n- **Participacion:** 5 puntos")}
+                          </div>
                         </div>
 
                         <div className="p-5 bg-slate-50/80 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
                           <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
                             <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" /> {t("rules_prizes_rec", "Premios & Reconocimientos")}
                           </h3>
-                          <pre className="text-xs text-slate-700 dark:text-slate-300 font-sans whitespace-pre-wrap leading-relaxed">
-                            {torneo?.prizesText || t("rules_no_prizes", "Por definir por el administrador.")}
-                          </pre>
+                          <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
+                            {renderFormattedText(torneo?.prizesText, t("rules_no_prizes", "Por definir por el administrador."))}
+                          </div>
                         </div>
                       </div>
 
@@ -5272,6 +5299,9 @@ export default function App() {
                             value={torneo.prizesText}
                             onChange={(e) => setTorneo({ ...torneo, prizesText: e.target.value })}
                           />
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            Puedes usar **negrilla** para resaltar nombres, porcentajes o premios.
+                          </span>
                         </div>
 
                         <div>
@@ -5282,6 +5312,9 @@ export default function App() {
                             value={torneo.rulesText}
                             onChange={(e) => setTorneo({ ...torneo, rulesText: e.target.value })}
                           />
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            Tambien soporta **negrilla** y saltos de linea para mejorar lectura.
+                          </span>
                         </div>
 
                         <div className="md:col-span-2">
@@ -5309,6 +5342,34 @@ export default function App() {
                           </div>
                           <span className="text-[10px] text-slate-400 mt-1 block">
                             Permite a tus participantes descargar este folleto físico/gráfico para enterarse de las reglas en WhatsApp.
+                          </span>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                            URL Imagen Reglamento Grafico en Ingles
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              className="w-full bg-white border rounded p-1.5 font-mono text-[11px]"
+                              placeholder="https://res.cloudinary.com/.../rules_en.png"
+                              value={torneo.rulesImageUrlEn || ""}
+                              onChange={(e) => setTorneo({ ...torneo, rulesImageUrlEn: e.target.value })}
+                            />
+                            {torneo.rulesImageUrlEn && (
+                              <a
+                                href={torneo.rulesImageUrlEn}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded flex items-center justify-center border"
+                              >
+                                Ver
+                              </a>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            Sube el poster en ingles desde Assets, copia su URL de Cloudinary y pegala aqui. Se usara automaticamente cuando el idioma sea English.
                           </span>
                         </div>
                       </div>
