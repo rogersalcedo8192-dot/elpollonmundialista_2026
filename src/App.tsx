@@ -46,13 +46,43 @@ import { User, Match, Prediction, Ranking, Announcement, AppNotification, Torneo
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 
+const createEmojiAvatar = (emoji: string, background: string) => {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+      <rect width="120" height="120" rx="32" fill="${background}"/>
+      <circle cx="60" cy="60" r="46" fill="rgba(255,255,255,0.18)"/>
+      <text x="60" y="73" text-anchor="middle" font-size="56" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">${emoji}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
+
 const AVATARS = [
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120",
-  "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120"
+  createEmojiAvatar("⚽", "#059669"),
+  createEmojiAvatar("🏆", "#f59e0b"),
+  createEmojiAvatar("🦁", "#d97706"),
+  createEmojiAvatar("🐯", "#ea580c"),
+  createEmojiAvatar("🦅", "#2563eb"),
+  createEmojiAvatar("🐺", "#475569"),
+  createEmojiAvatar("🐼", "#111827"),
+  createEmojiAvatar("🦊", "#f97316"),
+  createEmojiAvatar("🐵", "#a16207"),
+  createEmojiAvatar("🐸", "#16a34a"),
+  createEmojiAvatar("🐙", "#7c3aed"),
+  createEmojiAvatar("🦈", "#0284c7"),
+  createEmojiAvatar("🐉", "#15803d"),
+  createEmojiAvatar("🦄", "#c026d3"),
+  createEmojiAvatar("🐲", "#047857"),
+  createEmojiAvatar("🐻", "#92400e"),
+  createEmojiAvatar("🐨", "#64748b"),
+  createEmojiAvatar("🐶", "#b45309"),
+  createEmojiAvatar("🐱", "#db2777"),
+  createEmojiAvatar("🐰", "#e11d48"),
+  createEmojiAvatar("🤖", "#334155"),
+  createEmojiAvatar("👽", "#65a30d"),
+  createEmojiAvatar("🚀", "#4f46e5"),
+  createEmojiAvatar("🌎", "#0f766e"),
+  createEmojiAvatar("🔥", "#dc2626")
 ];
 
 const COUNTRY_OPTIONS = [
@@ -2952,7 +2982,7 @@ export default function App() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_choose_avatar")}</label>
-                    <div className="grid grid-cols-6 gap-2 pt-1">
+                    <div className="grid grid-cols-5 sm:grid-cols-8 gap-2 pt-1">
                       {AVATARS.map((av, idx) => (
                         <button
                           key={idx}
@@ -2960,7 +2990,7 @@ export default function App() {
                           onClick={() => setAuthAvatar(av)}
                           className={`rounded-full overflow-hidden border-2 transition-all p-0.5 ${authAvatar === av ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" : "border-transparent"}`}
                         >
-                          <img src={av} alt={`Avatar ${idx}`} className="w-full h-8 object-cover rounded-full" referrerPolicy="no-referrer" />
+                          <img src={av} alt={`Avatar ${idx + 1}`} className="w-full aspect-square object-cover rounded-full" referrerPolicy="no-referrer" />
                         </button>
                       ))}
                     </div>
