@@ -3521,17 +3521,20 @@ export default function App() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Premios</span>
-                          <span className="font-black text-slate-900 dark:text-slate-100">70% del bruto</span>
+                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
+                          <span className="block text-[10px] text-amber-700 dark:text-amber-300 uppercase font-bold">1er puesto</span>
+                          <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatUsd(publicPrizePool?.payouts.first || 0)}</span>
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">80% del premio</span>
                         </div>
                         <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Banco</span>
-                          <span className="font-black text-slate-900 dark:text-slate-100">3.5% sale del admin</span>
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">2do puesto</span>
+                          <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatUsd(publicPrizePool?.payouts.second || 0)}</span>
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">15% del premio</span>
                         </div>
-                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Top 3</span>
-                          <span className="font-black text-slate-900 dark:text-slate-100">80% / 15% / 5%</span>
+                        <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
+                          <span className="block text-[10px] text-orange-700 dark:text-orange-300 uppercase font-bold">3er puesto</span>
+                          <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatUsd(publicPrizePool?.payouts.third || 0)}</span>
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">5% del premio</span>
                         </div>
                       </div>
 
@@ -3554,23 +3557,23 @@ export default function App() {
                     <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-3">
                       <h3 className="text-sm font-black flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-amber-400" />
-                        Distribución del premio
+                        Bolsa actual
                       </h3>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between border-b border-white/10 pb-2">
-                          <span>1er puesto</span>
-                          <b>80%</b>
+                          <span>Premio acumulado</span>
+                          <b>{formatUsd(publicPrizePool?.prizePool || 0)}</b>
                         </div>
                         <div className="flex justify-between border-b border-white/10 pb-2">
-                          <span>2do puesto</span>
-                          <b>15%</b>
+                          <span>Participantes pagos</span>
+                          <b>{publicPrizePool?.paidParticipants || 0}</b>
                         </div>
                         <div className="flex justify-between">
-                          <span>3er puesto</span>
-                          <b>5%</b>
+                          <span>Recaudo bruto</span>
+                          <b>{formatUsd(publicPrizePool?.grossPool || 0)}</b>
                         </div>
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. El dashboard admin calcula los valores reales según pagos confirmados.</p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. Los valores se actualizan segun pagos confirmados.</p>
                     </div>
                   </div>
                 </div>
