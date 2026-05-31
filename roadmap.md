@@ -1,136 +1,191 @@
 # Roadmap - Polla Mundialista 2026
 
-Este roadmap organiza la evolucion del proyecto desde el prototipo actual hacia una app lista para operar una polla real del Mundial FIFA 2026. La prioridad es asegurar datos confiables, reglas claras, experiencia simple para participantes y herramientas solidas para administradores.
+Este roadmap resume el estado real del proyecto y organiza lo que falta para operar la polla en produccion con usuarios pagos, datos confiables y una experiencia clara para participantes y administradores.
 
-## Estado actual
+## Estado Actual
 
 - App React + Vite con servidor Express en `server.ts`.
-- Persistencia local en `db_store.json`.
+- Despliegue preparado para Railway.
+- Persistencia principal con Prisma + PostgreSQL.
+- Importacion inicial desde JSON hacia Postgres disponible en `scripts/import-db-to-postgres.ts`.
+- Archivos subidos con metadata en Postgres y almacenamiento en Cloudinary.
 - Registro, login, recuperacion simple de password y perfil de usuario.
 - Roles `admin` y `standard`.
-- Calendario de partidos, pronosticos por marcador y ranking.
+- Campo de pais por usuario, con bandera en registro, perfil, admin y ranking.
+- Normalizacion de paises/codigos, por ejemplo `CO` -> `Colombia`.
+- Multilenguaje parcial con mejoras en autenticacion, calendario, pronosticos y ranking.
+- Calendario de fase de grupos sincronizado con API externa.
+- Fixture de eliminacion directa separado de los partidos reales de API.
+- Pronosticos por marcador con guardar, actualizar y limpiar.
+- Bloqueo backend/frontend para impedir pronosticos de usuarios sin pago confirmado.
 - Pronosticos especiales de torneo: lideres de grupo, clasificados por fase, finalistas, subcampeon y campeon.
-- Panel admin para usuarios, partidos, resultados, comunicados, configuracion y reinicio de datos demo.
+- Ranking en tiempo real con exportacion CSV.
+- Panel admin para usuarios, partidos, resultados, comunicados, assets, banners y configuracion.
+- Banners dinamicos con rotacion y enlace.
 - Notificaciones internas para recordatorios, resultados, ranking y comunicados.
-- Multilenguaje parcial y tema claro/oscuro.
+- Integracion con Stripe Checkout para cobrar inscripcion.
+- Calculo de bolsa de premios:
+  - Inscripcion: USD 25.
+  - 70% para premios.
+  - 80% del premio para primer puesto.
+  - 15% para segundo puesto.
+  - 5% para tercer puesto.
+  - Comision bancaria fija 3.5% descontada de la ganancia admin.
+- Dashboard de usuario con premio acumulado visible.
+- Dashboard admin con desglose de participantes pagos, premio y ganancia estimada.
 
-## Fase 1 - Preparacion para uso real
+## Fase 1 - Estabilizacion Inmediata
 
-Objetivo: dejar la app lista para recibir participantes reales sin datos de demostracion ni riesgos obvios de operacion.
+Objetivo: dejar estable lo ya construido antes de seguir agregando capas grandes.
 
-- Limpiar datos demo y separar claramente `seed` de datos reales.
-- Corregir textos con problemas de codificacion para nombres, reglas, paises y mensajes.
-- Validar el fixture oficial que se usara en la polla.
-- Revisar reglas de puntuacion y unificar textos con la logica del backend.
-- Confirmar fecha y hora de cierre de pronosticos de partidos y favoritos.
-- Agregar controles para impedir ediciones fuera de plazo desde frontend y backend.
-- Documentar usuarios iniciales, credenciales admin y pasos de puesta en marcha.
+- Confirmar que Railway tiene `DATABASE_URL`, Cloudinary, Football Data API, Stripe y `PUBLIC_APP_URL`.
+- Ejecutar `npm run db:push` cuando haya cambios de Prisma.
+- Probar registro, login, pago, retorno de Stripe y bloqueo de pronosticos sin pago.
+- Verificar que paises antiguos como `CO` se muestren como `Colombia`.
+- Revisar que ranking, CSV y dashboard muestren paises/banderas correctamente.
+- Revisar en celular la pantalla de registro y el selector de idioma.
+- Confirmar que los usuarios demo no se mezclen con usuarios reales antes de abrir inscripciones.
 
 Criterio de cierre:
 
-- Una instalacion nueva puede arrancar en modo real, con usuarios en cero, partidos pendientes y reglas coherentes.
+- Un usuario nuevo puede registrarse, pagar, entrar a pronosticos, guardar/limpiar marcadores y aparecer correctamente en ranking.
 
-## Fase 2 - Seguridad y cuentas
+## Fase 2 - Pagos Profesionales
 
-Objetivo: reemplazar la autenticacion de prototipo por una base minima segura.
+Objetivo: hacer que la participacion paga sea confiable incluso si el usuario cierra la pestana.
+
+- Implementar Stripe Webhook para confirmar pagos desde Stripe, no solo al volver a la app.
+- Guardar evento de pago recibido y evitar procesar dos veces la misma sesion.
+- Agregar panel admin para ver estado de pago: pendiente, pagado, fallido.
+- Permitir al admin marcar pago manual solo en casos excepcionales.
+- Mostrar historial basico de pago del usuario.
+- Definir politica de reembolso o anulacion si aplica.
+
+Criterio de cierre:
+
+- Todo pago confirmado por Stripe queda registrado aunque el usuario no vuelva manualmente desde Checkout.
+
+## Fase 3 - Seguridad y Cuentas
+
+Objetivo: reemplazar autenticacion de prototipo por una base segura.
 
 - Guardar passwords con hash, no en texto plano.
-- Mover secretos y configuraciones sensibles a variables de entorno.
+- Migrar sesiones simples a tokens firmados o mecanismo equivalente.
 - Reforzar validaciones de registro, login y cambios de perfil.
-- Agregar expiracion o rotacion de tokens simples.
-- Limitar acciones admin en backend, no solo en la interfaz.
-- Definir politica para suspender, reactivar y eliminar usuarios.
-- Mejorar recuperacion de password con flujo seguro o token temporal.
+- Mejorar recuperacion de password con token temporal.
+- Limitar acciones admin en backend con validaciones consistentes.
+- Revisar que datos sensibles no viajen al frontend innecesariamente.
+- Ocultar passwords en respuestas admin y crear flujo real de reset.
 
 Criterio de cierre:
 
-- Un usuario estandar no puede ejecutar endpoints admin y las credenciales no quedan expuestas en datos persistidos.
+- Un usuario estandar no puede ejecutar endpoints admin y las credenciales no quedan expuestas.
 
-## Fase 3 - Persistencia y datos
+## Fase 4 - Datos de Partidos
 
-Objetivo: reemplazar el archivo JSON como fuente principal cuando la app crezca.
+Objetivo: operar el Mundial con datos consistentes y actualizables.
 
-- Elegir base de datos para produccion: SQLite, PostgreSQL o servicio administrado.
-- Crear modelo de datos para usuarios, partidos, predicciones, rankings, notificaciones y configuracion.
-- Implementar migraciones.
-- Agregar backups exportables del torneo.
-- Mantener importacion/exportacion JSON para administracion o recuperacion.
-- Registrar auditoria basica de cambios admin: resultados, usuarios, reglas y reinicios.
+- Mantener fase de grupos desde API externa como fuente principal.
+- Confirmar proveedor definitivo de API para resultados en vivo/oficiales.
+- Agregar proceso seguro de actualizacion de resultados oficiales.
+- Evitar duplicados al sincronizar.
+- Registrar auditoria de sincronizaciones API.
+- Mantener eliminacion directa como fixture separado hasta que los cruces esten definidos.
+- Cuando avance el torneo, transformar los cruces de eliminacion directa en partidos reales pronosticables.
 
 Criterio de cierre:
 
-- La app puede reiniciarse, desplegarse y respaldarse sin depender de editar manualmente `db_store.json`.
+- El calendario no duplica partidos y los resultados oficiales pueden actualizarse sin romper predicciones existentes.
 
-## Fase 4 - Motor de puntuacion
+## Fase 5 - Motor de Puntuacion
 
-Objetivo: hacer que el calculo de puntos sea confiable, trazable y facil de auditar.
+Objetivo: que el calculo de puntos sea confiable, trazable y facil de auditar.
 
 - Extraer la logica de puntuacion a un modulo probado.
 - Cubrir casos: marcador exacto, empate exacto, resultado acertado, participacion y partido sin resultado.
 - Separar puntos por fase de grupos, eliminatorias y bonus de campeon.
-- Recalcular ranking de forma idempotente al actualizar resultados.
+- Definir desempates del ranking: exactos, resultados acertados, cantidad de predicciones, fecha de pago o fecha de registro.
 - Mostrar desglose de puntos por partido y por prediccion especial.
-- Definir desempates del ranking: exactos, resultados acertados, cantidad de predicciones, fecha de registro u otro criterio.
+- Agregar recalculo idempotente con pruebas.
 
 Criterio de cierre:
 
 - Cualquier cambio de marcador o resultado oficial recalcula el ranking de manera repetible y explicable.
 
-## Fase 5 - Experiencia del participante
+## Fase 6 - Experiencia del Participante
 
-Objetivo: que predecir sea rapido, claro y usable desde celular.
+Objetivo: que participar sea rapido, claro y usable desde celular.
 
-- Mejorar vista de calendario con filtros por fecha, grupo, fase, equipo y estado.
+- Pulir pantalla de registro en todos los idiomas principales.
+- Mejorar selector de pais con busqueda si la lista crece.
 - Destacar partidos pendientes de pronostico y proximos cierres.
-- Agregar validaciones visuales antes de guardar marcadores.
-- Mostrar confirmacion clara de pronosticos guardados.
+- Agregar filtros por fecha, grupo, equipo y estado en vista mobile.
+- Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
-- Optimizar layout mobile para listas largas de partidos y selecciones.
-- Pulir reglas y premios dentro de la app con textos finales.
+- Mejorar mensajes cuando el usuario no ha pagado.
+- Pulir reglas y premios con textos finales.
 
 Criterio de cierre:
 
-- Un participante puede registrarse, entender reglas, hacer sus pronosticos y revisar su posicion sin ayuda externa.
+- Un participante entiende que debe pagar, paga, pronostica y revisa su posicion sin ayuda externa.
 
-## Fase 6 - Administracion del torneo
+## Fase 7 - Administracion del Torneo
 
-Objetivo: dar al admin herramientas completas para operar la polla durante todo el Mundial.
+Objetivo: que el admin pueda operar todo sin tocar archivos.
 
-- Dashboard admin con salud del torneo: participantes, predicciones faltantes, partidos cerrados y resultados pendientes.
-- Busqueda y filtros avanzados de usuarios.
-- Edicion masiva o importacion de partidos.
-- Flujo seguro para publicar resultados oficiales.
-- Vista previa del impacto en ranking antes de confirmar un resultado.
-- Historial de comunicados y programacion real de publicaciones.
-- Accion de cierre manual de predicciones ante casos especiales.
+- Mejorar busqueda y filtros de usuarios por pais, pago, rol y estado.
+- Vista de usuarios pagos vs pendientes.
+- Exportacion de usuarios y pagos a CSV.
+- Vista previa del impacto en ranking antes de confirmar resultado.
+- Historial de acciones admin: resultados, usuarios, banners, reglas y reinicios.
+- Confirmacion reforzada para acciones destructivas.
+- Programacion real de comunicados.
+- Panel de salud del torneo: predicciones faltantes, partidos cerrados y resultados pendientes.
 
 Criterio de cierre:
 
-- El admin puede operar una jornada completa sin tocar archivos ni reiniciar manualmente la app.
+- El admin puede operar una jornada completa desde la app, sin editar archivos ni reiniciar manualmente.
 
-## Fase 7 - Notificaciones
+## Fase 8 - Assets, Banners y Contenido
 
-Objetivo: convertir las notificaciones internas en un sistema util para recordar y enganchar a los participantes.
+Objetivo: convertir la app en una plataforma presentable para patrocinadores y reglas.
+
+- Mantener Cloudinary como almacenamiento de imagenes, PDFs y videos.
+- Agregar previsualizacion de assets por tipo.
+- Asociar assets a reglas, banners o comunicados desde la app.
+- Mejorar gestion de banners por ubicacion, fechas y rotacion.
+- Medir clics en banners.
+- Agregar orden/prioridad para banners activos.
+- Validar tamanos recomendados y formatos admitidos.
+
+Criterio de cierre:
+
+- El admin puede subir contenido, publicarlo y rotarlo sin tocar carpetas del proyecto.
+
+## Fase 9 - Notificaciones
+
+Objetivo: convertir las notificaciones internas en recordatorios utiles.
 
 - Programar recordatorios automaticos 24h y 1h antes del cierre.
 - Enviar alertas cuando se publiquen resultados.
 - Notificar cambios relevantes de ranking.
 - Integrar correo real para usuarios suscritos.
+- Evaluar WhatsApp solo si hay presupuesto/API adecuada.
 - Preparar plantillas de email en espanol e ingles.
 - Evitar notificaciones duplicadas con llaves de envio.
-- Agregar preferencias por usuario para tipos de alertas.
+- Agregar preferencias por usuario.
 
 Criterio de cierre:
 
 - Los usuarios reciben recordatorios utiles y el sistema evita spam o duplicados.
 
-## Fase 8 - Calidad, pruebas y mantenimiento
+## Fase 10 - Calidad y Mantenimiento
 
 Objetivo: reducir regresiones antes de abrir la app a mas participantes.
 
 - Agregar pruebas unitarias para el motor de puntuacion.
-- Agregar pruebas de endpoints criticos: auth, predicciones, resultados y ranking.
-- Ejecutar `npm run lint` en cada cambio.
+- Agregar pruebas de endpoints criticos: auth, pagos, predicciones, resultados y ranking.
+- Ejecutar `npm run lint` y `npm run build` en cada cambio importante.
 - Revisar accesibilidad basica: foco, contraste, labels y navegacion por teclado.
 - Medir rendimiento en listas grandes de partidos y rankings.
 - Crear checklist manual para probar una jornada completa.
@@ -140,49 +195,42 @@ Criterio de cierre:
 
 - Los flujos centrales estan cubiertos por pruebas y existe una rutina clara de verificacion antes de desplegar.
 
-## Fase 9 - Despliegue
+## Fase 11 - Despliegue y Operacion
 
-Objetivo: publicar la app de forma estable para participantes reales.
+Objetivo: operar la app de forma estable durante el torneo.
 
-- Definir plataforma de hosting para frontend y backend.
-- Configurar variables de entorno por ambiente.
-- Agregar build reproducible con `npm run build`.
-- Configurar logs de servidor y errores.
-- Definir dominio, HTTPS y politica basica de backups.
-- Preparar ambiente de staging para probar cambios antes de produccion.
+- Mantener Railway como plataforma inicial.
+- Configurar dominio propio si aplica.
+- Definir backups de Postgres.
+- Configurar logs y alertas de errores.
+- Crear ambiente de staging para probar cambios antes de produccion.
 - Documentar rollback y restauracion de datos.
+- Confirmar plan de escalamiento si aumenta el numero de usuarios.
 
 Criterio de cierre:
 
-- La app esta disponible en una URL estable, con datos respaldados y un camino claro para recuperar el servicio.
+- La app esta disponible en URL estable, con datos respaldados y camino claro de recuperacion.
 
-## Fase 10 - Mejoras posteriores
+## Prioridades Sugeridas
 
-Ideas para despues de tener la operacion principal estable:
+1. Stripe Webhook para confirmar pagos de forma robusta.
+2. Hash de passwords y mejora de recuperacion de cuenta.
+3. Limpieza definitiva de datos demo antes de abrir inscripciones reales.
+4. Pruebas del motor de puntuacion.
+5. Auditoria admin y exportes de operacion.
+6. Pulido mobile de registro, pronosticos y ranking.
 
-- Ligas privadas o grupos familiares dentro de la misma polla.
-- Invitaciones por enlace.
-- Exportacion de ranking a CSV o Excel.
-- Tabla historica por jornada.
-- Insignias por aciertos, rachas y lideratos.
-- Modo solo lectura publico para compartir ranking.
-- Integracion con API externa de resultados deportivos.
-- Panel de analitica: equipos mas elegidos, marcadores populares y predicciones de campeon.
+## Riesgos a Vigilar
 
-## Prioridades sugeridas
-
-1. Fase 1: preparacion real y limpieza de datos.
-2. Fase 4: motor de puntuacion confiable.
-3. Fase 2: seguridad minima de cuentas.
-4. Fase 6: herramientas admin para operar sin tocar archivos.
-5. Fase 9: despliegue estable.
-
-## Riesgos a vigilar
-
+- Usuarios sin pago intentando pronosticar por endpoints directos.
 - Diferencias entre reglas visibles y puntos calculados.
-- Datos demo mezclados con datos reales.
+- Datos demo mezclados con usuarios reales.
 - Passwords en texto plano durante uso real.
-- Dependencia de `db_store.json` para una competencia con muchos usuarios.
-- Cierres de prediccion implementados solo en frontend.
-- Problemas de codificacion en textos y nombres de selecciones.
+- Pagos confirmados solo por retorno del navegador, sin webhook.
+- Cambios de API externa que alteren nombres de equipos o ids.
+- Problemas de codificacion en textos, paises y nombres de selecciones.
+- Falta de backups antes de cambios grandes en Postgres.
 
+## Ultima Actualizacion
+
+- 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.
