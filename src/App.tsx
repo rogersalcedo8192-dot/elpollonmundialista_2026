@@ -42,7 +42,7 @@ import {
   CreditCard,
   Eraser
 } from "lucide-react";
-import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture } from "./types";
+import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 
@@ -1309,6 +1309,7 @@ export default function App() {
   const [sponsorBanners, setSponsorBanners] = useState<SponsorBanner[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [publicPrizePool, setPublicPrizePool] = useState<PublicPrizePool | null>(null);
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1457,6 +1458,11 @@ export default function App() {
       const tpRes = await fetch(`/api/tournament-predictions?userId=${currentUser.id}`, { headers: getHeaders() });
       if (tpRes.ok) {
         setTournamentPredictions(await tpRes.json());
+      }
+
+      const prizeRes = await fetch("/api/prize-pool", { headers: getHeaders() });
+      if (prizeRes.ok) {
+        setPublicPrizePool(await prizeRes.json());
       }
 
       // Check if Admin to render dynamic reports
@@ -3109,6 +3115,56 @@ export default function App() {
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">{t("db_desc", "Sigue tu progreso, aciertos y estadísticas particulares")}</p>
                   </div>
+
+                  {publicPrizePool && (
+                    <div className="bg-slate-950 text-white rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+                      <div className="p-4 md:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div className="space-y-2">
+                          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-amber-300">
+                            <Trophy className="w-3.5 h-3.5" />
+                            Premio acumulado
+                          </span>
+                          <div className="flex items-end gap-3 flex-wrap">
+                            <span className="text-3xl md:text-4xl font-black tracking-tight text-white">
+                              {formatUsd(publicPrizePool.prizePool)}
+                            </span>
+                            <span className="mb-1 text-[11px] font-semibold text-slate-300">
+                              {Math.round(publicPrizePool.prizePoolRate * 100)}% de la bolsa de participantes pagos
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-[10px] text-slate-300">
+                            <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">
+                              {publicPrizePool.paidParticipants} pagos confirmados
+                            </span>
+                            <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">
+                              Inscripcion {formatUsd(publicPrizePool.entryFeeUsd)}
+                            </span>
+                            <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">
+                              Recaudo bruto {formatUsd(publicPrizePool.grossPool)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 min-w-full lg:min-w-[330px]">
+                          <div className="rounded-lg bg-white/10 border border-white/10 p-3">
+                            <span className="block text-[9px] uppercase font-black text-amber-300">1er puesto</span>
+                            <span className="block text-lg font-black mt-1">{formatUsd(publicPrizePool.payouts.first)}</span>
+                            <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.first * 100)}%</span>
+                          </div>
+                          <div className="rounded-lg bg-white/10 border border-white/10 p-3">
+                            <span className="block text-[9px] uppercase font-black text-slate-300">2do puesto</span>
+                            <span className="block text-lg font-black mt-1">{formatUsd(publicPrizePool.payouts.second)}</span>
+                            <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.second * 100)}%</span>
+                          </div>
+                          <div className="rounded-lg bg-white/10 border border-white/10 p-3">
+                            <span className="block text-[9px] uppercase font-black text-slate-300">3er puesto</span>
+                            <span className="block text-lg font-black mt-1">{formatUsd(publicPrizePool.payouts.third)}</span>
+                            <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.third * 100)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Top Stats Cards metrics panel */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

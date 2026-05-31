@@ -3105,6 +3105,25 @@ app.post("/api/notifications/read-all", (req, res) => {
   res.json({ message: "Todas las notificaciones fueron marcadas como leídas." });
 });
 
+app.get("/api/prize-pool", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+
+  const db = loadDb();
+  const paidParticipants = db.users.filter((u) => u.role === "standard" && u.paymentStatus === "paid").length;
+  const prizePool = calculatePrizePool(paidParticipants);
+
+  res.json({
+    entryFeeUsd: prizePool.entryFeeUsd,
+    paidParticipants: prizePool.paidParticipants,
+    grossPool: prizePool.grossPool,
+    prizePoolRate: prizePool.prizePoolRate,
+    prizePool: prizePool.prizePool,
+    payouts: prizePool.payouts,
+    payoutRates: prizePool.payoutRates
+  });
+});
+
 // Statistics API
 app.get("/api/admin/stats", (req, res) => {
   const admin = getAuthenticatedUser(req);

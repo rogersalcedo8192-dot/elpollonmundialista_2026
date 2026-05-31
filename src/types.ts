@@ -136,6 +136,24 @@ export interface AppNotification {
   read: boolean;
 }
 
+export interface PublicPrizePool {
+  entryFeeUsd: number;
+  paidParticipants: number;
+  grossPool: number;
+  prizePoolRate: number;
+  prizePool: number;
+  payouts: {
+    first: number;
+    second: number;
+    third: number;
+  };
+  payoutRates: {
+    first: number;
+    second: number;
+    third: number;
+  };
+}
+
 export interface DashboardStats {
   totalParticipants: number;
   finishedMatches: number;
@@ -148,28 +166,13 @@ export interface DashboardStats {
     draw10: number;
     participation5: number;
   };
-  prizePool: {
-    entryFeeUsd: number;
-    paidParticipants: number;
-    grossPool: number;
+  prizePool: PublicPrizePool & {
     bankCommissionRate: number;
     bankCommission: number;
     netPool: number;
-    prizePoolRate: number;
-    prizePool: number;
     ownerProfitRate: number;
     ownerGrossProfit: number;
     ownerProfit: number;
-    payouts: {
-      first: number;
-      second: number;
-      third: number;
-    };
-    payoutRates: {
-      first: number;
-      second: number;
-      third: number;
-    };
   };
   stagesList: string[];
 }
