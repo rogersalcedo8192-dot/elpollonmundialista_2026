@@ -56,22 +56,61 @@ const AVATARS = [
 ];
 
 const COUNTRY_OPTIONS = [
-  "Colombia",
-  "Estados Unidos",
-  "México",
-  "Argentina",
-  "Brasil",
-  "Chile",
-  "Perú",
-  "Ecuador",
-  "Venezuela",
-  "Uruguay",
-  "Paraguay",
-  "Bolivia",
-  "España",
-  "Canadá",
-  "Otro"
+  { name: "Colombia", flag: "🇨🇴" },
+  { name: "México", flag: "🇲🇽" },
+  { name: "Sudáfrica", flag: "🇿🇦" },
+  { name: "Rep. de Corea", flag: "🇰🇷" },
+  { name: "Rep. Checa", flag: "🇨🇿" },
+  { name: "Canadá", flag: "🇨🇦" },
+  { name: "Bosnia y Herzegovina", flag: "🇧🇦" },
+  { name: "Estados Unidos", flag: "🇺🇸" },
+  { name: "Paraguay", flag: "🇵🇾" },
+  { name: "Catar", flag: "🇶🇦" },
+  { name: "Suiza", flag: "🇨🇭" },
+  { name: "Brasil", flag: "🇧🇷" },
+  { name: "Marruecos", flag: "🇲🇦" },
+  { name: "Haití", flag: "🇭🇹" },
+  { name: "Escocia", flag: "🏴" },
+  { name: "Australia", flag: "🇦🇺" },
+  { name: "Turquía", flag: "🇹🇷" },
+  { name: "Alemania", flag: "🇩🇪" },
+  { name: "Curazao", flag: "🇨🇼" },
+  { name: "Países Bajos", flag: "🇳🇱" },
+  { name: "Japón", flag: "🇯🇵" },
+  { name: "Costa de Marfil", flag: "🇨🇮" },
+  { name: "Ecuador", flag: "🇪🇨" },
+  { name: "Suecia", flag: "🇸🇪" },
+  { name: "Túnez", flag: "🇹🇳" },
+  { name: "España", flag: "🇪🇸" },
+  { name: "Cabo Verde", flag: "🇨🇻" },
+  { name: "Bélgica", flag: "🇧🇪" },
+  { name: "Egipto", flag: "🇪🇬" },
+  { name: "Arabia Saudí", flag: "🇸🇦" },
+  { name: "Uruguay", flag: "🇺🇾" },
+  { name: "Irán", flag: "🇮🇷" },
+  { name: "Nueva Zelanda", flag: "🇳🇿" },
+  { name: "Francia", flag: "🇫🇷" },
+  { name: "Senegal", flag: "🇸🇳" },
+  { name: "Irak", flag: "🇮🇶" },
+  { name: "Noruega", flag: "🇳🇴" },
+  { name: "Argentina", flag: "🇦🇷" },
+  { name: "Argelia", flag: "🇩🇿" },
+  { name: "Austria", flag: "🇦🇹" },
+  { name: "Jordania", flag: "🇯🇴" },
+  { name: "Portugal", flag: "🇵🇹" },
+  { name: "RD Congo", flag: "🇨🇩" },
+  { name: "Inglaterra", flag: "🏴" },
+  { name: "Croacia", flag: "🇭🇷" },
+  { name: "Ghana", flag: "🇬🇭" },
+  { name: "Panamá", flag: "🇵🇦" },
+  { name: "Uzbekistán", flag: "🇺🇿" },
+  { name: "Otro", flag: "🌍" }
 ];
+
+const COUNTRY_FLAGS = Object.fromEntries(COUNTRY_OPTIONS.map((country) => [country.name, country.flag]));
+
+const getCountryFlag = (country?: string) => COUNTRY_FLAGS[country || ""] || "🌍";
+const getCountryOptionLabel = (country: { name: string; flag: string }) => `${country.flag} ${country.name}`;
 
 const STAGES = [
   "Todos",
@@ -2743,7 +2782,7 @@ export default function App() {
                       required
                     >
                       {COUNTRY_OPTIONS.map((country) => (
-                        <option key={country} value={country}>{country}</option>
+                        <option key={country.name} value={country.name}>{getCountryOptionLabel(country)}</option>
                       ))}
                     </select>
                     <p className="text-[10px] text-slate-400 mt-1">Se mostrará en la tabla de clasificación.</p>
@@ -3308,7 +3347,7 @@ export default function App() {
                             required
                           >
                             {COUNTRY_OPTIONS.map((country) => (
-                              <option key={country} value={country}>{country}</option>
+                              <option key={country.name} value={country.name}>{getCountryOptionLabel(country)}</option>
                             ))}
                           </select>
                         </div>
@@ -3808,7 +3847,7 @@ export default function App() {
                                 </td>
                                 <td className="py-2.5 px-3 hidden md:table-cell text-slate-600 dark:text-slate-300">
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
-                                    <Globe className="w-3 h-3 text-emerald-600" />
+                                    <span className="text-sm leading-none">{getCountryFlag(r.userCountry)}</span>
                                     {r.userCountry || "Colombia"}
                                   </span>
                                 </td>
@@ -4223,7 +4262,7 @@ export default function App() {
                             onChange={(e) => setEditingUser({ ...editingUser, country: e.target.value })}
                           >
                             {COUNTRY_OPTIONS.map((country) => (
-                              <option key={country} value={country}>{country}</option>
+                              <option key={country.name} value={country.name}>{getCountryOptionLabel(country)}</option>
                             ))}
                           </select>
                         </div>
@@ -4313,7 +4352,12 @@ export default function App() {
                                   <span className="font-semibold text-slate-900">{u.name}</span>
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3 text-[11px] text-slate-600">{u.country || "Colombia"}</td>
+                              <td className="py-2.5 px-3 text-[11px] text-slate-600">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span className="text-sm leading-none">{getCountryFlag(u.country)}</span>
+                                  {u.country || "Colombia"}
+                                </span>
+                              </td>
                               <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">{u.email}</td>
                               <td className="py-2.5 px-3 text-center">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
