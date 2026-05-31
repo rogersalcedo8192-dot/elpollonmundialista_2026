@@ -1479,6 +1479,8 @@ export default function App() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [publicPrizePool, setPublicPrizePool] = useState<PublicPrizePool | null>(null);
+  const [winnerCertificate, setWinnerCertificate] = useState<Ranking | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1730,6 +1732,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("polla_lang", lang);
   }, [lang]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     fetchGlobalData();
@@ -2557,6 +2564,22 @@ export default function App() {
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
   const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
+  const finalMatch = matches.find((m) => m.stage === "Final");
+  const finalClosedByMatch = finalMatch?.status === "finished" && nowMs >= new Date(finalMatch.date).getTime() + 60 * 1000;
+  const finalClosedByOutcome = Boolean(tournamentOutcomes?.champion);
+  const certificatesEnabled = finalClosedByMatch || finalClosedByOutcome;
+  const getWinnerPrize = (position: number) => {
+    if (position === 1) return publicPrizePool?.payouts.first || 0;
+    if (position === 2) return publicPrizePool?.payouts.second || 0;
+    if (position === 3) return publicPrizePool?.payouts.third || 0;
+    return 0;
+  };
+  const getWinnerPlaceLabel = (position: number) => {
+    if (position === 1) return "1er puesto";
+    if (position === 2) return "2do puesto";
+    if (position === 3) return "3er puesto";
+    return `puesto ${position}`;
+  };
 
   const unreadNotifications = notifications.filter((n) => !n.read);
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
@@ -3930,6 +3953,7 @@ export default function App() {
                             <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_draw", "Empates 10pts")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_matches", "Partidos")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_trend", "Tendencia")}</th>
+                            <th className="py-2.5 px-3 text-center">Certificado</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -3985,6 +4009,26 @@ export default function App() {
                                     <span className="text-slate-400 font-bold" title="Igual">═ {t("rank_status_equal", "Mantener")}</span>
                                   )}
                                 </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  {isTopThree ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setWinnerCertificate(r)}
+                                      disabled={!certificatesEnabled}
+                                      title={certificatesEnabled ? "Ver certificado de ganador" : "Disponible 60 segundos despues de finalizar la gran final"}
+                                      className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors ${
+                                        certificatesEnabled
+                                          ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 dark:text-amber-200 dark:border-amber-900"
+                                          : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700"
+                                      }`}
+                                    >
+                                      <FileText className="w-3.5 h-3.5" />
+                                      <span className="hidden lg:inline">Certificado</span>
+                                    </button>
+                                  ) : (
+                                    <span className="text-slate-300 dark:text-slate-600">-</span>
+                                  )}
+                                </td>
                               </tr>
                             );
                           })}
@@ -3992,6 +4036,76 @@ export default function App() {
                       </table>
                     </div>
                   </div>
+
+                  {winnerCertificate && (
+                    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setWinnerCertificate(null)}>
+                      <div
+                        className="w-full max-w-xl bg-white dark:bg-slate-950 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-900 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="bg-slate-950 text-white p-5 border-b border-amber-500/30">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-amber-300">
+                                <FileText className="w-4 h-4" />
+                                Certificado de ganador
+                              </span>
+                              <h3 className="text-2xl font-black mt-2">Polla Mundialista 2026</h3>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setWinnerCertificate(null)}
+                              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white font-black"
+                              title="Cerrar certificado"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                          <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 p-4">
+                            <p className="text-xs uppercase tracking-widest font-black text-amber-700 dark:text-amber-300">Felicitaciones</p>
+                            <p className="text-lg md:text-xl font-black text-slate-950 dark:text-white mt-1">
+                              {winnerCertificate.userName}, eres ganador del {getWinnerPlaceLabel(winnerCertificate.position)}.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                              <span className="block text-[10px] uppercase font-black text-slate-400">Premio asignado</span>
+                              <span className="block text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
+                                {formatUsd(getWinnerPrize(winnerCertificate.position))}
+                              </span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                              <span className="block text-[10px] uppercase font-black text-slate-400">Puesto final</span>
+                              <span className="block text-2xl font-black text-slate-950 dark:text-white mt-1">
+                                #{winnerCertificate.position}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 space-y-3">
+                            <p>
+                              Este certificado reconoce tu posicion final en la tabla oficial de la Polla Mundialista 2026, calculada con los resultados registrados y las reglas de puntuacion vigentes.
+                            </p>
+                            <p>
+                              En poco tiempo nuestro equipo de soporte se contactara contigo por el correo registrado en tu cuenta para solicitar la informacion necesaria de identidad y cuenta bancaria para gestionar la entrega del premio.
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              La entrega del premio esta sujeta a verificacion de identidad, confirmacion de datos bancarios y validacion final del ranking.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 font-mono">
+                            <span>Emitido: {new Date().toLocaleDateString()}</span>
+                            <span>ID participante: {winnerCertificate.userId}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
