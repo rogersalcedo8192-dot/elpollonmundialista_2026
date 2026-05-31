@@ -39,7 +39,8 @@ import {
   Megaphone,
   ExternalLink,
   Copy,
-  CreditCard
+  CreditCard,
+  Eraser
 } from "lucide-react";
 import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
@@ -1325,7 +1326,7 @@ export default function App() {
   const [showAuthConfirmPassword, setShowAuthConfirmPassword] = useState(false);
   
   // Forecast Forms
-  const [predScores, setPredScores] = useState<Record<number, { local: number; visitor: number }>>({});
+  const [predScores, setPredScores] = useState<Record<number, { local: number | ""; visitor: number | "" }>>({});
   
   // Filters
   const [selectedStage, setSelectedStage] = useState("Todos");
@@ -1441,7 +1442,7 @@ export default function App() {
       if (pRes.ok) {
         const pList: Prediction[] = await pRes.json();
         setPredictions(pList);
-        const map: Record<number, { local: number; visitor: number }> = {};
+        const map: Record<number, { local: number | ""; visitor: number | "" }> = {};
         pList.forEach((p) => {
           map[p.matchId] = { local: p.localScore, visitor: p.visitorScore };
         });
@@ -1751,8 +1752,14 @@ export default function App() {
 
   // Forecast submissions
   const handleSavePrediction = async (matchId: number) => {
+    if (!canSubmitPredictions) {
+      showToast("Debes pagar la inscripcion antes de registrar pronosticos.", "error");
+      setActiveTab("participate");
+      return;
+    }
+
     const score = predScores[matchId];
-    if (!score) {
+    if (!score || score.local === "" || score.visitor === "") {
       showToast("Por favor ingresa un marcador válido", "error");
       return;
     }
@@ -1778,6 +1785,34 @@ export default function App() {
     }
   };
 
+  const handleClearPrediction = async (matchId: number) => {
+    if (!canSubmitPredictions) {
+      showToast("Debes pagar la inscripcion antes de modificar pronosticos.", "error");
+      setActiveTab("participate");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/predictions/${matchId}`, {
+        method: "DELETE",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo limpiar el marcador");
+
+      setPredScores((prev) => {
+        const next = { ...prev };
+        delete next[matchId];
+        return next;
+      });
+      showToast(data.message, "success");
+      fetchUserSpecificData();
+      fetchGlobalData();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
+  };
+
   const handleSaveTournamentPredictions = async (draft: {
     groupWinners: Record<string, string>;
     octavosTeams: string[];
@@ -1788,6 +1823,12 @@ export default function App() {
     champion: string;
   }) => {
     if (!currentUser) return;
+    if (!canSubmitPredictions) {
+      showToast("Debes pagar la inscripcion antes de guardar favoritos.", "error");
+      setActiveTab("participate");
+      return;
+    }
+
     const res = await fetch("/api/tournament-predictions", {
       method: "POST",
       headers: {
@@ -2331,6 +2372,10 @@ export default function App() {
       m.stage.toLowerCase().includes(searchText);
     return stageMatch && statusMatch && contentMatch;
   });
+  const canSubmitPredictions = currentUser?.role === "admin" || currentUser?.paymentStatus === "paid";
+  const matchIds = new Set(matches.map((m) => m.id));
+  const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
+  const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
 
   const unreadNotifications = notifications.filter((n) => !n.read);
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
@@ -3285,10 +3330,22 @@ export default function App() {
 
                     {/* Stats summary of predictions */}
                     <div className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-700 dark:text-slate-300 flex gap-4">
-                      <span>{t("pred_registered", "Registrados")}: <b>{predictions.length}</b></span>
-                      <span>{t("pred_pending", "Pendientes")}: <b>{matches.length - predictions.length}</b></span>
+                      <span>{t("pred_registered", "Registrados")}: <b>{registeredPredictionsCount}</b></span>
+                      <span>{t("pred_pending", "Pendientes")}: <b>{pendingPredictionsCount}</b></span>
                     </div>
                   </div>
+
+                  {!canSubmitPredictions && (
+                    <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200 text-xs font-semibold flex items-center justify-between gap-3 flex-wrap">
+                      <span>Para guardar, actualizar o limpiar pronosticos debes confirmar tu pago de inscripcion.</span>
+                      <button
+                        onClick={() => setActiveTab("participate")}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black"
+                      >
+                        Ir a pagar
+                      </button>
+                    </div>
+                  )}
 
                   {/* Mode Selector for Predictions */}
                   <div className="flex gap-2 border-b border-slate-105 dark:border-slate-800 pb-2">
@@ -3478,14 +3535,15 @@ export default function App() {
                                     type="number"
                                     min="0"
                                     placeholder="?"
-                                    className="w-10 text-center bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-1 text-xs font-bold font-mono"
+                                    disabled={!canSubmitPredictions}
+                                    className={`w-10 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-1 text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                                     value={localVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
-                                      setPredScores({
-                                        ...predScores,
-                                        [m.id]: { local: val as number, visitor: predScores[m.id]?.visitor ?? 0 }
-                                      });
+                                      setPredScores((prev) => ({
+                                        ...prev,
+                                        [m.id]: { local: val as number | "", visitor: prev[m.id]?.visitor ?? "" }
+                                      }));
                                     }}
                                   />
                                   <span className="text-slate-400 font-bold">-</span>
@@ -3493,14 +3551,15 @@ export default function App() {
                                     type="number"
                                     min="0"
                                     placeholder="?"
-                                    className="w-10 text-center bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-1 text-xs font-bold font-mono"
+                                    disabled={!canSubmitPredictions}
+                                    className={`w-10 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-1 text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                                     value={visVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
-                                      setPredScores({
-                                        ...predScores,
-                                        [m.id]: { local: predScores[m.id]?.local ?? 0, visitor: val as number }
-                                      });
+                                      setPredScores((prev) => ({
+                                        ...prev,
+                                        [m.id]: { local: prev[m.id]?.local ?? "", visitor: val as number | "" }
+                                      }));
                                     }}
                                   />
                                 </div>
@@ -3515,12 +3574,30 @@ export default function App() {
                             {/* Scoring details / Save Button Action */}
                             <div className="w-full md:w-1/4 flex flex-col items-center md:items-end justify-center">
                               {!isLocked ? (
-                                <button
-                                  onClick={() => handleSavePrediction(m.id)}
-                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                                >
-                                  <Check className="w-3 h-3" /> {pred ? t("pred_update", "Actualizar") : t("pred_save", "Guardar")}
-                                </button>
+                                <div className="flex items-center justify-center md:justify-end gap-2 flex-wrap">
+                                  <button
+                                    onClick={() => handleClearPrediction(m.id)}
+                                    disabled={!canSubmitPredictions || (!pred && localVal === "" && visVal === "")}
+                                    className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 border ${
+                                      !canSubmitPredictions || (!pred && localVal === "" && visVal === "")
+                                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700"
+                                        : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
+                                    }`}
+                                  >
+                                    <Eraser className="w-3 h-3" /> Limpiar
+                                  </button>
+                                  <button
+                                    onClick={() => handleSavePrediction(m.id)}
+                                    disabled={!canSubmitPredictions}
+                                    className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-sm ${
+                                      canSubmitPredictions
+                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                                        : "bg-slate-300 text-slate-500 cursor-not-allowed"
+                                    }`}
+                                  >
+                                    <Check className="w-3 h-3" /> {pred ? t("pred_update", "Actualizar") : t("pred_save", "Guardar")}
+                                  </button>
+                                </div>
                               ) : (
                                 <div className="text-center md:text-right">
                                   {hasEnded ? (

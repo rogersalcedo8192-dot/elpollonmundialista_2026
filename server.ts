@@ -1820,6 +1820,16 @@ function getAuthenticatedUser(req: express.Request): User | null {
   return db.users.find((u) => u.id === userId) || null;
 }
 
+function canSubmitPredictions(user: User) {
+  return user.role === "admin" || user.paymentStatus === "paid";
+}
+
+function requirePaidParticipant(user: User, res: express.Response) {
+  if (canSubmitPredictions(user)) return false;
+  res.status(402).json({ error: "Debes pagar la inscripcion antes de registrar pronosticos." });
+  return true;
+}
+
 // API: Welcome / Config Torneo
 app.get("/api/torneo", (req, res) => {
   const db = loadDb();
@@ -2768,6 +2778,7 @@ app.get("/api/predictions", (req, res) => {
 app.post("/api/predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (requirePaidParticipant(user, res)) return;
 
   const { matchId, localScore, visitorScore } = req.body;
   if (matchId === undefined || localScore === undefined || visitorScore === undefined) {
@@ -2793,6 +2804,14 @@ app.post("/api/predictions", (req, res) => {
 
   const parsedLocalScore = parseInt(localScore, 10);
   const parsedVisitorScore = parseInt(visitorScore, 10);
+  if (
+    !Number.isInteger(parsedLocalScore) ||
+    !Number.isInteger(parsedVisitorScore) ||
+    parsedLocalScore < 0 ||
+    parsedVisitorScore < 0
+  ) {
+    return res.status(400).json({ error: "Ingresa marcadores validos para ambos equipos." });
+  }
 
   let existing = db.predictions.find((p) => p.userId === user.id && p.matchId === matchId);
   if (existing) {
@@ -2815,6 +2834,39 @@ app.post("/api/predictions", (req, res) => {
 
   saveDb(db);
   res.json({ message: "Predicción guardada exitosamente.", prediction: existing });
+});
+
+app.delete("/api/predictions/:matchId", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (requirePaidParticipant(user, res)) return;
+
+  const matchId = Number(req.params.matchId);
+  if (!Number.isInteger(matchId)) {
+    return res.status(400).json({ error: "Partido invalido." });
+  }
+
+  const db = loadDb();
+  const m = db.matches.find((match) => match.id === matchId);
+  if (!m) return res.status(404).json({ error: "Partido no encontrado." });
+
+  const matchTime = new Date(m.date).getTime();
+  const lockTime = matchTime - 15 * 60 * 1000;
+  if (Date.now() > lockTime) {
+    return res.status(400).json({ error: "La prediccion para este partido ya esta cerrada." });
+  }
+
+  if (m.status !== "pending") {
+    return res.status(400).json({ error: "Este partido ya se esta jugando o ha finalizado." });
+  }
+
+  const before = db.predictions.length;
+  db.predictions = db.predictions.filter((p) => !(p.userId === user.id && p.matchId === matchId));
+  saveDb(db);
+
+  res.json({
+    message: before === db.predictions.length ? "El marcador ya estaba limpio." : "Marcador limpiado correctamente."
+  });
 });
 
 // Tournament Lock Time and long term predictions APIs
@@ -2853,6 +2905,7 @@ app.get("/api/tournament-predictions", (req, res) => {
 app.post("/api/tournament-predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (requirePaidParticipant(user, res)) return;
 
   const now = Date.now();
   if (now > TOURNAMENT_PREDICTIONS_LOCK_TIME) {
