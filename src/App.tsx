@@ -1499,6 +1499,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
+  const [rulesFlyerPreviewLang, setRulesFlyerPreviewLang] = useState<"es" | "en">("es");
   const [torneo, setTorneo] = useState<TorneoConfig | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [knockoutFixtures, setKnockoutFixtures] = useState<KnockoutFixture[]>([]);
@@ -4168,9 +4169,16 @@ export default function App() {
 
               {/* 4. MÓDULO USER: REGLAS Y PREMIACIONES TAB */}
               {activeTab === "rules-prizes" && (() => {
-                const selectedRulesImageUrl = lang === "en" 
+                const selectedRulesImageUrl = rulesFlyerPreviewLang === "en" 
                   ? (torneo?.rulesImageUrlEn || "/src/assets/images/polla_rules_en_1780083217819.png")
                   : (torneo?.rulesImageUrl || "/uploads/reglas.png");
+                const selectedRulesFallbackUrl = rulesFlyerPreviewLang === "en"
+                  ? "/src/assets/images/polla_rules_en_1780083217819.png"
+                  : "/uploads/reglas.png";
+                const selectedRulesDownloadName = rulesFlyerPreviewLang === "en"
+                  ? "rules_flyer_2026.png"
+                  : "reglamento_polla_2026.png";
+                const isUsingDefaultEnglishFlyer = rulesFlyerPreviewLang === "en" && !torneo?.rulesImageUrlEn;
 
                 return (
                   <div className="space-y-6">
@@ -4218,9 +4226,22 @@ export default function App() {
                             <h3 className="font-bold text-xs uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
                               <Sparkles className="w-3.5 h-3.5" /> {lang === "es" ? "Reglamento Gráfico" : "Graphic Brochure"}
                             </h3>
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase font-bold tracking-widest leading-none">
-                              {lang === "es" ? "Oficial" : "Official"}
-                            </span>
+                            <div className="flex items-center gap-1 rounded-full bg-slate-800/90 p-1 border border-slate-700">
+                              {(["es", "en"] as const).map((previewLang) => (
+                                <button
+                                  key={previewLang}
+                                  type="button"
+                                  onClick={() => setRulesFlyerPreviewLang(previewLang)}
+                                  className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-colors ${
+                                    rulesFlyerPreviewLang === previewLang
+                                      ? "bg-emerald-400 text-slate-950"
+                                      : "text-slate-300 hover:text-white hover:bg-slate-700"
+                                  }`}
+                                >
+                                  {previewLang}
+                                </button>
+                              ))}
+                            </div>
                           </div>
 
                           <p className="text-[11px] text-slate-350 leading-relaxed">
@@ -4228,6 +4249,21 @@ export default function App() {
                               ? "Descarga o amplía la infografía con las reglas de asignación del Mundial de la FIFA de forma atractiva para enviar por canales de chat o WhatsApp de amigos."
                               : "Download or expand the official infoguide with prediction scoring rules to share via chat or WhatsApp with friends and pool sub-leagues."}
                           </p>
+
+                          <div className="flex items-center justify-between gap-2 text-[10px] text-slate-300 bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2">
+                            <span className="font-semibold">
+                              {rulesFlyerPreviewLang === "en" ? "English flyer preview" : "Vista previa en espanol"}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase font-bold tracking-widest leading-none">
+                              {isUsingDefaultEnglishFlyer ? "Demo" : (lang === "es" ? "Oficial" : "Official")}
+                            </span>
+                          </div>
+
+                          {isUsingDefaultEnglishFlyer && (
+                            <p className="text-[10px] text-amber-200 leading-relaxed bg-amber-500/10 border border-amber-400/20 rounded-xl px-3 py-2">
+                              Todavia no hay flyer en ingles personalizado. Puedes subirlo en Assets, copiar la URL de Cloudinary y pegarla en Configuracion.
+                            </p>
+                          )}
 
                           {/* Image Preview Container */}
                           <div 
@@ -4240,9 +4276,7 @@ export default function App() {
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               referrerPolicy="no-referrer"
                               onError={(e) => {
-                                e.currentTarget.src = lang === "en" 
-                                  ? "/src/assets/images/polla_rules_en_1780083217819.png"
-                                  : "/uploads/reglas.png";
+                                e.currentTarget.src = selectedRulesFallbackUrl;
                               }}
                             />
                             <div className="absolute inset-0 bg-slate-950/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-3 text-center">
@@ -4266,7 +4300,7 @@ export default function App() {
 
                             <a
                               href={selectedRulesImageUrl}
-                              download={lang === "es" ? "reglamento_polla_2026.png" : "rules_flyer_2026.png"}
+                              download={selectedRulesDownloadName}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-emerald-900/10 active:scale-[0.98]"
@@ -4311,9 +4345,7 @@ export default function App() {
                               className="max-w-full h-auto object-contain rounded"
                               referrerPolicy="no-referrer"
                               onError={(e) => {
-                                e.currentTarget.src = lang === "en" 
-                                  ? "/src/assets/images/polla_rules_en_1780083217819.png"
-                                  : "/uploads/reglas.png";
+                                e.currentTarget.src = selectedRulesFallbackUrl;
                               }}
                             />
                           </div>
@@ -4324,7 +4356,7 @@ export default function App() {
                             </span>
                             <a
                               href={selectedRulesImageUrl}
-                              download={lang === "es" ? "reglamento_polla_2026.png" : "rules_flyer_2026.png"}
+                              download={selectedRulesDownloadName}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow"
@@ -5401,6 +5433,36 @@ export default function App() {
                           <span className="text-[10px] text-slate-400 mt-1 block">
                             Sube el poster en ingles desde Assets, copia su URL de Cloudinary y pegala aqui. Se usara automaticamente cuando el idioma sea English.
                           </span>
+                          {torneo.rulesImageUrlEn && (
+                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wide">
+                                  Preview flyer ingles
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTab("rules-prizes");
+                                    setRulesFlyerPreviewLang("en");
+                                  }}
+                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+                                >
+                                  Previsualizar en reglas
+                                </button>
+                              </div>
+                              <div className="max-w-[180px] aspect-[3/4] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                                <img
+                                  src={torneo.rulesImageUrlEn}
+                                  alt="Preview flyer ingles"
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/src/assets/images/polla_rules_en_1780083217819.png";
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
