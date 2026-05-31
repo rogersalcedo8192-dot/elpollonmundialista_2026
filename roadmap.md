@@ -69,6 +69,13 @@ Criterio de cierre:
 
 Objetivo: reemplazar autenticacion de prototipo por una base segura.
 
+- MUY IMPORTANTE - PENDIENTE: rehacer el flujo de "Olvido su contrasena" antes de abrir usuarios/pagos reales.
+  - No mostrar ni enviar la contrasena actual del usuario.
+  - Crear token temporal de recuperacion con expiracion.
+  - Enviar enlace real por correo usando proveedor como Resend, SendGrid, Brevo o SMTP.
+  - Crear pantalla para definir nueva contrasena.
+  - Guardar contrasenas con hash usando `bcrypt` o equivalente.
+  - El admin no debe ver contrasenas; solo puede iniciar un reset manual controlado.
 - Guardar passwords con hash, no en texto plano.
 - Migrar sesiones simples a tokens firmados o mecanismo equivalente.
 - Reforzar validaciones de registro, login y cambios de perfil.
@@ -214,7 +221,7 @@ Criterio de cierre:
 ## Prioridades Sugeridas
 
 1. Stripe Webhook para confirmar pagos de forma robusta.
-2. Hash de passwords y mejora de recuperacion de cuenta.
+2. MUY IMPORTANTE - PENDIENTE: recuperar contrasena de forma segura con hash, token temporal y envio real por correo.
 3. Limpieza definitiva de datos demo antes de abrir inscripciones reales.
 4. Pruebas del motor de puntuacion.
 5. Auditoria admin y exportes de operacion.
@@ -226,6 +233,7 @@ Criterio de cierre:
 - Diferencias entre reglas visibles y puntos calculados.
 - Datos demo mezclados con usuarios reales.
 - Passwords en texto plano durante uso real.
+- Flujo de "Olvido su contrasena" exponiendo credenciales o funcionando solo como simulacion.
 - Pagos confirmados solo por retorno del navegador, sin webhook.
 - Cambios de API externa que alteren nombres de equipos o ids.
 - Problemas de codificacion en textos, paises y nombres de selecciones.
@@ -233,4 +241,5 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.
