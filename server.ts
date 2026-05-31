@@ -1469,6 +1469,7 @@ function createDefaultDb(): DatabaseSchema {
     }
   ];
 
+  const activeSeedAnnouncements = announcements.filter((announcement) => !isLegacySeedAnnouncement(announcement));
   const notifications: AppNotification[] = [];
 
   return {
@@ -1477,7 +1478,7 @@ function createDefaultDb(): DatabaseSchema {
     matches,
     predictions,
     rankings,
-    announcements,
+    announcements: activeSeedAnnouncements,
     notifications,
     sentReminders: [],
     tournamentPredictions: [],
@@ -1506,6 +1507,10 @@ function loadDb(): DatabaseSchema {
       if (!dbState.sentReminders) dbState.sentReminders = [];
       if (!dbState.tournamentPredictions) dbState.tournamentPredictions = [];
       if (!dbState.sponsorBanners) dbState.sponsorBanners = [];
+      if (dbState.announcements?.some(isLegacySeedAnnouncement)) {
+        dbState.announcements = dbState.announcements.filter((announcement) => !isLegacySeedAnnouncement(announcement));
+        saveDb(dbState);
+      }
       ensureAssetsDir();
       if (!dbState.assets) {
         dbState.assets = fs.readdirSync(ASSETS_DIR)
@@ -1852,6 +1857,16 @@ function normalizeCountryName(country?: string) {
   const value = String(country || "").trim();
   if (!value) return "Colombia";
   return COUNTRY_ALIASES[value.toUpperCase()] || value;
+}
+
+function isLegacySeedAnnouncement(announcement: Announcement) {
+  return (
+    announcement.id === "announce-1" ||
+    announcement.id === "announce-2" ||
+    announcement.title.includes("Gran Polla del Mundial 2026") ||
+    announcement.content.includes("104 partidos del torneo completo") ||
+    announcement.content.includes("EMPATE REAL")
+  );
 }
 
 function requirePaidParticipant(user: User, res: express.Response) {
@@ -3038,6 +3053,7 @@ app.get("/api/announcements", (req, res) => {
   const now = new Date();
   // Safe filtering of announcement publication schedules
   const visible = db.announcements.filter((ann) => {
+    if (isLegacySeedAnnouncement(ann)) return false;
     if (!ann.publishAt) return true;
     return new Date(ann.publishAt).getTime() <= now.getTime();
   });
