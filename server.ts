@@ -807,7 +807,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       email: u.email,
       password: u.password || undefined,
       name: u.name,
-      country: u.country || "Colombia",
+      country: normalizeCountryName(u.country),
       role: u.role as User["role"],
       status: u.status as User["status"],
       avatar: u.avatar,
@@ -988,7 +988,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           email: u.email,
           password: u.password || null,
           name: u.name,
-          country: u.country || "Colombia",
+          country: normalizeCountryName(u.country),
           role: u.role,
           status: u.status,
           avatar: u.avatar,
@@ -1429,7 +1429,7 @@ function createDefaultDb(): DatabaseSchema {
       userId: u.id,
       userName: u.name,
       userAvatar: u.avatar,
-      userCountry: u.country || "Colombia",
+      userCountry: normalizeCountryName(u.country),
       points: totPoints,
       exactCount,
       drawCount,
@@ -1733,7 +1733,7 @@ function recalculateScoresAndRankings() {
       userId: u.id,
       name: u.name,
       avatar: u.avatar,
-      country: u.country || "Colombia",
+      country: normalizeCountryName(u.country),
       points: totalPoints,
       exactCount: exactHits,
       drawCount: drawHits,
@@ -1791,7 +1791,7 @@ function recalculateScoresAndRankings() {
       userId: ru.userId,
       userName: ru.name,
       userAvatar: ru.avatar,
-      userCountry: ru.country || "Colombia",
+      userCountry: normalizeCountryName(ru.country),
       points: ru.points,
       exactCount: ru.exactCount,
       drawCount: ru.drawCount,
@@ -1831,6 +1831,27 @@ function getAuthenticatedUser(req: express.Request): User | null {
 
 function canSubmitPredictions(user: User) {
   return user.role === "admin" || user.paymentStatus === "paid";
+}
+
+const COUNTRY_ALIASES: Record<string, string> = {
+  CO: "Colombia",
+  COL: "Colombia",
+  US: "Estados Unidos",
+  USA: "Estados Unidos",
+  MX: "México",
+  MEX: "México",
+  BR: "Brasil",
+  BRA: "Brasil",
+  AR: "Argentina",
+  ARG: "Argentina",
+  ES: "España",
+  ESP: "España"
+};
+
+function normalizeCountryName(country?: string) {
+  const value = String(country || "").trim();
+  if (!value) return "Colombia";
+  return COUNTRY_ALIASES[value.toUpperCase()] || value;
 }
 
 function requirePaidParticipant(user: User, res: express.Response) {
@@ -1911,7 +1932,7 @@ app.post("/api/auth/register", (req, res) => {
     email: email.toLowerCase(),
     password,
     name,
-    country: String(country || "Colombia").trim() || "Colombia",
+    country: normalizeCountryName(country),
     role: "standard",
     status: "active",
     avatar: avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120",
@@ -1990,7 +2011,7 @@ app.put("/api/auth/profile", (req, res) => {
 
   if (name) dbUser.name = name;
   if (avatar) dbUser.avatar = avatar;
-  if (country !== undefined) dbUser.country = String(country || "Colombia").trim() || "Colombia";
+  if (country !== undefined) dbUser.country = normalizeCountryName(country);
   if (emailSubscribed !== undefined) dbUser.emailSubscribed = emailSubscribed;
   if (newPassword) dbUser.password = newPassword;
 
@@ -2105,7 +2126,7 @@ app.get("/api/admin/users", (req, res) => {
     id: u.id,
     email: u.email,
     name: u.name,
-    country: u.country || "Colombia",
+    country: normalizeCountryName(u.country),
     role: u.role,
     status: u.status,
     avatar: u.avatar,
@@ -2139,7 +2160,7 @@ app.post("/api/admin/users", (req, res) => {
     email: email.toLowerCase(),
     password,
     name,
-    country: String(country || "Colombia").trim() || "Colombia",
+    country: normalizeCountryName(country),
     role: role || "standard",
     status: status || "active",
     avatar: avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120",
@@ -2174,7 +2195,7 @@ app.put("/api/admin/users/:id", (req, res) => {
 
   if (name) dbUser.name = name;
   if (email) dbUser.email = email.toLowerCase();
-  if (country !== undefined) dbUser.country = String(country || "Colombia").trim() || "Colombia";
+  if (country !== undefined) dbUser.country = normalizeCountryName(country);
   if (role) dbUser.role = role;
   if (status) dbUser.status = status;
   if (password) dbUser.password = password;
@@ -3007,7 +3028,7 @@ app.get("/api/rankings", (req, res) => {
   const usersById = new Map(db.users.map((u) => [u.id, u]));
   res.json(db.rankings.map((ranking) => ({
     ...ranking,
-    userCountry: ranking.userCountry || usersById.get(ranking.userId)?.country || "Colombia"
+    userCountry: normalizeCountryName(ranking.userCountry || usersById.get(ranking.userId)?.country)
   })));
 });
 

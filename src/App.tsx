@@ -109,7 +109,28 @@ const COUNTRY_OPTIONS = [
 
 const COUNTRY_FLAGS = Object.fromEntries(COUNTRY_OPTIONS.map((country) => [country.name, country.flag]));
 
-const getCountryFlag = (country?: string) => COUNTRY_FLAGS[country || ""] || "🌍";
+const COUNTRY_ALIASES: Record<string, string> = {
+  CO: "Colombia",
+  COL: "Colombia",
+  US: "Estados Unidos",
+  USA: "Estados Unidos",
+  MX: "México",
+  MEX: "México",
+  BR: "Brasil",
+  BRA: "Brasil",
+  AR: "Argentina",
+  ARG: "Argentina",
+  ES: "España",
+  ESP: "España"
+};
+
+const normalizeCountryName = (country?: string) => {
+  const value = String(country || "").trim();
+  if (!value) return "Colombia";
+  return COUNTRY_ALIASES[value.toUpperCase()] || value;
+};
+
+const getCountryFlag = (country?: string) => COUNTRY_FLAGS[normalizeCountryName(country)] || "🌍";
 const getCountryOptionLabel = (country: { name: string; flag: string }) => `${country.flag} ${country.name}`;
 
 const STAGES = [
@@ -1228,6 +1249,93 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
   }
 };
 
+const AUTH_COPY_BY_LANG: Record<string, Record<string, string>> = {
+  es: {
+    auth_box_title: "Inicia Sesión o Regístrate",
+    auth_box_subtitle: "Escribe tu correo para participar en la Polla del Mundial 2026",
+    auth_public_name: "Nombre público para el ranking",
+    auth_public_name_hint: "Será el nombre visible en la tabla de posiciones.",
+    auth_country: "País",
+    auth_country_hint: "Se mostrará en la tabla de clasificación.",
+    auth_choose_avatar: "Elige un Avatar",
+    auth_email: "Correo Electrónico",
+    auth_password: "Contraseña",
+    auth_confirm_password: "Confirmar contraseña",
+    auth_confirm_placeholder: "Repite tu contraseña",
+    auth_forgot: "¿Olvidó su contraseña?",
+    auth_btn_login: "Ingresar a la Polla",
+    auth_btn_register: "Crear Cuenta de Participante",
+    auth_btn_recover: "Recuperar Contraseña",
+    auth_no_account: "¿No tienes una cuenta aún?",
+    auth_btn_register_now: "Regístrate gratis",
+    auth_has_account: "¿Ya tienes una cuenta registrada?",
+    auth_btn_login_now: "Inicia Sesión"
+  },
+  en: {
+    auth_box_title: "Sign In or Register",
+    auth_box_subtitle: "Enter your email to join the 2026 World Cup pool",
+    auth_public_name: "Public leaderboard name",
+    auth_public_name_hint: "This name will be visible in the standings.",
+    auth_country: "Country",
+    auth_country_hint: "It will be shown in the leaderboard.",
+    auth_choose_avatar: "Choose an avatar",
+    auth_email: "Email",
+    auth_password: "Password",
+    auth_confirm_password: "Confirm password",
+    auth_confirm_placeholder: "Repeat your password",
+    auth_forgot: "Forgot your password?",
+    auth_btn_login: "Enter the Pool",
+    auth_btn_register: "Create Participant Account",
+    auth_btn_recover: "Recover Password",
+    auth_no_account: "Don't have an account yet?",
+    auth_btn_register_now: "Register free",
+    auth_has_account: "Already registered?",
+    auth_btn_login_now: "Sign in"
+  },
+  pt: {
+    auth_box_title: "Entrar ou Registrar",
+    auth_box_subtitle: "Digite seu e-mail para participar do Bolão da Copa 2026",
+    auth_public_name: "Nome público no ranking",
+    auth_public_name_hint: "Esse nome aparecerá na classificação.",
+    auth_country: "País",
+    auth_country_hint: "Será exibido na classificação.",
+    auth_choose_avatar: "Escolha um avatar",
+    auth_email: "E-mail",
+    auth_password: "Senha",
+    auth_confirm_password: "Confirmar senha",
+    auth_confirm_placeholder: "Repita sua senha",
+    auth_forgot: "Esqueceu sua senha?",
+    auth_btn_login: "Entrar no Bolão",
+    auth_btn_register: "Criar Conta",
+    auth_btn_recover: "Recuperar Senha",
+    auth_no_account: "Ainda não tem conta?",
+    auth_btn_register_now: "Registre-se grátis",
+    auth_has_account: "Já tem conta?",
+    auth_btn_login_now: "Entrar"
+  },
+  fr: {
+    auth_box_title: "Connexion ou Inscription",
+    auth_box_subtitle: "Entrez votre e-mail pour participer au prono Coupe du Monde 2026",
+    auth_public_name: "Nom public au classement",
+    auth_public_name_hint: "Ce nom sera visible dans le classement.",
+    auth_country: "Pays",
+    auth_country_hint: "Il sera affiché dans le classement.",
+    auth_choose_avatar: "Choisir un avatar",
+    auth_email: "E-mail",
+    auth_password: "Mot de passe",
+    auth_confirm_password: "Confirmer le mot de passe",
+    auth_confirm_placeholder: "Répétez votre mot de passe",
+    auth_forgot: "Mot de passe oublié ?",
+    auth_btn_login: "Entrer",
+    auth_btn_register: "Créer un compte",
+    auth_btn_recover: "Récupérer le mot de passe",
+    auth_no_account: "Pas encore de compte ?",
+    auth_btn_register_now: "Inscription gratuite",
+    auth_has_account: "Déjà inscrit ?",
+    auth_btn_login_now: "Se connecter"
+  }
+};
+
 // Tool to shorten long names to brief counterparts
 export function getTeamDisplayName(name: string, lang: string = "es"): string {
   if (!name) return "";
@@ -1320,6 +1428,10 @@ export default function App() {
     const dict = TRANSLATIONS[lang];
     if (!dict) return fallback || key;
     return dict[key] || fallback || key;
+  };
+
+  const authT = (key: string) => {
+    return AUTH_COPY_BY_LANG[lang]?.[key] || AUTH_COPY_BY_LANG.en[key] || AUTH_COPY_BY_LANG.es[key] || key;
   };
 
   const ui = (key: string, replacements: Record<string, string | number> = {}) => {
@@ -1628,7 +1740,7 @@ export default function App() {
     if (currentUser) {
       fetchUserSpecificData();
       setProfileName(currentUser.name);
-      setProfileCountry(currentUser.country || "Colombia");
+      setProfileCountry(normalizeCountryName(currentUser.country));
       setProfileAvatar(currentUser.avatar);
       setProfileEmailSubscribed(currentUser.emailSubscribed || false);
     } else {
@@ -1726,7 +1838,7 @@ export default function App() {
           email: authEmail,
           password: authPassword,
           name: authName,
-          country: authCountry,
+          country: normalizeCountryName(authCountry),
           avatar: authAvatar
         })
       });
@@ -1793,7 +1905,7 @@ export default function App() {
     try {
       const reqPayload: any = {
         name: profileName,
-        country: profileCountry,
+        country: normalizeCountryName(profileCountry),
         avatar: profileAvatar,
         emailSubscribed: profileEmailSubscribed
       };
@@ -2065,7 +2177,7 @@ export default function App() {
       let csvContent = "data:text/csv;charset=utf-8,";
       csvContent += "Posicion,Nombre,Pais,Puntos,Exactos(15pts),Empates(10pts),Partidos Predichos\n";
       rankings.forEach((r) => {
-        csvContent += `${r.position},"${r.userName}","${r.userCountry || "Colombia"}",${r.points},${r.exactCount},${r.drawCount},${r.predictCount}\n`;
+        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.exactCount},${r.drawCount},${r.predictCount}\n`;
       });
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -2751,8 +2863,8 @@ export default function App() {
           <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-950 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden my-6">
             <div className="p-6 bg-slate-900 border-b border-emerald-800 text-center text-white">
               <Trophy className="w-10 h-10 text-amber-400 mx-auto mb-2" />
-              <h2 className="text-xl font-bold">{t("auth_box_title", "Inicia Sesión o Regístrate")}</h2>
-              <p className="text-xs text-slate-300 mt-1">{t("auth_box_subtitle", "Escribe tu correo para participar en la Polla del Mundial 2026")}</p>
+              <h2 className="text-xl font-bold">{authT("auth_box_title")}</h2>
+              <p className="text-xs text-slate-300 mt-1">{authT("auth_box_subtitle")}</p>
             </div>
             
             <form onSubmit={authMode === "login" ? handleLogin : authMode === "register" ? handleRegister : handleRecover} className="p-6 space-y-4">
@@ -2760,7 +2872,7 @@ export default function App() {
               {authMode === "register" && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_public_name", "Nombre público para el ranking")}</label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_public_name")}</label>
                     <input
                       type="text"
                       className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -2770,14 +2882,14 @@ export default function App() {
                       minLength={3}
                       required
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Será el nombre visible en la tabla de posiciones.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{authT("auth_public_name_hint")}</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">País</label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_country")}</label>
                     <select
                       className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      value={authCountry}
+                      value={normalizeCountryName(authCountry)}
                       onChange={(e) => setAuthCountry(e.target.value)}
                       required
                     >
@@ -2785,11 +2897,11 @@ export default function App() {
                         <option key={country.name} value={country.name}>{getCountryOptionLabel(country)}</option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-slate-400 mt-1">Se mostrará en la tabla de clasificación.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{authT("auth_country_hint")}</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_choose_avatar", "Elige un Avatar")}</label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_choose_avatar")}</label>
                     <div className="grid grid-cols-6 gap-2 pt-1">
                       {AVATARS.map((av, idx) => (
                         <button
@@ -2807,7 +2919,7 @@ export default function App() {
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_email", "Correo Electrónico")}</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_email")}</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                   <input
@@ -2823,7 +2935,7 @@ export default function App() {
 
               {authMode !== "recover" && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("auth_password", "Contraseña")}</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_password")}</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                     <input
@@ -2846,13 +2958,13 @@ export default function App() {
                   {authMode === "register" && (
                     <>
                       <div className="mt-3">
-                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Confirmar contraseña</label>
+                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{authT("auth_confirm_password")}</label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                           <input
                             type={showAuthConfirmPassword ? "text" : "password"}
                             className="w-full pl-9 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                            placeholder="Repite tu contraseña"
+                            placeholder={authT("auth_confirm_placeholder")}
                             value={authConfirmPassword}
                             onChange={(e) => setAuthConfirmPassword(e.target.value)}
                             required
@@ -2886,7 +2998,7 @@ export default function App() {
                       onClick={() => setAuthMode("recover")}
                       className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline mt-1.5 block font-medium cursor-pointer"
                     >
-                      {t("auth_forgot", "¿Olvidó su contraseña?")}
+                      {authT("auth_forgot")}
                     </button>
                   )}
                 </div>
@@ -2897,22 +3009,22 @@ export default function App() {
                 disabled={authMode === "register" && (!isEmailValid || !isRegisterPasswordValid || authName.trim().length < 3)}
                 className={`w-full py-2.5 rounded-xl text-sm font-semibold shadow-md transition-colors ${authMode === "register" && (!isEmailValid || !isRegisterPasswordValid || authName.trim().length < 3) ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"}`}
               >
-                {authMode === "login" ? t("auth_btn_login", "Ingresar a la Polla") : authMode === "register" ? t("auth_btn_register", "Crear Cuenta de Participante") : t("auth_btn_recover", "Recuperar Contraseña")}
+                {authMode === "login" ? authT("auth_btn_login") : authMode === "register" ? authT("auth_btn_register") : authT("auth_btn_recover")}
               </button>
 
               <div className="border-t border-slate-100 dark:border-slate-800 pt-4 text-center">
                 {authMode === "login" ? (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {t("auth_no_account", "¿No tienes una cuenta aún?")}{" "}
+                    {authT("auth_no_account")}{" "}
                     <button type="button" onClick={() => setAuthMode("register")} className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer">
-                      {t("auth_btn_register_now", "Regístrate gratis")}
+                      {authT("auth_btn_register_now")}
                     </button>
                   </p>
                 ) : (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {t("auth_has_account", "¿Ya tienes una cuenta registrada?")}{" "}
+                    {authT("auth_has_account")}{" "}
                     <button type="button" onClick={() => setAuthMode("login")} className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer">
-                      {t("auth_btn_login_now", "Inicia Sesión")}
+                      {authT("auth_btn_login_now")}
                     </button>
                   </p>
                 )}
@@ -3342,7 +3454,7 @@ export default function App() {
                           <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">País</label>
                           <select
                             className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
-                            value={profileCountry}
+                            value={normalizeCountryName(profileCountry)}
                             onChange={(e) => setProfileCountry(e.target.value)}
                             required
                           >
@@ -3848,7 +3960,7 @@ export default function App() {
                                 <td className="py-2.5 px-3 hidden md:table-cell text-slate-600 dark:text-slate-300">
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
                                     <span className="text-sm leading-none">{getCountryFlag(r.userCountry)}</span>
-                                    {r.userCountry || "Colombia"}
+                                    {normalizeCountryName(r.userCountry)}
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">{r.points}</td>
@@ -4258,7 +4370,7 @@ export default function App() {
                           <label className="block text-[10px] uppercase font-bold text-slate-500">País</label>
                           <select
                             className="bg-white border rounded p-1.5 text-xs w-full mt-1"
-                            value={editingUser.country || "Colombia"}
+                            value={normalizeCountryName(editingUser.country)}
                             onChange={(e) => setEditingUser({ ...editingUser, country: e.target.value })}
                           >
                             {COUNTRY_OPTIONS.map((country) => (
@@ -4342,7 +4454,7 @@ export default function App() {
                           .filter((u) =>
                             u.name.toLowerCase().includes(searchUser.toLowerCase()) ||
                             u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
-                            (u.country || "").toLowerCase().includes(searchUser.toLowerCase())
+                            normalizeCountryName(u.country).toLowerCase().includes(searchUser.toLowerCase())
                           )
                           .map((u) => (
                             <tr key={u.id} className="hover:bg-slate-50/50">
@@ -4355,7 +4467,7 @@ export default function App() {
                               <td className="py-2.5 px-3 text-[11px] text-slate-600">
                                 <span className="inline-flex items-center gap-1.5">
                                   <span className="text-sm leading-none">{getCountryFlag(u.country)}</span>
-                                  {u.country || "Colombia"}
+                                  {normalizeCountryName(u.country)}
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">{u.email}</td>
