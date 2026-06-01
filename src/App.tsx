@@ -2172,7 +2172,7 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar la predicción");
 
-      showToast(data.message, "success");
+      showToast("Pronóstico guardado con éxito.", "success");
       fetchUserSpecificData();
       fetchGlobalData();
     } catch (err: any) {
@@ -4405,26 +4405,30 @@ export default function App() {
                               {!isLocked ? (
                                 <div className="flex items-center justify-center md:justify-end gap-2 flex-wrap">
                                   <button
-                                    onClick={() => handleClearPrediction(m.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleClearPrediction(m.id);
+                                    }}
                                     disabled={!canSubmitPredictions || (!pred && localVal === "" && visVal === "")}
                                     className={`min-h-12 px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 border ${
                                       !canSubmitPredictions || (!pred && localVal === "" && visVal === "")
                                         ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700"
                                         : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
                                     }`}
-                                    onClickCapture={(e) => e.stopPropagation()}
                                   >
                                     <Eraser className="w-3 h-3" /> Limpiar
                                   </button>
                                   <button
-                                    onClick={() => handleSavePrediction(m.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSavePrediction(m.id);
+                                    }}
                                     disabled={!canSubmitPredictions}
                                     className={`min-h-12 px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-sm ${
                                       canSubmitPredictions
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                                         : "bg-slate-300 text-slate-500 cursor-not-allowed"
                                     }`}
-                                    onClickCapture={(e) => e.stopPropagation()}
                                   >
                                     <Check className="w-3 h-3" /> {pred ? t("pred_update", "Actualizar") : t("pred_save", "Guardar")}
                                   </button>
