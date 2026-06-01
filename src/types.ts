@@ -49,6 +49,7 @@ export interface Company {
   name: string;
   slug: string;
   logo?: string;
+  prizesText?: string;
   adminId?: string;
   maxPlayers: number;
   status: "active" | "suspended";

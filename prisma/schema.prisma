@@ -67,6 +67,7 @@ model Company {
   name        String
   slug        String   @unique
   logo        String?
+  prizesText  String?
   adminId     String?  @unique
   maxPlayers  Int      @default(50)
   status      String   @default("active")

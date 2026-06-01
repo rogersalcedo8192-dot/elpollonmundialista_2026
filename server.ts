@@ -56,6 +56,7 @@ interface Company {
   name: string;
   slug: string;
   logo?: string;
+  prizesText?: string;
   adminId?: string;
   maxPlayers: number;
   status: "active" | "suspended";
@@ -1025,6 +1026,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       name: company.name,
       slug: company.slug,
       logo: company.logo || undefined,
+      prizesText: company.prizesText || undefined,
       adminId: company.adminId || undefined,
       maxPlayers: company.maxPlayers,
       status: company.status as Company["status"],
@@ -1118,6 +1120,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           name: company.name,
           slug: company.slug,
           logo: company.logo || null,
+          prizesText: company.prizesText || null,
           adminId: company.adminId && userIds.has(company.adminId) ? company.adminId : null,
           maxPlayers: company.maxPlayers,
           status: company.status,
@@ -2250,10 +2253,22 @@ app.get("/api/companies", (req, res) => {
   }));
 });
 
+app.get("/api/company-policy", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const db = loadDb();
+  const company = user.companyId ? (db.companies || []).find((item) => item.id === user.companyId) : null;
+  res.json({
+    companyId: company?.id,
+    companyName: company?.name,
+    prizesText: company?.prizesText || db.torneo.prizesText
+  });
+});
+
 app.post("/api/companies", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!isSuperAdmin(user)) return res.status(403).json({ error: "Solo el SuperAdmin puede crear empresas." });
-  const { name, slug, logo, adminId, maxPlayers, status } = req.body;
+  const { name, slug, logo, prizesText, adminId, maxPlayers, status } = req.body;
   if (!name) return res.status(400).json({ error: "El nombre de la empresa es requerido." });
 
   const db = loadDb();
@@ -2268,6 +2283,7 @@ app.post("/api/companies", (req, res) => {
     name: String(name).trim(),
     slug: companySlug,
     logo: logo || undefined,
+    prizesText: prizesText || undefined,
     adminId: adminId || undefined,
     maxPlayers: Math.min(Math.max(Number(maxPlayers) || DEFAULT_COMPANY_MAX_PLAYERS, 1), DEFAULT_COMPANY_MAX_PLAYERS),
     status: status === "suspended" ? "suspended" : "active",
@@ -2290,17 +2306,20 @@ app.post("/api/companies", (req, res) => {
 
 app.put("/api/companies/:id", (req, res) => {
   const user = getAuthenticatedUser(req);
-  if (!isSuperAdmin(user)) return res.status(403).json({ error: "Solo el SuperAdmin puede editar empresas." });
   const db = loadDb();
   const company = (db.companies || []).find((item) => item.id === req.params.id);
   if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
-  const { name, slug, logo, adminId, maxPlayers, status } = req.body;
-  if (name) company.name = String(name).trim();
-  if (slug) company.slug = makeSlug(slug);
-  if (logo !== undefined) company.logo = logo || undefined;
-  if (maxPlayers !== undefined) company.maxPlayers = Math.min(Math.max(Number(maxPlayers) || DEFAULT_COMPANY_MAX_PLAYERS, 1), DEFAULT_COMPANY_MAX_PLAYERS);
-  if (status) company.status = status === "suspended" ? "suspended" : "active";
-  if (adminId !== undefined) {
+  if (!canManageCompany(user, company.id)) return res.status(403).json({ error: "No autorizado para editar esta empresa." });
+  const { name, slug, logo, prizesText, adminId, maxPlayers, status } = req.body;
+  if (prizesText !== undefined) company.prizesText = prizesText || undefined;
+  if (isSuperAdmin(user)) {
+    if (name) company.name = String(name).trim();
+    if (slug) company.slug = makeSlug(slug);
+    if (logo !== undefined) company.logo = logo || undefined;
+    if (maxPlayers !== undefined) company.maxPlayers = Math.min(Math.max(Number(maxPlayers) || DEFAULT_COMPANY_MAX_PLAYERS, 1), DEFAULT_COMPANY_MAX_PLAYERS);
+    if (status) company.status = status === "suspended" ? "suspended" : "active";
+  }
+  if (adminId !== undefined && isSuperAdmin(user)) {
     company.adminId = adminId || undefined;
     const adminUser = db.users.find((dbUser) => dbUser.id === adminId);
     if (adminUser) {

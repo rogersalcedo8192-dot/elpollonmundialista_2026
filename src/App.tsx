@@ -1599,9 +1599,10 @@ export default function App() {
   const [companies, setCompanies] = useState<Array<Company & { playersCount?: number; availableSlots?: number }>>([]);
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitation[]>([]);
   const [companyRanking, setCompanyRanking] = useState<Array<Ranking & { companyPosition?: number }>>([]);
-  const [companyForm, setCompanyForm] = useState({ name: "", slug: "", logo: "", maxPlayers: 50, adminId: "", status: "active" });
+  const [companyForm, setCompanyForm] = useState({ name: "", slug: "", logo: "", prizesText: "", maxPlayers: 50, adminId: "", status: "active" });
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [inviteToken, setInviteToken] = useState("");
+  const [companyPrizePolicy, setCompanyPrizePolicy] = useState("");
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1769,6 +1770,12 @@ export default function App() {
         setPublicPrizePool(await prizeRes.json());
       }
 
+      const policyRes = await fetch("/api/company-policy", { headers: getHeaders() });
+      if (policyRes.ok) {
+        const policy = await policyRes.json();
+        setCompanyPrizePolicy(policy.prizesText || "");
+      }
+
       // Check if Admin to render dynamic reports
       if (currentUser.role === "admin" || currentUser.role === "superadmin") {
         fetchAdminStats();
@@ -1827,6 +1834,7 @@ export default function App() {
       if (!res.ok) return;
       const data = await res.json();
       setCompanyInvitations(data.invitations || []);
+      setCompanyPrizePolicy(data.company?.prizesText || "");
     } catch (err) {
       console.error(err);
     }
@@ -2369,9 +2377,27 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar la empresa.");
       showToast(data.message, "success");
-      setCompanyForm({ name: "", slug: "", logo: "", maxPlayers: 50, adminId: "", status: "active" });
+      setCompanyForm({ name: "", slug: "", logo: "", prizesText: "", maxPlayers: 50, adminId: "", status: "active" });
       fetchCompanies();
       fetchAdminUsers();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
+  };
+
+  const handleSaveCompanyPrizePolicy = async () => {
+    if (!selectedCompanyId) return;
+    try {
+      const res = await fetch(`/api/companies/${selectedCompanyId}`, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify({ prizesText: companyPrizePolicy })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo guardar el texto de premiaciones.");
+      showToast("Texto de premiaciones de la empresa guardado.", "success");
+      fetchCompanies();
+      fetchUserSpecificData();
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -4580,7 +4606,7 @@ export default function App() {
                             <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" /> {t("rules_prizes_rec", "Premios & Reconocimientos")}
                           </h3>
                           <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
-                            {renderFormattedText(torneo?.prizesText, t("rules_no_prizes", "Por definir por el administrador."))}
+                            {renderFormattedText(companyPrizePolicy || torneo?.prizesText, t("rules_no_prizes", "Por definir por el administrador."))}
                           </div>
                         </div>
                       </div>
@@ -4904,6 +4930,12 @@ export default function App() {
                         {adminUsers.map((user) => <option key={user.id} value={user.id}>{user.name} ({user.email})</option>)}
                       </select>
                       <button className="min-h-11 rounded-lg bg-emerald-600 text-white font-black">Crear empresa</button>
+                      <textarea
+                        className="md:col-span-5 min-h-24 px-3 py-2 rounded-lg border"
+                        placeholder="Texto Libro de Premiaciones específico para esta empresa"
+                        value={companyForm.prizesText}
+                        onChange={(e) => setCompanyForm({ ...companyForm, prizesText: e.target.value })}
+                      />
                     </form>
                   )}
 
@@ -4938,6 +4970,28 @@ export default function App() {
                           Generar invitacion
                         </button>
                       </div>
+
+                      {selectedCompanyId && (
+                        <div className="p-4 rounded-xl border bg-white space-y-3">
+                          <div>
+                            <h3 className="text-sm font-black">Texto Libro de Premiaciones</h3>
+                            <p className="text-xs text-slate-500">Este texto reemplaza el libro global solo para los usuarios de esta empresa.</p>
+                          </div>
+                          <textarea
+                            className="w-full min-h-36 rounded-xl border px-3 py-2 text-xs"
+                            value={companyPrizePolicy}
+                            onChange={(e) => setCompanyPrizePolicy(e.target.value)}
+                            placeholder={torneo?.prizesText || "Premiaciones por definir..."}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveCompanyPrizePolicy}
+                            className="min-h-11 px-4 rounded-lg bg-emerald-600 text-white font-black text-xs"
+                          >
+                            Guardar premiaciones de empresa
+                          </button>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="p-4 rounded-xl border bg-white">

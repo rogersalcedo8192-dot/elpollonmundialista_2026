@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS "Company" (
   "name" TEXT NOT NULL,
   "slug" TEXT NOT NULL,
   "logo" TEXT,
+  "prizesText" TEXT,
   "adminId" TEXT,
   "maxPlayers" INTEGER NOT NULL DEFAULT 50,
   "status" TEXT NOT NULL DEFAULT 'active',
