@@ -14,6 +14,11 @@ interface TorneoConfig {
   welcomeMessage: string;
   rulesText: string;
   prizesText: string;
+  popupEnabled?: boolean;
+  popupTitle?: string;
+  popupMessage?: string;
+  popupCtaLabel?: string;
+  popupCtaTab?: string;
   rulesImageUrl?: string;
   rulesImageUrlEn?: string;
   notificationConfig: {
@@ -936,6 +941,11 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       welcomeMessage: torneo.welcomeMessage,
       rulesText: torneo.rulesText,
       prizesText: torneo.prizesText,
+      popupEnabled: torneo.popupEnabled,
+      popupTitle: torneo.popupTitle || undefined,
+      popupMessage: torneo.popupMessage || undefined,
+      popupCtaLabel: torneo.popupCtaLabel || undefined,
+      popupCtaTab: torneo.popupCtaTab || undefined,
       rulesImageUrl: torneo.rulesImageUrl || undefined,
       rulesImageUrlEn: torneo.rulesImageUrlEn || undefined,
       notificationConfig: torneo.notificationConfig as TorneoConfig["notificationConfig"]
@@ -1140,6 +1150,11 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
         welcomeMessage: schema.torneo.welcomeMessage,
         rulesText: schema.torneo.rulesText,
         prizesText: schema.torneo.prizesText,
+        popupEnabled: Boolean(schema.torneo.popupEnabled),
+        popupTitle: schema.torneo.popupTitle || null,
+        popupMessage: schema.torneo.popupMessage || null,
+        popupCtaLabel: schema.torneo.popupCtaLabel || null,
+        popupCtaTab: schema.torneo.popupCtaTab || null,
         rulesImageUrl: schema.torneo.rulesImageUrl || null,
         rulesImageUrlEn: schema.torneo.rulesImageUrlEn || null,
         notificationConfig: schema.torneo.notificationConfig
@@ -1429,6 +1444,11 @@ function createDefaultDb(): DatabaseSchema {
     welcomeMessage: "¡Bienvenido a la Polla Mundialista FIFA 2026! Predice y demuestra tus dotes como estratega del fútbol.",
     rulesText: "REGLAS DE PUNTUACIÓN DE PARTIDOS:\n- Si aciertas un EMPATE EXACTO (marcador correcto), ¡obtienes 25 puntos!\n- Si aciertas el MARCADOR EXACTO de un partido con ganador, ¡obtienes 15 puntos!\n- Si NO aciertas el marcador exacto pero sí el RESULTADO FINAL (ganador local, empate o ganador visitante), obtienes un BONUS de +10 puntos.\n- De lo contrario, obtienes 5 puntos por participación.\n- Partido sin marcador: 0 puntos.\n\nREGLAS DE PREMIACIÓN FAVORITOS REALES (DEBE ENVIARSE HASTA 24 HORAS ANTES DEL PRIMER PARTIDO):\n- Acierta favorito por grupo: gane 100 puntos.\n- Acierta quien clasifica en cada fase eliminatoria (sin contar grupos): gana 200 puntos.\n- Acierta los 1 finalista de la gran final: gana 300 puntos.\n- Acierta subcampeón: gana 500 puntos.\n- Acierta campeón: gana 1000 puntos.",
     prizesText: "PREMIACIONES Y RECONOCIMIENTOS:\n- 1er Lugar: Camiseta Autografiada + Copa de Campeón de la Polla.\n- 2do Lugar: Balón Adidas Al Rihla Edición 2026.\n- 3er Lugar: Suscripción VIP de streaming deportivo.",
+    popupEnabled: false,
+    popupTitle: "Aviso importante",
+    popupMessage: "",
+    popupCtaLabel: "Ver detalles",
+    popupCtaTab: "rules-prizes",
     rulesImageUrl: "/uploads/reglas.png",
     rulesImageUrlEn: "/src/assets/images/polla_rules_en_1780083217819.png",
     notificationConfig: {
@@ -2952,7 +2972,7 @@ app.delete("/api/admin/banners/:id", (req, res) => {
 // Admin: Reset Tournament to Real Pre-Tournament State (Pre-Mundial)
 app.post("/api/admin/reset-tournament", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const db = loadDb();
   
@@ -2984,12 +3004,23 @@ app.post("/api/admin/reset-tournament", (req, res) => {
   db.notifications = [];
   db.sentReminders = [];
 
+  db.users.forEach((u) => {
+    if (u.role !== "standard") return;
+    u.paymentStatus = "pending";
+    u.paidAt = undefined;
+    u.paymentProvider = undefined;
+    u.paymentReference = undefined;
+    u.paymentTransactionId = undefined;
+    u.stripeCheckoutSessionId = undefined;
+    u.stripePaymentIntentId = undefined;
+  });
+
   saveDb(db);
 
   // 4. Recalculate will automatically reset all users points, exact hits, history to [0, 0] or [0]
   recalculateScoresAndRankings();
 
-  res.json({ message: "¡El torneo ha sido reiniciado con éxito al Estado Inicial Real! Todos los partidos están pendientes sin marcadores y los puntos se han establecido en 0." });
+  res.json({ message: "La polla fue reiniciada: partidos, predicciones, puntajes y saldos del premio acumulado volvieron a cero." });
 });
 
 // API: Matches Endpoints

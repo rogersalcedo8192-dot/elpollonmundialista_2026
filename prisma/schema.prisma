@@ -16,6 +16,11 @@ model TorneoConfig {
   welcomeMessage          String
   rulesText               String
   prizesText              String
+  popupEnabled            Boolean  @default(false)
+  popupTitle              String?
+  popupMessage            String?
+  popupCtaLabel           String?
+  popupCtaTab             String?
   rulesImageUrl           String?
   rulesImageUrlEn         String?
   notificationConfig      Json

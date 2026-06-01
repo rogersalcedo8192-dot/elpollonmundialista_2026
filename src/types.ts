@@ -6,6 +6,11 @@ export interface TorneoConfig {
   welcomeMessage: string;
   rulesText: string;
   prizesText: string;
+  popupEnabled?: boolean;
+  popupTitle?: string;
+  popupMessage?: string;
+  popupCtaLabel?: string;
+  popupCtaTab?: string;
   rulesImageUrl?: string;
   rulesImageUrlEn?: string;
   notificationConfig: {
