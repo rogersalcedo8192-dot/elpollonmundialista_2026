@@ -40,7 +40,9 @@ import {
   ExternalLink,
   Copy,
   CreditCard,
-  Eraser
+  Eraser,
+  Menu,
+  X
 } from "lucide-react";
 import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
@@ -2812,7 +2814,7 @@ export default function App() {
               <select
                 value={lang}
                 onChange={(e) => setLang(e.target.value as any)}
-                className="min-h-12 md:min-h-0 appearance-none bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/60 transition-all text-xs font-bold py-1.5 pl-8 pr-3.5 outline-none cursor-pointer shadow-sm focus:ring-1 focus:ring-emerald-500"
+                className="min-h-10 md:min-h-0 appearance-none bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/60 transition-all text-xs font-bold py-1.5 pl-8 pr-3.5 outline-none cursor-pointer shadow-sm focus:ring-1 focus:ring-emerald-500"
                 title="Cambiar idioma / Change language"
               >
                 <option value="es" className="bg-slate-900 text-white">🇪🇸 ES</option>
@@ -2832,11 +2834,11 @@ export default function App() {
             </div>
 
             {/* Aesthetic Segmented Theme Picker */}
-            <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700/60 shrink-0 shadow-sm">
+            <div className="hidden md:flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700/60 shrink-0 shadow-sm">
               <button
                 type="button"
                 onClick={() => setTheme("light")}
-                className={`min-h-12 min-w-12 md:min-h-0 md:min-w-0 p-1.5 rounded-lg transition-all ${theme === "light" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`p-1.5 rounded-lg transition-all ${theme === "light" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
                 title={t("theme_light", "Claro")}
               >
                 <Sun className="w-3.5 h-3.5" />
@@ -2844,7 +2846,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTheme("dark")}
-                className={`min-h-12 min-w-12 md:min-h-0 md:min-w-0 p-1.5 rounded-lg transition-all ${theme === "dark" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`p-1.5 rounded-lg transition-all ${theme === "dark" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
                 title={t("theme_dark", "Oscuro")}
               >
                 <Moon className="w-3.5 h-3.5" />
@@ -2852,7 +2854,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTheme("system")}
-                className={`min-h-12 min-w-12 md:min-h-0 md:min-w-0 p-1.5 rounded-lg transition-all ${theme === "system" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`p-1.5 rounded-lg transition-all ${theme === "system" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
                 title={t("theme_system", "Sistema")}
               >
                 <Laptop className="w-3.5 h-3.5" />
@@ -2861,11 +2863,22 @@ export default function App() {
 
             {currentUser ? (
               <div className="flex items-center gap-2 md:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile_header_nav"
+                  className="md:hidden min-h-10 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 shadow-sm"
+                >
+                  {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                  Menú
+                </button>
+
                 {/* Notification Bell Trigger */}
                 <div className="relative" ref={notificationPanelRef}>
                   <button
                     onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-                    className="min-h-12 min-w-12 p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative flex items-center justify-center"
                     id="bell_notification_trigger"
                   >
                     <Bell className="w-4 h-4" />
@@ -2934,7 +2947,7 @@ export default function App() {
                   <button
                     onClick={handleLogout}
                     title={t("logout", "Cerrar Sesión")}
-                    className="min-h-12 min-w-12 p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-lg transition-colors ml-1 flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-lg transition-colors ml-1 flex items-center justify-center"
                     id="logout_action_btn"
                   >
                     <LogOut className="w-4 h-4" />
@@ -2948,8 +2961,48 @@ export default function App() {
         </div>
       </header>
 
+      {currentUser && mobileMenuOpen && (
+        <nav
+          id="mobile_header_nav"
+          aria-label="Menú principal móvil"
+          className="md:hidden sticky top-0 z-40 bg-slate-900 border-b border-emerald-800 shadow-xl"
+        >
+          <div className="px-4 py-3 grid grid-cols-2 gap-2">
+            {[
+              { key: "dashboard", label: "Resumen", icon: BarChart3 },
+              { key: "predictions", label: "Mis Pronósticos", icon: Calendar },
+              { key: "participate", label: "Partidos", icon: CreditCard },
+              { key: "ranking", label: "Clasificación", icon: Trophy },
+              { key: "rules-prizes", label: "Premios", icon: Info },
+              ...(currentUser.role === "admin" ? [{ key: "admin-config", label: "Configuración", icon: Settings }] : [])
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(item.key);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`min-h-12 rounded-xl px-3 flex items-center gap-2 text-left text-xs font-black transition-colors ${
+                    isActive
+                      ? "bg-emerald-500 text-emerald-950"
+                      : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 pt-4 pb-28 md:py-6 flex flex-col md:flex-row gap-5 md:gap-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-5 md:py-6 flex flex-col md:flex-row gap-5 md:gap-6">
 
         {!currentUser ? (
           /* Authentication Screen */
@@ -3128,7 +3181,7 @@ export default function App() {
           /* Logged In Portal Layout */
           <>
             {/* Sidebar Navigation */}
-            <aside className="w-full md:w-64 shrink-0 flex flex-col gap-4">
+            <aside className="hidden md:flex w-full md:w-64 shrink-0 flex-col gap-4">
               
               {/* Soccer Ball Toggle Button (Only visible on responsive mobile viewports) */}
               <button
@@ -5678,61 +5731,8 @@ export default function App() {
         )}
       </main>
 
-      {currentUser && (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("predictions");
-              setPredictionsMode("matches");
-              setMobileMenuOpen(false);
-            }}
-            className="md:hidden fixed right-4 bottom-24 z-40 min-h-14 px-5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black text-sm shadow-2xl shadow-emerald-950/30 border border-emerald-300 flex items-center gap-2"
-          >
-            <Check className="w-4 h-4" />
-            Pronosticar
-          </button>
-
-          <nav
-            aria-label="Navegación principal móvil"
-            className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+8px)] shadow-[0_-12px_30px_rgba(15,23,42,0.12)]"
-          >
-            <div className="grid grid-cols-4 gap-1 max-w-md mx-auto">
-              {[
-                { key: "dashboard", label: "Resumen", icon: BarChart3 },
-                { key: "predictions", label: "Pronósticos", icon: Calendar },
-                { key: "ranking", label: "Ranking", icon: Trophy },
-                { key: "rules-prizes", label: "Premios", icon: Info }
-              ].map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.key;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => {
-                      setActiveTab(item.key);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`min-h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-[10px] font-black transition-colors ${
-                      isActive
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                        : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="leading-none">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-        </>
-      )}
-
       {/* Football-inspired high contrast informational footer line */}
-      <footer className="bg-slate-900 text-slate-400 pt-6 pb-28 md:pb-6 text-center border-t border-slate-800 shrink-0 text-xs">
+      <footer className="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 shrink-0 text-xs">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p className="font-mono text-emerald-400 font-bold tracking-widest text-[11px] uppercase">
             ⚽ Polla Mundialista FIFA 2026 • Bogotá UTC-5 Base
