@@ -61,7 +61,7 @@ const createEmojiAvatar = (emoji: string, background: string) => {
 
 const getManagedPopupKey = (torneo?: TorneoConfig | null) => {
   if (!torneo?.popupEnabled || !torneo.popupMessage?.trim()) return "";
-  return `polla_popup_seen_${encodeURIComponent(`${torneo.popupTitle || ""}|${torneo.popupMessage}|${torneo.popupCtaLabel || ""}`)}`;
+  return `polla_popup_seen_${encodeURIComponent(`${torneo.popupTitle || ""}|${torneo.popupMessage}|${torneo.popupImageUrl || ""}|${torneo.popupCtaLabel || ""}`)}`;
 };
 
 const AVATARS = [
@@ -1603,6 +1603,7 @@ export default function App() {
   const [isUserLoading, setIsUserLoading] = useState(false);
   const [appMode, setAppMode] = useState<"FREE" | "PAID">("PAID");
   const [paymentProvider, setPaymentProvider] = useState<"stripe" | "wompi">("stripe");
+  const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
   const [companies, setCompanies] = useState<Array<Company & { playersCount?: number; availableSlots?: number }>>([]);
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitation[]>([]);
   const [companyRanking, setCompanyRanking] = useState<Array<Ranking & { companyPosition?: number }>>([]);
@@ -2802,6 +2803,30 @@ export default function App() {
     const diffHours = Math.floor(diffMinutes / 60);
     if (diffHours < 24) return ui("closes_in_hours", { value: diffHours });
     return ui("closes_in_days", { value: Math.floor(diffHours / 24) });
+  };
+
+  const getPredictionResultPick = (local: number | "", visitor: number | ""): "1" | "X" | "2" | "" => {
+    if (local === "" || visitor === "") return "";
+    if (local > visitor) return "1";
+    if (local === visitor) return "X";
+    return "2";
+  };
+
+  const updatePredictionScore = (matchId: number, side: "local" | "visitor", delta: number) => {
+    if (!canSubmitPredictions) return;
+    setPredScores((prev) => {
+      const current = prev[matchId] || { local: "", visitor: "" };
+      const rawValue = current[side] === "" ? 0 : Number(current[side]);
+      const nextValue = Math.max(0, Math.min(30, rawValue + delta));
+      return { ...prev, [matchId]: { ...current, [side]: nextValue } };
+    });
+  };
+
+  const setPredictionScoreValue = (matchId: number, side: "local" | "visitor", value: number | "") => {
+    setPredScores((prev) => ({
+      ...prev,
+      [matchId]: { local: prev[matchId]?.local ?? "", visitor: prev[matchId]?.visitor ?? "", [side]: value }
+    }));
   };
 
   const normalizeSearchText = (value: string) =>
@@ -4243,9 +4268,20 @@ export default function App() {
                         // Local score values mapping from state
                         const localVal = predScores[m.id]?.local ?? "";
                         const visVal = predScores[m.id]?.visitor ?? "";
+                        const resultPick = getPredictionResultPick(localVal, visVal);
+                        const isExpanded = expandedMatchId === m.id;
 
                         return (
-                          <div key={m.id} className={`p-4 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/20 flex flex-col md:flex-row items-center justify-between gap-4 ${hasEnded ? "bg-slate-50/20 dark:bg-slate-850/10" : ""}`}>
+                          <div
+                            key={m.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setExpandedMatchId(isExpanded ? null : m.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") setExpandedMatchId(isExpanded ? null : m.id);
+                            }}
+                            className={`p-4 transition-colors cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/30 flex flex-col md:flex-row items-center justify-between gap-4 ${isExpanded ? "bg-emerald-50/40 dark:bg-emerald-950/10 ring-1 ring-emerald-200 dark:ring-emerald-900" : ""} ${hasEnded ? "bg-slate-50/20 dark:bg-slate-850/10" : ""}`}
+                          >
                             
                             {/* Match Header stage & details */}
                             <div className="w-full md:w-1/3 space-y-1">
@@ -4260,7 +4296,23 @@ export default function App() {
                             </div>
 
                             {/* Teams & Prediction Scoring Board Inputs */}
-                            <div className="w-full md:w-2/5 flex items-center justify-center gap-3">
+                            <div className="w-full md:w-2/5 flex flex-col items-center justify-center gap-3">
+                              <div className="flex items-center justify-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+                                {(["1", "X", "2"] as const).map((pick) => (
+                                  <span
+                                    key={pick}
+                                    className={`w-9 h-8 rounded-full flex items-center justify-center text-xs font-black transition-colors ${
+                                      resultPick === pick
+                                        ? "bg-emerald-600 text-white shadow"
+                                        : "text-slate-500 dark:text-slate-400"
+                                    }`}
+                                    title={pick === "1" ? `Gana ${getTeamDisplayName(m.local, lang)}` : pick === "X" ? "Empate" : `Gana ${getTeamDisplayName(m.visitor, lang)}`}
+                                  >
+                                    {pick}
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="w-full flex items-center justify-center gap-3">
                               {/* HOME TEAM */}
                               <div className="w-16 text-right font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.local, lang)}>
                                 {getTeamShortCode(m.local)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span>
@@ -4291,7 +4343,13 @@ export default function App() {
                                 </div>
                               ) : (
                                 /* INPUT ACTIVE STATE VIEW */
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                  {isExpanded && (
+                                    <div className="flex flex-col gap-1">
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "local", 1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-emerald-600 text-white font-black disabled:bg-slate-300">+</button>
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "local", -1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-slate-100 text-slate-700 font-black border disabled:text-slate-300">-</button>
+                                    </div>
+                                  )}
                                   <input
                                     type="number"
                                     inputMode="numeric"
@@ -4303,11 +4361,9 @@ export default function App() {
                                     value={localVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
-                                      setPredScores((prev) => ({
-                                        ...prev,
-                                        [m.id]: { local: val as number | "", visitor: prev[m.id]?.visitor ?? "" }
-                                      }));
+                                      setPredictionScoreValue(m.id, "local", val as number | "");
                                     }}
+                                    onClick={(e) => e.stopPropagation()}
                                   />
                                   <span className="text-slate-400 font-bold">-</span>
                                   <input
@@ -4321,12 +4377,16 @@ export default function App() {
                                     value={visVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
-                                      setPredScores((prev) => ({
-                                        ...prev,
-                                        [m.id]: { local: prev[m.id]?.local ?? "", visitor: val as number | "" }
-                                      }));
+                                      setPredictionScoreValue(m.id, "visitor", val as number | "");
                                     }}
+                                    onClick={(e) => e.stopPropagation()}
                                   />
+                                  {isExpanded && (
+                                    <div className="flex flex-col gap-1">
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "visitor", 1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-emerald-600 text-white font-black disabled:bg-slate-300">+</button>
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "visitor", -1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-slate-100 text-slate-700 font-black border disabled:text-slate-300">-</button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               
@@ -4334,6 +4394,10 @@ export default function App() {
                               <div className="w-16 text-left font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.visitor, lang)}>
                                 <span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getTeamShortCode(m.visitor)}
                               </div>
+                              </div>
+                              {!isLocked && !isExpanded && (
+                                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">Toca para ajustar marcador</span>
+                              )}
                             </div>
 
                             {/* Scoring details / Save Button Action */}
@@ -4348,6 +4412,7 @@ export default function App() {
                                         ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700"
                                         : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
                                     }`}
+                                    onClickCapture={(e) => e.stopPropagation()}
                                   >
                                     <Eraser className="w-3 h-3" /> Limpiar
                                   </button>
@@ -4359,6 +4424,7 @@ export default function App() {
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                                         : "bg-slate-300 text-slate-500 cursor-not-allowed"
                                     }`}
+                                    onClickCapture={(e) => e.stopPropagation()}
                                   >
                                     <Check className="w-3 h-3" /> {pred ? t("pred_update", "Actualizar") : t("pred_save", "Guardar")}
                                   </button>
@@ -5907,10 +5973,9 @@ export default function App() {
                             <select className="w-full bg-white border rounded p-2" value={torneo.popupCtaTab || "rules-prizes"} onChange={(e) => setTorneo({ ...torneo, popupCtaTab: e.target.value })}>
                               <option value="dashboard">Resumen</option>
                               <option value="predictions">Mis Pronosticos</option>
-                              <option value="matches">Partidos</option>
-                              <option value="rankings">Clasificacion</option>
+                              <option value="participate">Partidos</option>
+                              <option value="ranking">Clasificacion</option>
                               <option value="rules-prizes">Premios</option>
-                              <option value="participate">Participar</option>
                             </select>
                             <textarea
                               rows={4}
@@ -5919,6 +5984,27 @@ export default function App() {
                               value={torneo.popupMessage || ""}
                               onChange={(e) => setTorneo({ ...torneo, popupMessage: e.target.value })}
                             />
+                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[1fr_120px] gap-3 items-start">
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold text-emerald-900 mb-1">Imagen desde biblioteca</label>
+                                <select
+                                  className="w-full min-h-11 bg-white border rounded p-2"
+                                  value={torneo.popupImageUrl || ""}
+                                  onChange={(e) => setTorneo({ ...torneo, popupImageUrl: e.target.value })}
+                                >
+                                  <option value="">Sin imagen</option>
+                                  {imageAssets.map((asset) => (
+                                    <option key={asset.id} value={asset.url}>{asset.originalName}</option>
+                                  ))}
+                                </select>
+                                <p className="text-[10px] text-emerald-800/70 mt-1">Sube imagenes en Assets y luego seleccionalas aqui.</p>
+                              </div>
+                              {torneo.popupImageUrl && (
+                                <div className="aspect-video rounded-xl overflow-hidden border bg-white">
+                                  <img src={torneo.popupImageUrl} alt="Preview popup" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -6182,6 +6268,13 @@ export default function App() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+            {torneo.popupImageUrl && (
+              <div className="px-5 pt-5">
+                <div className="aspect-video rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                  <img src={torneo.popupImageUrl} alt={torneo.popupTitle || "Imagen del aviso"} className="w-full h-full object-cover" />
+                </div>
+              </div>
+            )}
             <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-2 max-h-[55vh] overflow-y-auto">
               {renderFormattedText(torneo.popupMessage, "")}
             </div>

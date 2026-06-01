@@ -17,6 +17,7 @@ interface TorneoConfig {
   popupEnabled?: boolean;
   popupTitle?: string;
   popupMessage?: string;
+  popupImageUrl?: string;
   popupCtaLabel?: string;
   popupCtaTab?: string;
   rulesImageUrl?: string;
@@ -944,6 +945,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       popupEnabled: torneo.popupEnabled,
       popupTitle: torneo.popupTitle || undefined,
       popupMessage: torneo.popupMessage || undefined,
+      popupImageUrl: torneo.popupImageUrl || undefined,
       popupCtaLabel: torneo.popupCtaLabel || undefined,
       popupCtaTab: torneo.popupCtaTab || undefined,
       rulesImageUrl: torneo.rulesImageUrl || undefined,
@@ -1153,6 +1155,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
         popupEnabled: Boolean(schema.torneo.popupEnabled),
         popupTitle: schema.torneo.popupTitle || null,
         popupMessage: schema.torneo.popupMessage || null,
+        popupImageUrl: schema.torneo.popupImageUrl || null,
         popupCtaLabel: schema.torneo.popupCtaLabel || null,
         popupCtaTab: schema.torneo.popupCtaTab || null,
         rulesImageUrl: schema.torneo.rulesImageUrl || null,
@@ -1447,6 +1450,7 @@ function createDefaultDb(): DatabaseSchema {
     popupEnabled: false,
     popupTitle: "Aviso importante",
     popupMessage: "",
+    popupImageUrl: "",
     popupCtaLabel: "Ver detalles",
     popupCtaTab: "rules-prizes",
     rulesImageUrl: "/uploads/reglas.png",

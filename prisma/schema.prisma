@@ -19,6 +19,7 @@ model TorneoConfig {
   popupEnabled            Boolean  @default(false)
   popupTitle              String?
   popupMessage            String?
+  popupImageUrl           String?
   popupCtaLabel           String?
   popupCtaTab             String?
   rulesImageUrl           String?
