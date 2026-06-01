@@ -29,7 +29,8 @@ interface User {
   password?: string;
   name: string;
   country?: string;
-  role: "admin" | "standard";
+  role: "admin" | "superadmin" | "company_admin" | "standard";
+  companyId?: string;
   status: "active" | "suspended";
   avatar: string;
   points: number;
@@ -48,6 +49,28 @@ interface User {
   subchampionPoints?: number;
   championPoints?: number;
   totalBonusPoints?: number;
+}
+
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  logo?: string;
+  adminId?: string;
+  maxPlayers: number;
+  status: "active" | "suspended";
+  createdAt: string;
+}
+
+interface CompanyInvitation {
+  id: string;
+  companyId: string;
+  token: string;
+  createdBy: string;
+  usedBy?: string;
+  status: "active" | "used" | "revoked";
+  createdAt: string;
+  usedAt?: string;
 }
 
 interface TournamentPredictions {
@@ -188,6 +211,8 @@ interface DatabaseSchema {
   tournamentOutcomes?: TournamentOutcomes;
   assets?: UploadedAsset[];
   sponsorBanners?: SponsorBanner[];
+  companies?: Company[];
+  companyInvitations?: CompanyInvitation[];
 }
 
 const DB_FILE = path.join(process.cwd(), "db_store.json");
@@ -202,6 +227,8 @@ const hasCloudinaryConfig = Boolean(
 );
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
+const APP_MODE = (process.env.APP_MODE || "PAID").toUpperCase() === "FREE" ? "FREE" : "PAID";
+const DEFAULT_COMPANY_MAX_PLAYERS = 50;
 const ENTRY_FEE_USD = 5;
 const ENTRY_FEE_CENTS = ENTRY_FEE_USD * 100;
 const BANK_COMMISSION_RATE = 0.035;
@@ -244,6 +271,51 @@ function calculatePrizePool(paidParticipants: number) {
       third: THIRD_PLACE_RATE
     }
   };
+}
+
+function isSuperAdmin(user?: User | null) {
+  return Boolean(user && (user.role === "admin" || user.role === "superadmin"));
+}
+
+function isCompanyAdmin(user?: User | null) {
+  return Boolean(user && user.role === "company_admin");
+}
+
+function canManageCompany(user: User | null, companyId?: string) {
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+  return isCompanyAdmin(user) && Boolean(companyId) && user.companyId === companyId;
+}
+
+function makeSlug(value: string) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+function getCompanyPlayers(db: DatabaseSchema, companyId: string) {
+  return db.users.filter((u) => u.companyId === companyId && u.role !== "company_admin" && !isSuperAdmin(u));
+}
+
+function assertCompanyCapacity(db: DatabaseSchema, companyId: string, res: express.Response) {
+  const company = (db.companies || []).find((c) => c.id === companyId);
+  if (!company) {
+    res.status(404).json({ error: "Empresa no encontrada." });
+    return false;
+  }
+  if (company.status !== "active") {
+    res.status(403).json({ error: "La empresa no esta activa." });
+    return false;
+  }
+  if (getCompanyPlayers(db, companyId).length >= company.maxPlayers) {
+    res.status(400).json({ error: `La empresa alcanzo el limite de ${company.maxPlayers} jugadores.` });
+    return false;
+  }
+  return true;
 }
 
 function getRequestOrigin(req: express.Request) {
@@ -770,7 +842,9 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
     tournamentPredictions,
     tournamentOutcome,
     assets,
-    sponsorBanners
+    sponsorBanners,
+    companies,
+    companyInvitations
   ] = await Promise.all([
     prisma.torneoConfig.findUnique({ where: { id: "default" } }),
     prisma.user.findMany(),
@@ -783,7 +857,9 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
     prisma.tournamentPrediction.findMany(),
     prisma.tournamentOutcome.findUnique({ where: { id: "default" } }),
     prisma.asset.findMany(),
-    prisma.sponsorBanner.findMany()
+    prisma.sponsorBanner.findMany(),
+    prisma.company.findMany(),
+    prisma.companyInvitation.findMany()
   ]);
 
   if (!torneo) return null;
@@ -806,6 +882,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       email: u.email,
       password: u.password || undefined,
       name: u.name,
+      companyId: u.companyId || undefined,
       country: normalizeCountryName(u.country),
       role: u.role as User["role"],
       status: u.status as User["status"],
@@ -942,6 +1019,26 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       endsAt: dateToIso(banner.endsAt) || undefined,
       createdAt: banner.createdAt.toISOString(),
       updatedAt: banner.updatedAt.toISOString()
+    })),
+    companies: companies.map((company) => ({
+      id: company.id,
+      name: company.name,
+      slug: company.slug,
+      logo: company.logo || undefined,
+      adminId: company.adminId || undefined,
+      maxPlayers: company.maxPlayers,
+      status: company.status as Company["status"],
+      createdAt: company.createdAt.toISOString()
+    })),
+    companyInvitations: companyInvitations.map((invitation) => ({
+      id: invitation.id,
+      companyId: invitation.companyId,
+      token: invitation.token,
+      createdBy: invitation.createdBy,
+      usedBy: invitation.usedBy || undefined,
+      status: invitation.status as CompanyInvitation["status"],
+      createdAt: invitation.createdAt.toISOString(),
+      usedAt: dateToIso(invitation.usedAt) || undefined
     }))
   };
 }
@@ -953,6 +1050,8 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
   await prisma.$transaction(async (tx) => {
     await tx.asset.deleteMany();
     await tx.sponsorBanner.deleteMany();
+    await tx.companyInvitation.deleteMany();
+    await tx.company.deleteMany();
     await tx.tournamentPrediction.deleteMany();
     await tx.tournamentOutcome.deleteMany();
     await tx.sentReminder.deleteMany();
@@ -987,6 +1086,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           email: u.email,
           password: u.password || null,
           name: u.name,
+          companyId: null,
           country: normalizeCountryName(u.country),
           role: u.role,
           status: u.status,
@@ -1009,6 +1109,31 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           totalBonusPoints: u.totalBonusPoints ?? null
         }))
       });
+    }
+
+    if (schema.companies?.length) {
+      await tx.company.createMany({
+        data: schema.companies.map((company) => ({
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+          logo: company.logo || null,
+          adminId: company.adminId && userIds.has(company.adminId) ? company.adminId : null,
+          maxPlayers: company.maxPlayers,
+          status: company.status,
+          createdAt: new Date(company.createdAt)
+        }))
+      });
+    }
+
+    const companyIds = new Set((schema.companies || []).map((company) => company.id));
+    for (const user of schema.users) {
+      if (user.companyId && companyIds.has(user.companyId)) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { companyId: user.companyId }
+        });
+      }
     }
 
     if (schema.matches.length) {
@@ -1093,6 +1218,23 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           date: new Date(n.date),
           read: n.read
         }))
+      });
+    }
+
+    if (schema.companyInvitations?.length) {
+      await tx.companyInvitation.createMany({
+        data: schema.companyInvitations
+          .filter((invitation) => userIds.has(invitation.createdBy) && companyIds.has(invitation.companyId))
+          .map((invitation) => ({
+            id: invitation.id,
+            companyId: invitation.companyId,
+            token: invitation.token,
+            createdBy: invitation.createdBy,
+            usedBy: invitation.usedBy && userIds.has(invitation.usedBy) ? invitation.usedBy : null,
+            status: invitation.status,
+            createdAt: new Date(invitation.createdAt),
+            usedAt: invitation.usedAt ? new Date(invitation.usedAt) : null
+          }))
       });
     }
 
@@ -1489,7 +1631,9 @@ function createDefaultDb(): DatabaseSchema {
       finalists: [],
       subchampion: "",
       champion: ""
-    }
+    },
+    companies: [],
+    companyInvitations: []
   };
 }
 
@@ -1506,6 +1650,8 @@ function loadDb(): DatabaseSchema {
       if (!dbState.sentReminders) dbState.sentReminders = [];
       if (!dbState.tournamentPredictions) dbState.tournamentPredictions = [];
       if (!dbState.sponsorBanners) dbState.sponsorBanners = [];
+      if (!dbState.companies) dbState.companies = [];
+      if (!dbState.companyInvitations) dbState.companyInvitations = [];
       if (dbState.announcements?.some(isLegacySeedAnnouncement)) {
         dbState.announcements = dbState.announcements.filter((announcement) => !isLegacySeedAnnouncement(announcement));
         saveDb(dbState);
@@ -1579,6 +1725,8 @@ function loadDb(): DatabaseSchema {
   }
   dbState = createDefaultDb();
   dbState.sponsorBanners = [];
+  dbState.companies = [];
+  dbState.companyInvitations = [];
   ensureAssetsDir();
   dbState.assets = fs.readdirSync(ASSETS_DIR)
     .filter((fileName) => !fileName.startsWith("~$"))
@@ -1834,6 +1982,7 @@ function getAuthenticatedUser(req: express.Request): User | null {
 }
 
 function canSubmitPredictions(user: User) {
+  if (APP_MODE === "FREE") return true;
   return user.role === "admin" || user.paymentStatus === "paid";
 }
 
@@ -1880,6 +2029,10 @@ app.get("/api/torneo", (req, res) => {
   res.json(db.torneo);
 });
 
+app.get("/api/app-config", (req, res) => {
+  res.json({ appMode: APP_MODE, paymentsEnabled: APP_MODE === "PAID", companyMaxPlayers: DEFAULT_COMPANY_MAX_PLAYERS });
+});
+
 app.post("/api/torneo", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") {
@@ -1916,7 +2069,7 @@ app.post("/api/auth/register", (req, res) => {
     return res.status(400).json({ error: "El registro público de nuevos participantes está desactivado por el administrador." });
   }
 
-  const { email, password, name, avatar, country } = req.body;
+  const { email, password, name, avatar, country, inviteToken } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "Todos los campos obligatorios (nombre, correo, contraseña) son necesarios." });
   }
@@ -1941,11 +2094,21 @@ app.post("/api/auth/register", (req, res) => {
     return res.status(400).json({ error: "Este correo electrónico ya está registrado en la polla." });
   }
 
+  let companyId: string | undefined;
+  let invitation: CompanyInvitation | undefined;
+  if (inviteToken) {
+    invitation = (db.companyInvitations || []).find((item) => item.token === String(inviteToken) && item.status === "active");
+    if (!invitation) return res.status(400).json({ error: "Invitacion invalida o expirada." });
+    if (!assertCompanyCapacity(db, invitation.companyId, res)) return;
+    companyId = invitation.companyId;
+  }
+
   const newUser: User = {
     id: `user-${Date.now()}`,
     email: email.toLowerCase(),
     password,
     name,
+    companyId,
     country: normalizeCountryName(country),
     role: "standard",
     status: "active",
@@ -1956,10 +2119,16 @@ app.post("/api/auth/register", (req, res) => {
     predictCount: 0,
     historyPoints: [0],
     emailSubscribed: true,
-    paymentStatus: "pending"
+    paymentStatus: APP_MODE === "FREE" ? "paid" : "pending",
+    paidAt: APP_MODE === "FREE" ? new Date().toISOString() : undefined
   };
 
   db.users.push(newUser);
+  if (invitation) {
+    invitation.status = "used";
+    invitation.usedBy = newUser.id;
+    invitation.usedAt = new Date().toISOString();
+  }
   saveDb(db);
   recalculateScoresAndRankings();
 
@@ -2063,9 +2232,159 @@ app.post("/api/auth/recover-password", (req, res) => {
   res.json({ message: "Se ha enviado un código de recuperación simulado a su dirección de correo y se registró una alerta en su panel." });
 });
 
+app.get("/api/companies", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const db = loadDb();
+  const companies = isSuperAdmin(user)
+    ? (db.companies || [])
+    : (db.companies || []).filter((company) => company.id === user.companyId);
+
+  res.json(companies.map((company) => {
+    const playersCount = getCompanyPlayers(db, company.id).length;
+    return {
+      ...company,
+      playersCount,
+      availableSlots: Math.max(company.maxPlayers - playersCount, 0)
+    };
+  }));
+});
+
+app.post("/api/companies", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!isSuperAdmin(user)) return res.status(403).json({ error: "Solo el SuperAdmin puede crear empresas." });
+  const { name, slug, logo, adminId, maxPlayers, status } = req.body;
+  if (!name) return res.status(400).json({ error: "El nombre de la empresa es requerido." });
+
+  const db = loadDb();
+  const companySlug = makeSlug(slug || name);
+  if (!companySlug) return res.status(400).json({ error: "Slug de empresa invalido." });
+  if ((db.companies || []).some((company) => company.slug === companySlug)) {
+    return res.status(400).json({ error: "Ya existe una empresa con este slug." });
+  }
+
+  const company: Company = {
+    id: `company-${Date.now()}`,
+    name: String(name).trim(),
+    slug: companySlug,
+    logo: logo || undefined,
+    adminId: adminId || undefined,
+    maxPlayers: Math.min(Math.max(Number(maxPlayers) || DEFAULT_COMPANY_MAX_PLAYERS, 1), DEFAULT_COMPANY_MAX_PLAYERS),
+    status: status === "suspended" ? "suspended" : "active",
+    createdAt: new Date().toISOString()
+  };
+  db.companies = db.companies || [];
+  db.companies.push(company);
+  if (company.adminId) {
+    const adminUser = db.users.find((dbUser) => dbUser.id === company.adminId);
+    if (adminUser) {
+      adminUser.role = "company_admin";
+      adminUser.companyId = company.id;
+      adminUser.paymentStatus = "paid";
+      adminUser.paidAt = adminUser.paidAt || new Date().toISOString();
+    }
+  }
+  saveDb(db);
+  res.json({ message: "Empresa creada correctamente.", company });
+});
+
+app.put("/api/companies/:id", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!isSuperAdmin(user)) return res.status(403).json({ error: "Solo el SuperAdmin puede editar empresas." });
+  const db = loadDb();
+  const company = (db.companies || []).find((item) => item.id === req.params.id);
+  if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
+  const { name, slug, logo, adminId, maxPlayers, status } = req.body;
+  if (name) company.name = String(name).trim();
+  if (slug) company.slug = makeSlug(slug);
+  if (logo !== undefined) company.logo = logo || undefined;
+  if (maxPlayers !== undefined) company.maxPlayers = Math.min(Math.max(Number(maxPlayers) || DEFAULT_COMPANY_MAX_PLAYERS, 1), DEFAULT_COMPANY_MAX_PLAYERS);
+  if (status) company.status = status === "suspended" ? "suspended" : "active";
+  if (adminId !== undefined) {
+    company.adminId = adminId || undefined;
+    const adminUser = db.users.find((dbUser) => dbUser.id === adminId);
+    if (adminUser) {
+      adminUser.role = "company_admin";
+      adminUser.companyId = company.id;
+      adminUser.paymentStatus = "paid";
+    }
+  }
+  saveDb(db);
+  res.json({ message: "Empresa actualizada correctamente.", company });
+});
+
+app.delete("/api/companies/:id", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!isSuperAdmin(user)) return res.status(403).json({ error: "Solo el SuperAdmin puede eliminar empresas." });
+  const db = loadDb();
+  const company = (db.companies || []).find((item) => item.id === req.params.id);
+  if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
+  if (db.users.some((dbUser) => dbUser.companyId === company.id)) {
+    return res.status(400).json({ error: "No se puede eliminar una empresa con usuarios asociados. Suspendela primero." });
+  }
+  db.companies = (db.companies || []).filter((item) => item.id !== company.id);
+  db.companyInvitations = (db.companyInvitations || []).filter((item) => item.companyId !== company.id);
+  saveDb(db);
+  res.json({ message: "Empresa eliminada correctamente." });
+});
+
+app.post("/api/companies/:id/invitations", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const db = loadDb();
+  if (!canManageCompany(user, req.params.id)) return res.status(403).json({ error: "No autorizado para invitar en esta empresa." });
+  if (!assertCompanyCapacity(db, req.params.id, res)) return;
+  const token = `${req.params.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const invitation: CompanyInvitation = {
+    id: `inv-${Date.now()}`,
+    companyId: req.params.id,
+    token,
+    createdBy: user!.id,
+    status: "active",
+    createdAt: new Date().toISOString()
+  };
+  db.companyInvitations = db.companyInvitations || [];
+  db.companyInvitations.push(invitation);
+  saveDb(db);
+  const origin = getRequestOrigin(req);
+  res.json({ message: "Invitacion creada.", invitation, url: `${origin}/?invite=${encodeURIComponent(token)}` });
+});
+
+app.get("/api/companies/:id/invitations", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const db = loadDb();
+  if (!canManageCompany(user, req.params.id)) return res.status(403).json({ error: "No autorizado." });
+  const company = (db.companies || []).find((item) => item.id === req.params.id);
+  if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
+  const playersCount = getCompanyPlayers(db, company.id).length;
+  res.json({
+    company,
+    playersCount,
+    availableSlots: Math.max(company.maxPlayers - playersCount, 0),
+    invitations: (db.companyInvitations || []).filter((item) => item.companyId === company.id),
+    players: db.users.filter((dbUser) => dbUser.companyId === company.id)
+  });
+});
+
+app.get("/api/rankings/company/:id", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const db = loadDb();
+  if (!canManageCompany(user, req.params.id) && user?.companyId !== req.params.id) return res.status(403).json({ error: "No autorizado." });
+  const companyUsers = new Set(db.users.filter((dbUser) => dbUser.companyId === req.params.id).map((dbUser) => dbUser.id));
+  const companyRanking = db.rankings
+    .filter((ranking) => companyUsers.has(ranking.userId))
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
+      return b.drawCount - a.drawCount;
+    })
+    .map((ranking, index) => ({ ...ranking, companyPosition: index + 1 }));
+  res.json(companyRanking);
+});
+
 app.post("/api/payments/create-checkout-session", async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (APP_MODE === "FREE") return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
   if (user.role === "admin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
   if (user.paymentStatus === "paid") return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
 
@@ -2132,16 +2451,18 @@ app.post("/api/payments/confirm-checkout-session", async (req, res) => {
 // Admin: Retrieve Users List
 app.get("/api/admin/users", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!admin || (!isSuperAdmin(admin) && !isCompanyAdmin(admin))) return res.status(403).json({ error: "No autorizado." });
 
   const db = loadDb();
+  const visibleUsers = isSuperAdmin(admin) ? db.users : db.users.filter((u) => u.companyId === admin.companyId);
   // Safe mapping (omit passwords details unless specifically requesting for manual reset view)
-  res.json(db.users.map((u) => ({
+  res.json(visibleUsers.map((u) => ({
     id: u.id,
     email: u.email,
     name: u.name,
     country: normalizeCountryName(u.country),
     role: u.role,
+    companyId: u.companyId,
     status: u.status,
     avatar: u.avatar,
     points: u.points,
@@ -2158,14 +2479,17 @@ app.get("/api/admin/users", (req, res) => {
 // Admin: Create User Account
 app.post("/api/admin/users", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!admin || (!isSuperAdmin(admin) && !isCompanyAdmin(admin))) return res.status(403).json({ error: "No autorizado." });
 
-  const { name, email, password, role, status, avatar, country } = req.body;
+  const { name, email, password, role, status, avatar, country, companyId } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Datos del usuario incompletos." });
   }
 
   const db = loadDb();
+  const targetCompanyId = isSuperAdmin(admin) ? companyId : admin.companyId;
+  if (!isSuperAdmin(admin) && !targetCompanyId) return res.status(400).json({ error: "Tu usuario administrador no tiene empresa asignada." });
+  if (targetCompanyId && role !== "company_admin" && !assertCompanyCapacity(db, targetCompanyId, res)) return;
   const existing = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (existing) return res.status(400).json({ error: "El correo ya está registrado." });
 
@@ -2174,8 +2498,9 @@ app.post("/api/admin/users", (req, res) => {
     email: email.toLowerCase(),
     password,
     name,
+    companyId: targetCompanyId,
     country: normalizeCountryName(country),
-    role: role || "standard",
+    role: isSuperAdmin(admin) ? (role || "standard") : "standard",
     status: status || "active",
     avatar: avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120",
     points: 0,
@@ -2184,8 +2509,8 @@ app.post("/api/admin/users", (req, res) => {
     predictCount: 0,
     historyPoints: [0],
     emailSubscribed: true,
-    paymentStatus: role === "admin" ? "paid" : "pending",
-    paidAt: role === "admin" ? new Date().toISOString() : undefined
+    paymentStatus: APP_MODE === "FREE" || role === "admin" || role === "superadmin" || role === "company_admin" ? "paid" : "pending",
+    paidAt: APP_MODE === "FREE" || role === "admin" || role === "superadmin" || role === "company_admin" ? new Date().toISOString() : undefined
   };
 
   db.users.push(newUser);
@@ -2198,19 +2523,21 @@ app.post("/api/admin/users", (req, res) => {
 // Admin: Edit User details
 app.put("/api/admin/users/:id", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!admin || (!isSuperAdmin(admin) && !isCompanyAdmin(admin))) return res.status(403).json({ error: "No autorizado." });
 
   const { id } = req.params;
-  const { name, email, role, status, password, avatar, country } = req.body;
+  const { name, email, role, status, password, avatar, country, companyId } = req.body;
 
   const db = loadDb();
   const dbUser = db.users.find((u) => u.id === id);
   if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
+  if (!isSuperAdmin(admin) && dbUser.companyId !== admin.companyId) return res.status(403).json({ error: "No puedes editar usuarios de otra empresa." });
 
   if (name) dbUser.name = name;
   if (email) dbUser.email = email.toLowerCase();
   if (country !== undefined) dbUser.country = normalizeCountryName(country);
-  if (role) dbUser.role = role;
+  if (role && isSuperAdmin(admin)) dbUser.role = role;
+  if (companyId !== undefined && isSuperAdmin(admin)) dbUser.companyId = companyId || undefined;
   if (status) dbUser.status = status;
   if (password) dbUser.password = password;
   if (avatar) dbUser.avatar = avatar;
@@ -2224,12 +2551,15 @@ app.put("/api/admin/users/:id", (req, res) => {
 // Admin: Delete User account
 app.delete("/api/admin/users/:id", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!admin || (!isSuperAdmin(admin) && !isCompanyAdmin(admin))) return res.status(403).json({ error: "No autorizado." });
 
   const { id } = req.params;
   if (id === admin.id) return res.status(400).json({ error: "No puedes eliminar tu propia cuenta de Administrador." });
 
   const db = loadDb();
+  const targetUser = db.users.find((u) => u.id === id);
+  if (!targetUser) return res.status(404).json({ error: "Usuario no encontrado." });
+  if (!isSuperAdmin(admin) && targetUser.companyId !== admin.companyId) return res.status(403).json({ error: "No puedes eliminar usuarios de otra empresa." });
   const originalLen = db.users.length;
   db.users = db.users.filter((u) => u.id !== id);
   db.predictions = db.predictions.filter((p) => p.userId !== id);

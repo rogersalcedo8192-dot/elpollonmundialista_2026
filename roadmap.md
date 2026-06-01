@@ -39,6 +39,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Filtros mobile de partidos corregidos con controles full-width, busqueda tolerante a tildes y boton para limpiar filtros.
 - Mejoras de accesibilidad tactil en pronosticos: inputs numericos de marcador, botones de accion y filtros con areas tactiles mas comodas.
 - Skeleton loaders basicos en dashboard durante carga inicial y carga de datos del usuario.
+- Base multitenant incremental: empresas, invitaciones, ranking empresarial y `APP_MODE` FREE/PAID sin eliminar Stripe.
 
 ## Fase 1 - Estabilizacion Inmediata
 
@@ -249,6 +250,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-01: agregado primer bloque multitenant incremental con empresas, invitaciones, administradores de empresa, ranking empresarial, migracion Prisma y modo `APP_MODE=FREE|PAID`.
 - 2026-06-01: actualizado tras integrar menu mobile en header, resumen mobile above the fold, filtros mobile de partidos corregidos, busqueda sin tildes, boton limpiar filtros, mejoras tactiles en pronosticos y skeleton loaders basicos.
 - 2026-06-01: actualizado esquema de premios: entrada USD 5, administracion 10%, pasarela 3.5%, premios con el restante 86.5% distribuido 80/15/5.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.

@@ -44,7 +44,7 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool } from "./types";
+import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool, Company, CompanyInvitation } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 
@@ -1595,6 +1595,13 @@ export default function App() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const [isUserLoading, setIsUserLoading] = useState(false);
+  const [appMode, setAppMode] = useState<"FREE" | "PAID">("PAID");
+  const [companies, setCompanies] = useState<Array<Company & { playersCount?: number; availableSlots?: number }>>([]);
+  const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitation[]>([]);
+  const [companyRanking, setCompanyRanking] = useState<Array<Ranking & { companyPosition?: number }>>([]);
+  const [companyForm, setCompanyForm] = useState({ name: "", slug: "", logo: "", maxPlayers: 50, adminId: "", status: "active" });
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1696,6 +1703,12 @@ export default function App() {
   const fetchGlobalData = async () => {
     setIsGlobalLoading(true);
     try {
+      const cfgRes = await fetch("/api/app-config");
+      if (cfgRes.ok) {
+        const cfg = await cfgRes.json();
+        setAppMode(cfg.appMode === "FREE" ? "FREE" : "PAID");
+      }
+
       const trRes = await fetch("/api/torneo");
       if (trRes.ok) setTorneo(await trRes.json());
 
@@ -1757,11 +1770,14 @@ export default function App() {
       }
 
       // Check if Admin to render dynamic reports
-      if (currentUser.role === "admin") {
+      if (currentUser.role === "admin" || currentUser.role === "superadmin") {
         fetchAdminStats();
         fetchAdminUsers();
         fetchAdminAssets();
         fetchAdminBanners();
+      }
+      if (currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin") {
+        fetchCompanies();
       }
     } catch (err) {
       console.error("Error loading user explicit data:", err);
@@ -1783,6 +1799,43 @@ export default function App() {
     try {
       const uRes = await fetch("/api/admin/users", { headers: getHeaders() });
       if (uRes.ok) setAdminUsers(await uRes.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const res = await fetch("/api/companies", { headers: getHeaders() });
+      if (!res.ok) return;
+      const list = await res.json();
+      setCompanies(list);
+      const firstCompanyId = selectedCompanyId || currentUser?.companyId || list[0]?.id || "";
+      if (firstCompanyId) {
+        setSelectedCompanyId(firstCompanyId);
+        fetchCompanyDetails(firstCompanyId);
+        fetchCompanyRanking(firstCompanyId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchCompanyDetails = async (companyId: string) => {
+    try {
+      const res = await fetch(`/api/companies/${companyId}/invitations`, { headers: getHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      setCompanyInvitations(data.invitations || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchCompanyRanking = async (companyId: string) => {
+    try {
+      const res = await fetch(`/api/rankings/company/${companyId}`, { headers: getHeaders() });
+      if (res.ok) setCompanyRanking(await res.json());
     } catch (err) {
       console.error(err);
     }
@@ -1859,6 +1912,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get("invite");
+    if (invite) {
+      setInviteToken(invite);
+      setAuthMode("register");
+    }
     fetchGlobalData();
     syncCurrentUserProfile();
   }, []);
@@ -1966,7 +2025,8 @@ export default function App() {
           password: authPassword,
           name: authName,
           country: normalizeCountryName(authCountry),
-          avatar: authAvatar
+          avatar: authAvatar,
+          inviteToken: inviteToken || undefined
         })
       });
       const data = await res.json();
@@ -2296,6 +2356,44 @@ export default function App() {
     if (pass === null) return;
     setEditingUser({ ...user, password: pass });
     showToast(`Preparado para resetear contraseña. Da clic en guardar cambios.`, "info");
+  };
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/companies", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(companyForm)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo guardar la empresa.");
+      showToast(data.message, "success");
+      setCompanyForm({ name: "", slug: "", logo: "", maxPlayers: 50, adminId: "", status: "active" });
+      fetchCompanies();
+      fetchAdminUsers();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
+  };
+
+  const handleCreateCompanyInvitation = async () => {
+    if (!selectedCompanyId) return;
+    try {
+      const res = await fetch(`/api/companies/${selectedCompanyId}/invitations`, {
+        method: "POST",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo crear la invitacion.");
+      await copyTextToClipboard(data.url);
+      showToast("Invitacion creada y enlace copiado.", "success");
+      fetchCompanies();
+      fetchCompanyDetails(selectedCompanyId);
+      fetchCompanyRanking(selectedCompanyId);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
   };
 
   // ADMIN ACTION: EXPORT DATA TO CSV
@@ -2695,7 +2793,7 @@ export default function App() {
     setMatchStatusFilter("all");
     setTeamSearch("");
   };
-  const canSubmitPredictions = currentUser?.role === "admin" || currentUser?.paymentStatus === "paid";
+  const canSubmitPredictions = appMode === "FREE" || currentUser?.role === "admin" || currentUser?.role === "superadmin" || currentUser?.role === "company_admin" || currentUser?.paymentStatus === "paid";
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
   const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
@@ -2707,6 +2805,9 @@ export default function App() {
   const finalClosedByMatch = finalMatch?.status === "finished" && nowMs >= new Date(finalMatch.date).getTime() + 60 * 1000;
   const finalClosedByOutcome = Boolean(tournamentOutcomes?.champion);
   const certificatesEnabled = finalClosedByMatch || finalClosedByOutcome;
+  const isSuperAdminUser = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+  const isCompanyAdminUser = currentUser?.role === "company_admin";
+  const canManageUsers = Boolean(isSuperAdminUser || isCompanyAdminUser);
   const getWinnerPrize = (position: number) => {
     if (position === 1) return publicPrizePool?.payouts.first || 0;
     if (position === 2) return publicPrizePool?.payouts.second || 0;
@@ -3068,7 +3169,9 @@ export default function App() {
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "Clasificación", icon: Trophy },
               { key: "rules-prizes", label: "Premios", icon: Info },
-              ...(currentUser.role === "admin" ? [{ key: "admin-config", label: "Configuración", icon: Settings }] : [])
+              ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
+              ...(canManageUsers ? [{ key: "admin-companies", label: "Empresas", icon: Tv }] : []),
+              ...(isSuperAdminUser ? [{ key: "admin-config", label: "Configuración", icon: Settings }] : [])
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.key;
@@ -3383,17 +3486,17 @@ export default function App() {
                   </button>
 
                   {/* ADMINS MODULE ENTRY CHANGER */}
-                  {currentUser.role === "admin" && (
+                  {canManageUsers && (
                     <>
                       <span className="hidden md:block text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1 uppercase tracking-wider border-t border-slate-100 dark:border-slate-800 mt-2">{t("admin_title", "ADMINISTRACIÓN")}</span>
 
-                      <button
+                      {isSuperAdminUser && <button
                         onClick={() => { setActiveTab("admin-stats"); setMobileMenuOpen(false); }}
                         className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-stats" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <BarChart3 className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_stats", "Dashboard & Métricas")}
-                      </button>
+                      </button>}
 
                       <button
                         onClick={() => { setActiveTab("admin-users"); setMobileMenuOpen(false); }}
@@ -3404,12 +3507,20 @@ export default function App() {
                       </button>
 
                       <button
+                        onClick={() => { setActiveTab("admin-companies"); setMobileMenuOpen(false); }}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-companies" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                      >
+                        <Tv className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        Empresas e invitaciones
+                      </button>
+
+                      {isSuperAdminUser && <button
                         onClick={() => { setActiveTab("admin-matches"); setMobileMenuOpen(false); }}
                         className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-matches" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Calendar className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_matches", "Gestión de Partidos")}
-                      </button>
+                      </button>}
 
                       <button
                         onClick={() => { setActiveTab("admin-announcements"); setMobileMenuOpen(false); }}
@@ -3828,8 +3939,8 @@ export default function App() {
                           <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatUsd(publicPrizePool?.entryFeeUsd || 5)}</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pago único para entrar a la Polla Mundialista 2026.</p>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${currentUser.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
-                          {currentUser.paymentStatus === "paid" ? "Pago confirmado" : "Pago pendiente"}
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${appMode === "FREE" || currentUser.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
+                          {appMode === "FREE" ? "Acceso gratuito" : currentUser.paymentStatus === "paid" ? "Pago confirmado" : "Pago pendiente"}
                         </span>
                       </div>
 
@@ -3851,9 +3962,9 @@ export default function App() {
                         </div>
                       </div>
 
-                      {currentUser.paymentStatus === "paid" ? (
+                      {appMode === "FREE" || currentUser.paymentStatus === "paid" ? (
                         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 font-semibold">
-                          Tu inscripción ya está confirmada. Ya puedes registrar pronósticos y competir por premios.
+                          {appMode === "FREE" ? "La plataforma esta en modo gratuito. Ya puedes registrar pronosticos." : "Tu inscripción ya está confirmada. Ya puedes registrar pronósticos y competir por premios."}
                         </div>
                       ) : (
                         <button
@@ -4628,7 +4739,7 @@ export default function App() {
               })()}
 
               {/* 5. MÓDULO ADMIN: CORE REPORTS & METRIC STATS */}
-              {activeTab === "admin-stats" && currentUser.role === "admin" && (
+              {activeTab === "admin-stats" && isSuperAdminUser && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-100 pb-3">
                     <h2 className="text-xl font-bold flex items-center gap-2">
@@ -4771,7 +4882,94 @@ export default function App() {
               )}
 
               {/* 6. MÓDULO ADMIN: MANAGE USER ACCOUNTS */}
-              {activeTab === "admin-users" && currentUser.role === "admin" && (
+              {activeTab === "admin-companies" && canManageUsers && (
+                <div className="space-y-5">
+                  <div className="border-b pb-3 flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Tv className="text-amber-500 w-5 h-5" /> Empresas e Invitaciones
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">Maximo 50 jugadores por empresa. El ranking empresarial es una vista independiente del ranking global.</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black">Modo {appMode}</span>
+                  </div>
+
+                  {isSuperAdminUser && (
+                    <form onSubmit={handleSaveCompany} className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-slate-50 border rounded-xl text-xs">
+                      <input className="min-h-11 px-3 rounded-lg border" placeholder="Nombre empresa" value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} required />
+                      <input className="min-h-11 px-3 rounded-lg border" placeholder="slug-opcional" value={companyForm.slug} onChange={(e) => setCompanyForm({ ...companyForm, slug: e.target.value })} />
+                      <input className="min-h-11 px-3 rounded-lg border" placeholder="Logo URL" value={companyForm.logo} onChange={(e) => setCompanyForm({ ...companyForm, logo: e.target.value })} />
+                      <select className="min-h-11 px-3 rounded-lg border" value={companyForm.adminId} onChange={(e) => setCompanyForm({ ...companyForm, adminId: e.target.value })}>
+                        <option value="">Admin principal</option>
+                        {adminUsers.map((user) => <option key={user.id} value={user.id}>{user.name} ({user.email})</option>)}
+                      </select>
+                      <button className="min-h-11 rounded-lg bg-emerald-600 text-white font-black">Crear empresa</button>
+                    </form>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="lg:col-span-1 space-y-3">
+                      {companies.length === 0 ? (
+                        <div className="p-4 rounded-xl border text-xs text-slate-500">Aun no hay empresas creadas.</div>
+                      ) : companies.map((company) => (
+                        <button
+                          key={company.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCompanyId(company.id);
+                            fetchCompanyDetails(company.id);
+                            fetchCompanyRanking(company.id);
+                          }}
+                          className={`w-full min-h-16 p-3 rounded-xl border text-left transition ${selectedCompanyId === company.id ? "bg-emerald-50 border-emerald-200" : "bg-white hover:bg-slate-50"}`}
+                        >
+                          <span className="block text-sm font-black text-slate-950">{company.name}</span>
+                          <span className="block text-[11px] text-slate-500">{company.playersCount || 0}/{company.maxPlayers} jugadores · disponibles {company.availableSlots ?? company.maxPlayers}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-4">
+                      <div className="p-4 rounded-xl border bg-white flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <h3 className="text-sm font-black">Invitaciones</h3>
+                          <p className="text-xs text-slate-500">Genera un enlace para registrar jugadores de la empresa seleccionada.</p>
+                        </div>
+                        <button type="button" onClick={handleCreateCompanyInvitation} disabled={!selectedCompanyId} className="min-h-11 px-4 rounded-lg bg-slate-900 text-white font-black text-xs disabled:bg-slate-300">
+                          Generar invitacion
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-4 rounded-xl border bg-white">
+                          <h3 className="text-xs font-black uppercase text-slate-500 mb-3">Invitaciones recientes</h3>
+                          <div className="space-y-2 max-h-56 overflow-y-auto">
+                            {companyInvitations.length === 0 ? <p className="text-xs text-slate-400">Sin invitaciones.</p> : companyInvitations.map((inv) => (
+                              <div key={inv.id} className="p-2 rounded-lg bg-slate-50 text-xs flex justify-between gap-2">
+                                <span className="font-mono truncate">{inv.token}</span>
+                                <span className="font-black uppercase">{inv.status}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-xl border bg-white">
+                          <h3 className="text-xs font-black uppercase text-slate-500 mb-3">Ranking empresarial</h3>
+                          <div className="space-y-2 max-h-56 overflow-y-auto">
+                            {companyRanking.length === 0 ? <p className="text-xs text-slate-400">Sin ranking para esta empresa.</p> : companyRanking.map((row) => (
+                              <div key={row.userId} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-slate-50 text-xs">
+                                <span className="font-bold">#{row.companyPosition} {row.userName}</span>
+                                <span className="font-black">{row.points} pts</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "admin-users" && canManageUsers && (
                 <div className="space-y-4">
                   <div className="border-b border-slate-100 pb-3 flex items-center justify-between gap-4 flex-wrap">
                     <div>
@@ -5020,7 +5218,7 @@ export default function App() {
               )}
 
               {/* 7. MÓDULO ADMIN: MATCH CRUD / SCHEDULES / REGISTER RESULTS */}
-              {activeTab === "admin-matches" && currentUser.role === "admin" && (
+              {activeTab === "admin-matches" && isSuperAdminUser && (
                 <div className="space-y-4">
                   <div className="border-b border-slate-100 pb-3 flex items-center justify-between gap-4 flex-wrap">
                     <div>
@@ -5242,7 +5440,7 @@ export default function App() {
               )}
 
               {/* 8. MÓDULO ADMIN: COMMUNICADOS BROADCAST PUBLISHER */}
-              {activeTab === "admin-announcements" && currentUser.role === "admin" && (
+              {activeTab === "admin-announcements" && isSuperAdminUser && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-100 pb-3">
                     <h2 className="text-xl font-bold flex items-center gap-2">
@@ -5337,7 +5535,7 @@ export default function App() {
 
               {/* 9. MÓDULO ADMIN: POLÍTICAS Y CONFIGURACIONES TORNEO TAB */}
               {/* 9. MODULO ADMIN: BIBLIOTECA DE ASSETS */}
-              {activeTab === "admin-assets" && currentUser.role === "admin" && (
+              {activeTab === "admin-assets" && isSuperAdminUser && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-start justify-between gap-4 flex-wrap">
                     <div>
@@ -5440,7 +5638,7 @@ export default function App() {
                 </div>
               )}
 
-              {activeTab === "admin-banners" && currentUser.role === "admin" && (
+              {activeTab === "admin-banners" && isSuperAdminUser && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
                     <h2 className="text-xl font-bold flex items-center gap-2">
@@ -5553,7 +5751,7 @@ export default function App() {
                 </div>
               )}
 
-              {activeTab === "admin-config" && currentUser.role === "admin" && (
+              {activeTab === "admin-config" && isSuperAdminUser && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-100 pb-3">
                     <h2 className="text-xl font-bold flex items-center gap-2">

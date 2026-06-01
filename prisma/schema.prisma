@@ -29,6 +29,7 @@ model User {
   name               String
   country            String   @default("Colombia")
   role               String
+  companyId          String?
   status             String
   avatar             String
   points             Int      @default(0)
@@ -55,6 +56,41 @@ model User {
   notifications         Notification[]
   tournamentPredictions TournamentPrediction[]
   uploadedAssets        Asset[]                @relation("UploadedAssets")
+  company               Company?               @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: SetNull)
+  administeredCompany   Company?               @relation("CompanyAdmin")
+  createdInvitations    CompanyInvitation[]    @relation("InvitationCreator")
+  usedInvitations       CompanyInvitation[]    @relation("InvitationUser")
+}
+
+model Company {
+  id          String   @id
+  name        String
+  slug        String   @unique
+  logo        String?
+  adminId     String?  @unique
+  maxPlayers  Int      @default(50)
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  admin       User?    @relation("CompanyAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+  users       User[]   @relation("CompanyUsers")
+  invitations CompanyInvitation[]
+}
+
+model CompanyInvitation {
+  id        String   @id
+  companyId String
+  token     String   @unique
+  createdBy String
+  usedBy    String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator User    @relation("InvitationCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  usedUser User?   @relation("InvitationUser", fields: [usedBy], references: [id], onDelete: SetNull)
 }
 
 model Match {

@@ -21,7 +21,8 @@ export interface User {
   email: string;
   name: string;
   country?: string;
-  role: "admin" | "standard";
+  role: "admin" | "superadmin" | "company_admin" | "standard";
+  companyId?: string;
   status: "active" | "suspended";
   avatar: string;
   points: number;
@@ -41,6 +42,28 @@ export interface User {
   subchampionPoints?: number;
   championPoints?: number;
   totalBonusPoints?: number;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  logo?: string;
+  adminId?: string;
+  maxPlayers: number;
+  status: "active" | "suspended";
+  createdAt: string;
+}
+
+export interface CompanyInvitation {
+  id: string;
+  companyId: string;
+  token: string;
+  createdBy: string;
+  usedBy?: string;
+  status: "active" | "used" | "revoked";
+  createdAt: string;
+  usedAt?: string;
 }
 
 export interface TournamentPredictions {
