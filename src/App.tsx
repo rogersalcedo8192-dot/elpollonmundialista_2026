@@ -2114,13 +2114,14 @@ export default function App() {
     showToast("Sesión cerrada correctamente", "info");
   };
 
-  const handleStartPayment = async (realUpgrade = false) => {
+  const handleStartPayment = async (realUpgrade: boolean | React.MouseEvent = false) => {
+    const shouldUpgradeToReal = realUpgrade === true;
     setPaymentBusy(true);
     try {
       const res = await fetch("/api/payments/create-checkout-session", {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ realUpgrade })
+        body: JSON.stringify({ realUpgrade: shouldUpgradeToReal })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar el pago.");
@@ -4184,7 +4185,7 @@ export default function App() {
                         </div>
                       ) : (
                         <button
-                          onClick={handleStartPayment}
+                          onClick={() => handleStartPayment(false)}
                           disabled={paymentBusy}
                           className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow ${paymentBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
                         >
