@@ -3593,37 +3593,49 @@ export default function App() {
                       </button>}
 
                       <button
+                        disabled={!isSuperAdminUser}
                         onClick={() => { setActiveTab("admin-announcements"); setMobileMenuOpen(false); }}
-                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-announcements" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${!isSuperAdminUser ? "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-75" : activeTab === "admin-announcements" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        title={!isSuperAdminUser ? "Disponible solo para SuperAdmin" : undefined}
                       >
                         <Bell className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_announcement", "Publicar Comunicados")}
+                        {!isSuperAdminUser && <Lock className="ml-auto w-3.5 h-3.5 text-slate-400" />}
                       </button>
 
                       <button
+                        disabled={!isSuperAdminUser}
                         onClick={() => { setActiveTab("admin-assets"); setMobileMenuOpen(false); }}
-                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-assets" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${!isSuperAdminUser ? "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-75" : activeTab === "admin-assets" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        title={!isSuperAdminUser ? "Disponible solo para SuperAdmin" : undefined}
                       >
                         <FileText className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         Biblioteca de Assets
+                        {!isSuperAdminUser && <Lock className="ml-auto w-3.5 h-3.5 text-slate-400" />}
                       </button>
 
                       <button
+                        disabled={!isSuperAdminUser}
                         onClick={() => { setActiveTab("admin-banners"); setMobileMenuOpen(false); }}
-                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-banners" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${!isSuperAdminUser ? "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-75" : activeTab === "admin-banners" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        title={!isSuperAdminUser ? "Disponible solo para SuperAdmin" : undefined}
                       >
                         <Megaphone className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         Banners de Pauta
+                        {!isSuperAdminUser && <Lock className="ml-auto w-3.5 h-3.5 text-slate-400" />}
                       </button>
 
                       <button
+                        disabled={!isSuperAdminUser}
                         onClick={() => { setActiveTab("admin-config"); setMobileMenuOpen(false); }}
-                        className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-config" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${!isSuperAdminUser ? "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-75" : activeTab === "admin-config" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        title={!isSuperAdminUser ? "Disponible solo para SuperAdmin" : undefined}
                       >
                         <span className="md:hidden" aria-hidden="true">⚙️</span>
                         <Settings className="hidden md:block w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
                         <span className="md:hidden">Configuración</span>
                         <span className="hidden md:inline">{t("admin_config", "Políticas de la Polla")}</span>
+                        {!isSuperAdminUser && <Lock className="ml-auto w-3.5 h-3.5 text-slate-400" />}
                       </button>
                     </>
                   )}
