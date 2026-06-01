@@ -175,6 +175,12 @@ export interface PublicPrizePool {
   entryFeeUsd: number;
   paidParticipants: number;
   grossPool: number;
+  bankCommissionRate: number;
+  bankCommission: number;
+  ownerProfitRate: number;
+  ownerGrossProfit: number;
+  ownerProfit: number;
+  prizeSeed: number;
   prizePoolRate: number;
   prizePool: number;
   payouts: {

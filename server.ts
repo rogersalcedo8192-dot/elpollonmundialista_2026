@@ -245,6 +245,7 @@ const ENTRY_FEE_USD = 5;
 const ENTRY_FEE_CENTS = ENTRY_FEE_USD * 100;
 const WOMPI_CURRENCY = (process.env.WOMPI_CURRENCY || "COP").toUpperCase();
 const WOMPI_AMOUNT_IN_CENTS = Number(process.env.WOMPI_AMOUNT_IN_CENTS || "0");
+const PRIZE_SEED_USD = Number(process.env.PRIZE_SEED_USD || "0");
 const BANK_COMMISSION_RATE = 0.035;
 const OWNER_PROFIT_RATE = 0.1;
 const PRIZE_POOL_RATE = 1 - BANK_COMMISSION_RATE - OWNER_PROFIT_RATE;
@@ -260,7 +261,8 @@ function calculatePrizePool(paidParticipants: number) {
   const grossPool = paidParticipants * ENTRY_FEE_USD;
   const bankCommission = grossPool * BANK_COMMISSION_RATE;
   const ownerGrossProfit = grossPool * OWNER_PROFIT_RATE;
-  const prizePool = grossPool - bankCommission - ownerGrossProfit;
+  const prizeSeed = Number.isFinite(PRIZE_SEED_USD) ? Math.max(PRIZE_SEED_USD, 0) : 0;
+  const prizePool = grossPool - bankCommission - ownerGrossProfit + prizeSeed;
 
   return {
     entryFeeUsd: ENTRY_FEE_USD,
@@ -269,6 +271,7 @@ function calculatePrizePool(paidParticipants: number) {
     bankCommissionRate: BANK_COMMISSION_RATE,
     bankCommission: roundMoney(bankCommission),
     netPool: roundMoney(grossPool - bankCommission),
+    prizeSeed: roundMoney(prizeSeed),
     prizePoolRate: PRIZE_POOL_RATE,
     prizePool: roundMoney(prizePool),
     ownerProfitRate: OWNER_PROFIT_RATE,
@@ -330,6 +333,14 @@ function assertCompanyCapacity(db: DatabaseSchema, companyId: string, res: expre
     return false;
   }
   return true;
+}
+
+function hasRealPaymentRecord(user: User) {
+  return Boolean(user.paymentProvider || user.paymentReference || user.paymentTransactionId || user.stripeCheckoutSessionId || user.stripePaymentIntentId);
+}
+
+function isRealMoneyPaidParticipant(user: User) {
+  return user.paymentStatus === "paid" && hasRealPaymentRecord(user) && !isSuperAdmin(user);
 }
 
 function getRequestOrigin(req: express.Request) {
@@ -2501,7 +2512,7 @@ app.post("/api/payments/create-checkout-session", async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
   const realUpgrade = req.body?.realUpgrade === true;
-  const hasPaymentProviderRecord = Boolean(user.paymentProvider || user.paymentReference || user.paymentTransactionId || user.stripeCheckoutSessionId || user.stripePaymentIntentId);
+  const hasPaymentProviderRecord = hasRealPaymentRecord(user);
   if (APP_MODE === "FREE" && !realUpgrade) return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
   if (user.role === "admin" || user.role === "superadmin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
   if (user.paymentStatus === "paid" && hasPaymentProviderRecord) return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
@@ -2623,6 +2634,36 @@ app.post("/api/payments/confirm-checkout-session", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || "No se pudo confirmar el pago." });
   }
+});
+
+app.post("/api/payments/wompi/webhook", async (req, res) => {
+  const transaction = req.body?.data?.transaction || req.body?.transaction || req.body?.data;
+  const reference = transaction?.reference;
+  const status = transaction?.status;
+
+  if (!reference) return res.status(400).json({ error: "Webhook Wompi sin referencia." });
+
+  const db = loadDb();
+  const dbUser = db.users.find((u) => u.paymentReference === reference || u.stripeCheckoutSessionId === reference);
+  if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado para la referencia Wompi." });
+
+  dbUser.paymentProvider = "wompi";
+  dbUser.paymentReference = reference;
+  dbUser.paymentTransactionId = transaction?.id || dbUser.paymentTransactionId;
+  dbUser.stripeCheckoutSessionId = reference;
+
+  if (status === "APPROVED") {
+    markUserAsPaid(dbUser, {
+      id: transaction?.id || reference,
+      reference,
+      payment_intent: transaction?.id || reference
+    }, "wompi");
+  } else if (status === "DECLINED" || status === "ERROR" || status === "VOIDED") {
+    dbUser.paymentStatus = "failed";
+  }
+
+  saveDb(db);
+  res.json({ received: true, paymentStatus: dbUser.paymentStatus });
 });
 
 // Admin: Retrieve Users List
@@ -3683,13 +3724,19 @@ app.get("/api/prize-pool", (req, res) => {
   if (!user) return res.status(401).json({ error: "No autenticado." });
 
   const db = loadDb();
-  const paidParticipants = db.users.filter((u) => u.role === "standard" && u.paymentStatus === "paid").length;
+  const paidParticipants = db.users.filter(isRealMoneyPaidParticipant).length;
   const prizePool = calculatePrizePool(paidParticipants);
 
   res.json({
     entryFeeUsd: prizePool.entryFeeUsd,
     paidParticipants: prizePool.paidParticipants,
     grossPool: prizePool.grossPool,
+    bankCommissionRate: prizePool.bankCommissionRate,
+    bankCommission: prizePool.bankCommission,
+    ownerProfitRate: prizePool.ownerProfitRate,
+    ownerGrossProfit: prizePool.ownerGrossProfit,
+    ownerProfit: prizePool.ownerProfit,
+    prizeSeed: prizePool.prizeSeed,
     prizePoolRate: prizePool.prizePoolRate,
     prizePool: prizePool.prizePool,
     payouts: prizePool.payouts,
@@ -3727,7 +3774,7 @@ app.get("/api/admin/stats", (req, res) => {
   const averagePoints = standardUsers.length > 0 
     ? (standardUsers.reduce((sum, u) => sum + u.points, 0) / standardUsers.length).toFixed(1)
     : "0.0";
-  const paidUsers = standardUsers.filter((u) => u.paymentStatus === "paid");
+  const paidUsers = db.users.filter(isRealMoneyPaidParticipant);
   const prizePool = calculatePrizePool(paidUsers.length);
 
   // Match phase breakdowns for nice filter previews

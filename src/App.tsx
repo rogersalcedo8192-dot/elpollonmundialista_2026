@@ -1802,6 +1802,16 @@ export default function App() {
     }
   };
 
+  const refreshPrizePool = async () => {
+    if (!currentUser) return;
+    try {
+      const prizeRes = await fetch("/api/prize-pool", { headers: getHeaders() });
+      if (prizeRes.ok) setPublicPrizePool(await prizeRes.json());
+    } catch (err) {
+      console.error("Error refreshing prize pool:", err);
+    }
+  };
+
   const fetchAdminStats = async () => {
     try {
       const sRes = await fetch("/api/admin/stats", { headers: getHeaders() });
@@ -1963,6 +1973,12 @@ export default function App() {
     if (localStorage.getItem(popupKey)) return;
     setManagedPopupOpen(true);
   }, [torneo?.popupEnabled, torneo?.popupTitle, torneo?.popupMessage, currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const timer = window.setInterval(refreshPrizePool, 15000);
+    return () => window.clearInterval(timer);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -4096,24 +4112,24 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-3">
+                      <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-4">
                         <h3 className="text-sm font-black flex items-center gap-2">
                           <Sparkles className="w-4 h-4 text-amber-400" />
                           Bolsa Polla REAL
                         </h3>
                         <div className="space-y-2 text-xs">
-                          <div className="flex justify-between border-b border-white/10 pb-2">
-                            <span>Premio acumulado</span>
-                            <b>{formatUsd(publicPrizePool?.prizePool || 0)}</b>
-                          </div>
-                          <div className="flex justify-between border-b border-white/10 pb-2">
-                            <span>Participantes pagos</span>
-                            <b>{publicPrizePool?.paidParticipants || 0}</b>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Recaudo bruto</span>
-                            <b>{formatUsd(publicPrizePool?.grossPool || 0)}</b>
-                          </div>
+                          <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatUsd(publicPrizePool?.grossPool || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatUsd(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatUsd(publicPrizePool?.bankCommission || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
+                          <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatUsd(publicPrizePool?.prizePool || 0)}</b></div>
+                          {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatUsd(publicPrizePool?.prizeSeed || 0)}</b></div>}
+                        </div>
+                        <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
+                          <h4 className="font-black text-amber-300">Distribución de Premios</h4>
+                          <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.first || 0)}</b></div>
+                          <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatUsd(publicPrizePool?.payouts.second || 0)}</b></div>
+                          <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.third || 0)}</b></div>
                         </div>
                         <p className="text-[11px] text-slate-400 leading-relaxed">Esta bolsa aplica solo para participantes inscritos en Polla REAL.</p>
                       </div>
@@ -4178,24 +4194,24 @@ export default function App() {
                       )}
                     </div>
 
-                    <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-3">
+                    <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-4">
                       <h3 className="text-sm font-black flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-amber-400" />
-                        Bolsa actual
+                        Resumen del Premio
                       </h3>
                       <div className="space-y-2 text-xs">
-                        <div className="flex justify-between border-b border-white/10 pb-2">
-                          <span>Premio acumulado</span>
-                          <b>{formatUsd(publicPrizePool?.prizePool || 0)}</b>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-2">
-                          <span>Participantes pagos</span>
-                          <b>{publicPrizePool?.paidParticipants || 0}</b>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Recaudo bruto</span>
-                          <b>{formatUsd(publicPrizePool?.grossPool || 0)}</b>
-                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatUsd(publicPrizePool?.grossPool || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatUsd(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatUsd(publicPrizePool?.bankCommission || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
+                        <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatUsd(publicPrizePool?.prizePool || 0)}</b></div>
+                        {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatUsd(publicPrizePool?.prizeSeed || 0)}</b></div>}
+                      </div>
+                      <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
+                        <h4 className="font-black text-amber-300">Distribución de Premios</h4>
+                        <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.first || 0)}</b></div>
+                        <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatUsd(publicPrizePool?.payouts.second || 0)}</b></div>
+                        <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.third || 0)}</b></div>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. Los valores se actualizan segun pagos confirmados.</p>
                     </div>
