@@ -3052,7 +3052,7 @@ app.post("/api/admin/reset-tournament", (req, res) => {
   db.sentReminders = [];
 
   db.users.forEach((u) => {
-    if (u.role !== "standard") return;
+    if (isSuperAdmin(u)) return;
     u.paymentStatus = "pending";
     u.paidAt = undefined;
     u.paymentProvider = undefined;
