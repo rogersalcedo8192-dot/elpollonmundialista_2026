@@ -2098,12 +2098,13 @@ export default function App() {
     showToast("Sesión cerrada correctamente", "info");
   };
 
-  const handleStartPayment = async () => {
+  const handleStartPayment = async (realUpgrade = false) => {
     setPaymentBusy(true);
     try {
       const res = await fetch("/api/payments/create-checkout-session", {
         method: "POST",
-        headers: getHeaders()
+        headers: getHeaders(),
+        body: JSON.stringify({ realUpgrade })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar el pago.");
@@ -2863,7 +2864,7 @@ export default function App() {
     setMatchStatusFilter("all");
     setTeamSearch("");
   };
-  const canSubmitPredictions = appMode === "FREE" || currentUser?.role === "admin" || currentUser?.role === "superadmin" || currentUser?.role === "company_admin" || currentUser?.paymentStatus === "paid";
+  const canSubmitPredictions = appMode === "FREE" || Boolean(currentUser?.companyId) || currentUser?.role === "admin" || currentUser?.role === "superadmin" || currentUser?.role === "company_admin" || currentUser?.paymentStatus === "paid";
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
   const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
@@ -2878,6 +2879,11 @@ export default function App() {
   const isSuperAdminUser = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdminUser = currentUser?.role === "company_admin";
   const canManageUsers = Boolean(isSuperAdminUser || isCompanyAdminUser);
+  const isFreeOrCompanyUser = appMode === "FREE" || Boolean(currentUser?.companyId);
+  const hasRealPrizeAccess = Boolean(
+    currentUser?.paymentStatus === "paid" &&
+    (currentUser.paymentProvider || currentUser.paymentReference || currentUser.paymentTransactionId || currentUser.stripeCheckoutSessionId || currentUser.stripePaymentIntentId)
+  );
   const getWinnerPrize = (position: number) => {
     if (position === 1) return publicPrizePool?.payouts.first || 0;
     if (position === 2) return publicPrizePool?.payouts.second || 0;
@@ -4013,7 +4019,108 @@ export default function App() {
                     <p className="text-xs text-slate-500 mt-1">Activa tu inscripción oficial para competir por la bolsa de premios.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {isFreeOrCompanyUser && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div className="lg:col-span-2 space-y-4">
+                        <div className="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900 rounded-xl p-5 shadow-sm space-y-4">
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div>
+                              <span className="text-[10px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-black">Modalidad con premios en dinero</span>
+                              <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">Participar en Polla REAL</h3>
+                              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-xl">Participa por premios en efectivo y compite contra otros participantes de la comunidad.</p>
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${hasRealPrizeAccess ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
+                              {hasRealPrizeAccess ? "Polla REAL activa" : "Requiere pago"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
+                              <span className="block text-[10px] text-amber-700 dark:text-amber-300 uppercase font-bold">1er puesto</span>
+                              <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatUsd(publicPrizePool?.payouts.first || 0)}</span>
+                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">80% del premio</span>
+                            </div>
+                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">2do puesto</span>
+                              <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatUsd(publicPrizePool?.payouts.second || 0)}</span>
+                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">15% del premio</span>
+                            </div>
+                            <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
+                              <span className="block text-[10px] text-orange-700 dark:text-orange-300 uppercase font-bold">3er puesto</span>
+                              <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatUsd(publicPrizePool?.payouts.third || 0)}</span>
+                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">5% del premio</span>
+                            </div>
+                          </div>
+
+                          {hasRealPrizeAccess ? (
+                            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 font-semibold">
+                              Tu inscripción a Polla REAL está confirmada. Participas por premios en dinero.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <p className="text-xs text-slate-500 dark:text-slate-400">El acceso a premios monetarios requiere inscripción en la modalidad Polla REAL.</p>
+                              <button
+                                onClick={() => handleStartPayment(true)}
+                                disabled={paymentBusy}
+                                className={`w-full sm:w-auto min-h-12 px-5 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow ${paymentBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
+                              >
+                                <CreditCard className="w-4 h-4" />
+                                {paymentBusy ? `Conectando con ${paymentProvider === "wompi" ? "Wompi" : "Stripe"}...` : "Pagar para acceder a premios en dinero"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div>
+                              <span className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-black">INSCRIPCIÓN OFICIAL</span>
+                              <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">$0 COP</h3>
+                              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">Estás participando gratuitamente con los compañeros de tu empresa.</p>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase">Modalidad gratuita</span>
+                          </div>
+
+                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                            En esta modalidad podrás realizar tus pronósticos y competir dentro del ranking corporativo, pero no participarás en los premios en efectivo de la Polla REAL.
+                          </p>
+
+                          <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-amber-500" /> Premios y beneficios de tu modalidad
+                            </h3>
+                            <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
+                              {renderFormattedText(companyPrizePolicy || torneo?.prizesText, "Premiaciones por definir en el Libro de Premiaciones.")}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm space-y-3">
+                        <h3 className="text-sm font-black flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-amber-400" />
+                          Bolsa Polla REAL
+                        </h3>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between border-b border-white/10 pb-2">
+                            <span>Premio acumulado</span>
+                            <b>{formatUsd(publicPrizePool?.prizePool || 0)}</b>
+                          </div>
+                          <div className="flex justify-between border-b border-white/10 pb-2">
+                            <span>Participantes pagos</span>
+                            <b>{publicPrizePool?.paidParticipants || 0}</b>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Recaudo bruto</span>
+                            <b>{formatUsd(publicPrizePool?.grossPool || 0)}</b>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">Esta bolsa aplica solo para participantes inscritos en Polla REAL.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isFreeOrCompanyUser && <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
@@ -4092,7 +4199,7 @@ export default function App() {
                       </div>
                       <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. Los valores se actualizan segun pagos confirmados.</p>
                     </div>
-                  </div>
+                  </div>}
                 </div>
               )}
 

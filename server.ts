@@ -2078,7 +2078,7 @@ function getAuthenticatedUser(req: express.Request): User | null {
 
 function canSubmitPredictions(user: User) {
   if (APP_MODE === "FREE") return true;
-  return user.role === "admin" || user.paymentStatus === "paid";
+  return user.role === "admin" || user.role === "superadmin" || user.role === "company_admin" || Boolean(user.companyId) || user.paymentStatus === "paid";
 }
 
 const COUNTRY_ALIASES: Record<string, string> = {
@@ -2500,9 +2500,11 @@ app.get("/api/rankings/company/:id", (req, res) => {
 app.post("/api/payments/create-checkout-session", async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
-  if (APP_MODE === "FREE") return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
+  const realUpgrade = req.body?.realUpgrade === true;
+  const hasPaymentProviderRecord = Boolean(user.paymentProvider || user.paymentReference || user.paymentTransactionId || user.stripeCheckoutSessionId || user.stripePaymentIntentId);
+  if (APP_MODE === "FREE" && !realUpgrade) return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
   if (user.role === "admin" || user.role === "superadmin" || user.role === "company_admin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
-  if (user.paymentStatus === "paid") return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
+  if (user.paymentStatus === "paid" && hasPaymentProviderRecord) return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
 
   const origin = getRequestOrigin(req);
 
