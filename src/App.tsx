@@ -59,9 +59,9 @@ const createEmojiAvatar = (emoji: string, background: string) => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-const getManagedPopupKey = (torneo?: TorneoConfig | null) => {
+const getManagedPopupKey = (torneo?: TorneoConfig | null, userId = "") => {
   if (!torneo?.popupEnabled || !torneo.popupMessage?.trim()) return "";
-  return `polla_popup_seen_${encodeURIComponent(`${torneo.popupTitle || ""}|${torneo.popupMessage}|${torneo.popupImageUrl || ""}|${torneo.popupCtaLabel || ""}`)}`;
+  return `polla_popup_seen_${encodeURIComponent(`${userId}|${torneo.popupTitle || ""}|${torneo.popupMessage}|${torneo.popupImageUrl || ""}|${torneo.popupCtaLabel || ""}`)}`;
 };
 
 const AVATARS = [
@@ -1957,8 +1957,9 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    const popupKey = getManagedPopupKey(torneo);
-    if (!popupKey || !currentUser) return;
+    if (!currentUser) return;
+    const popupKey = getManagedPopupKey(torneo, currentUser.id);
+    if (!popupKey) return;
     if (localStorage.getItem(popupKey)) return;
     setManagedPopupOpen(true);
   }, [torneo?.popupEnabled, torneo?.popupTitle, torneo?.popupMessage, currentUser?.id]);
@@ -6262,7 +6263,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  const popupKey = getManagedPopupKey(torneo);
+                  const popupKey = getManagedPopupKey(torneo, currentUser?.id);
                   if (popupKey) localStorage.setItem(popupKey, "1");
                   setManagedPopupOpen(false);
                 }}
@@ -6286,7 +6287,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  const popupKey = getManagedPopupKey(torneo);
+                  const popupKey = getManagedPopupKey(torneo, currentUser?.id);
                   if (popupKey) localStorage.setItem(popupKey, "1");
                   setManagedPopupOpen(false);
                 }}
@@ -6298,7 +6299,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    const popupKey = getManagedPopupKey(torneo);
+                    const popupKey = getManagedPopupKey(torneo, currentUser?.id);
                     if (popupKey) localStorage.setItem(popupKey, "1");
                     setActiveTab(torneo.popupCtaTab || "dashboard");
                     setManagedPopupOpen(false);

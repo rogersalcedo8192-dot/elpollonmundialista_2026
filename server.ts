@@ -3432,9 +3432,7 @@ app.delete("/api/predictions/:matchId", (req, res) => {
   db.predictions = db.predictions.filter((p) => !(p.userId === user.id && p.matchId === matchId));
   saveDb(db);
 
-  res.json({
-    message: before === db.predictions.length ? "El marcador ya estaba limpio." : "Marcador limpiado correctamente."
-  });
+  res.json({ message: "Se limpió el marcador correctamente" });
 });
 
 // Tournament Lock Time and long term predictions APIs
