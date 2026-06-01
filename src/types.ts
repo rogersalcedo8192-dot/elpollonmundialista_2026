@@ -34,6 +34,9 @@ export interface User {
   password?: string;
   paymentStatus?: "pending" | "paid" | "failed";
   paidAt?: string;
+  paymentProvider?: "stripe" | "wompi";
+  paymentReference?: string;
+  paymentTransactionId?: string;
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
   groupPoints?: number;

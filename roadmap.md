@@ -23,7 +23,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Panel admin para usuarios, partidos, resultados, comunicados, assets, banners y configuracion.
 - Banners dinamicos con rotacion y enlace.
 - Notificaciones internas para recordatorios, resultados, ranking y comunicados.
-- Integracion con Stripe Checkout para cobrar inscripcion.
+- Integracion de pagos configurable: Wompi Web Checkout como proveedor principal y Stripe Checkout como respaldo (`PAYMENT_PROVIDER`).
 - Calculo de bolsa de premios:
   - Inscripcion: USD 5.
   - 10% para administracion.
@@ -39,15 +39,16 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Filtros mobile de partidos corregidos con controles full-width, busqueda tolerante a tildes y boton para limpiar filtros.
 - Mejoras de accesibilidad tactil en pronosticos: inputs numericos de marcador, botones de accion y filtros con areas tactiles mas comodas.
 - Skeleton loaders basicos en dashboard durante carga inicial y carga de datos del usuario.
-- Base multitenant incremental: empresas, invitaciones, ranking empresarial y `APP_MODE` FREE/PAID sin eliminar Stripe.
+- Base multitenant incremental: empresas, invitaciones, ranking empresarial y `APP_MODE` FREE/PAID sin eliminar la pasarela.
+- Cambio incremental de Stripe a Wompi: se conserva Stripe, pero el proveedor activo se controla con `PAYMENT_PROVIDER=wompi|stripe`.
 
 ## Fase 1 - Estabilizacion Inmediata
 
 Objetivo: dejar estable lo ya construido antes de seguir agregando capas grandes.
 
-- Confirmar que Railway tiene `DATABASE_URL`, Cloudinary, Football Data API, Stripe y `PUBLIC_APP_URL`.
+- Confirmar que Railway tiene `DATABASE_URL`, Cloudinary, Football Data API, Wompi, Stripe opcional y `PUBLIC_APP_URL`.
 - Ejecutar `npm run db:push` cuando haya cambios de Prisma.
-- Probar registro, login, pago, retorno de Stripe y bloqueo de pronosticos sin pago.
+- Probar registro, login, pago, retorno de Wompi y bloqueo de pronosticos sin pago.
 - Verificar que paises antiguos como `CO` se muestren como `Colombia`.
 - Revisar que ranking, CSV y dashboard muestren paises/banderas correctamente.
 - Revisar en celular la pantalla de registro y el selector de idioma.
@@ -61,7 +62,8 @@ Criterio de cierre:
 
 Objetivo: hacer que la participacion paga sea confiable incluso si el usuario cierra la pestana.
 
-- Implementar Stripe Webhook para confirmar pagos desde Stripe, no solo al volver a la app.
+- Implementar webhook de Wompi para confirmar pagos desde Wompi, no solo al volver a la app.
+- Mantener webhook Stripe solo si `PAYMENT_PROVIDER=stripe` se usa como respaldo.
 - Guardar evento de pago recibido y evitar procesar dos veces la misma sesion.
 - Agregar panel admin para ver estado de pago: pendiente, pagado, fallido.
 - Permitir al admin marcar pago manual solo en casos excepcionales.
@@ -70,7 +72,7 @@ Objetivo: hacer que la participacion paga sea confiable incluso si el usuario ci
 
 Criterio de cierre:
 
-- Todo pago confirmado por Stripe queda registrado aunque el usuario no vuelva manualmente desde Checkout.
+- Todo pago confirmado por Wompi queda registrado aunque el usuario no vuelva manualmente desde Checkout.
 
 ## Fase 3 - Seguridad y Cuentas
 
@@ -229,7 +231,7 @@ Criterio de cierre:
 
 ## Prioridades Sugeridas
 
-1. Stripe Webhook para confirmar pagos de forma robusta.
+1. Webhook Wompi para confirmar pagos de forma robusta.
 2. MUY IMPORTANTE - PENDIENTE: recuperar contrasena de forma segura con hash, token temporal y envio real por correo.
 3. Limpieza definitiva de datos demo antes de abrir inscripciones reales.
 4. Pruebas del motor de puntuacion.
@@ -251,6 +253,7 @@ Criterio de cierre:
 ## Ultima Actualizacion
 
 - 2026-06-01: agregado primer bloque multitenant incremental con empresas, invitaciones, administradores de empresa, ranking empresarial, migracion Prisma y modo `APP_MODE=FREE|PAID`.
+- 2026-06-01: agregado `PAYMENT_PROVIDER` para migrar de Stripe a Wompi sin eliminar Stripe; Wompi queda como proveedor principal configurable.
 - 2026-06-01: actualizado tras integrar menu mobile en header, resumen mobile above the fold, filtros mobile de partidos corregidos, busqueda sin tildes, boton limpiar filtros, mejoras tactiles en pronosticos y skeleton loaders basicos.
 - 2026-06-01: actualizado esquema de premios: entrada USD 5, administracion 10%, pasarela 3.5%, premios con el restante 86.5% distribuido 80/15/5.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.

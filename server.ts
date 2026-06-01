@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { createHash } from "crypto";
 import { createServer as createViteServer } from "vite";
 import { PrismaClient } from "@prisma/client";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
@@ -41,6 +42,9 @@ interface User {
   emailSubscribed: boolean;
   paymentStatus?: "pending" | "paid" | "failed";
   paidAt?: string;
+  paymentProvider?: "stripe" | "wompi";
+  paymentReference?: string;
+  paymentTransactionId?: string;
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
   groupPoints?: number;
@@ -229,9 +233,12 @@ const hasCloudinaryConfig = Boolean(
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
 const APP_MODE = (process.env.APP_MODE || "PAID").toUpperCase() === "FREE" ? "FREE" : "PAID";
+const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "stripe").toLowerCase() === "wompi" ? "wompi" : "stripe";
 const DEFAULT_COMPANY_MAX_PLAYERS = 50;
 const ENTRY_FEE_USD = 5;
 const ENTRY_FEE_CENTS = ENTRY_FEE_USD * 100;
+const WOMPI_CURRENCY = (process.env.WOMPI_CURRENCY || "COP").toUpperCase();
+const WOMPI_AMOUNT_IN_CENTS = Number(process.env.WOMPI_AMOUNT_IN_CENTS || "0");
 const BANK_COMMISSION_RATE = 0.035;
 const OWNER_PROFIT_RATE = 0.1;
 const PRIZE_POOL_RATE = 1 - BANK_COMMISSION_RATE - OWNER_PROFIT_RATE;
@@ -349,9 +356,64 @@ async function stripeRequest(pathname: string, params?: URLSearchParams, method 
   return payload;
 }
 
-function markUserAsPaid(user: User, session: any) {
+function getWompiApiBaseUrl() {
+  return process.env.WOMPI_ENV === "production" ? "https://production.wompi.co/v1" : "https://sandbox.wompi.co/v1";
+}
+
+function getWompiCheckoutAmount() {
+  if (!Number.isFinite(WOMPI_AMOUNT_IN_CENTS) || WOMPI_AMOUNT_IN_CENTS <= 0) {
+    throw new Error("Falta configurar WOMPI_AMOUNT_IN_CENTS. Wompi requiere el valor en centavos de la moneda configurada.");
+  }
+  return Math.round(WOMPI_AMOUNT_IN_CENTS);
+}
+
+function createWompiIntegritySignature(reference: string, amountInCents: number, currency: string) {
+  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
+  if (!integritySecret) {
+    throw new Error("Falta configurar WOMPI_INTEGRITY_SECRET en Railway.");
+  }
+  return createHash("sha256").update(`${reference}${amountInCents}${currency}${integritySecret}`).digest("hex");
+}
+
+async function wompiRequest(pathname: string) {
+  const privateKey = process.env.WOMPI_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error("Falta configurar WOMPI_PRIVATE_KEY en Railway.");
+  }
+
+  const response = await fetch(`${getWompiApiBaseUrl()}/${pathname.replace(/^\/+/, "")}`, {
+    headers: { Authorization: `Bearer ${privateKey}` }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error?.message || payload.message || "Wompi no pudo procesar la solicitud.");
+  }
+  return payload;
+}
+
+async function getWompiTransaction(transactionId?: string, reference?: string) {
+  if (transactionId && transactionId !== reference) {
+    const transactionLookup = await wompiRequest(`transactions/${encodeURIComponent(transactionId)}`).catch(() => null);
+    if (transactionLookup?.data) return transactionLookup.data;
+  }
+
+  if (!reference) return null;
+  const directLookup = await wompiRequest(`transactions/${encodeURIComponent(reference)}`).catch(() => null);
+  if (directLookup?.data) return directLookup.data;
+
+  const listLookup = await wompiRequest(`transactions?reference=${encodeURIComponent(reference)}`).catch(() => null);
+  if (Array.isArray(listLookup?.data)) {
+    return listLookup.data.find((transaction: any) => transaction.reference === reference) || listLookup.data[0];
+  }
+  return listLookup?.data || null;
+}
+
+function markUserAsPaid(user: User, session: any, provider: "stripe" | "wompi" = "stripe") {
   user.paymentStatus = "paid";
   user.paidAt = new Date().toISOString();
+  user.paymentProvider = provider;
+  user.paymentReference = session.reference || session.id || user.paymentReference;
+  user.paymentTransactionId = session.payment_intent || session.id || user.paymentTransactionId;
   user.stripeCheckoutSessionId = session.id || user.stripeCheckoutSessionId;
   user.stripePaymentIntentId = session.payment_intent || user.stripePaymentIntentId;
 }
@@ -896,6 +958,9 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       emailSubscribed: u.emailSubscribed,
       paymentStatus: (u.paymentStatus as User["paymentStatus"]) || "pending",
       paidAt: dateToIso(u.paidAt) || undefined,
+      paymentProvider: (u as any).paymentProvider || undefined,
+      paymentReference: (u as any).paymentReference || undefined,
+      paymentTransactionId: (u as any).paymentTransactionId || undefined,
       stripeCheckoutSessionId: u.stripeCheckoutSessionId || undefined,
       stripePaymentIntentId: u.stripePaymentIntentId || undefined,
       groupPoints: u.groupPoints || undefined,
@@ -1101,6 +1166,9 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           emailSubscribed: u.emailSubscribed,
           paymentStatus: u.paymentStatus || "pending",
           paidAt: u.paidAt ? new Date(u.paidAt) : null,
+          paymentProvider: u.paymentProvider || null,
+          paymentReference: u.paymentReference || null,
+          paymentTransactionId: u.paymentTransactionId || null,
           stripeCheckoutSessionId: u.stripeCheckoutSessionId || null,
           stripePaymentIntentId: u.stripePaymentIntentId || null,
           groupPoints: u.groupPoints ?? null,
@@ -2032,8 +2100,13 @@ app.get("/api/torneo", (req, res) => {
   res.json(db.torneo);
 });
 
-app.get("/api/app-config", (req, res) => {
-  res.json({ appMode: APP_MODE, paymentsEnabled: APP_MODE === "PAID", companyMaxPlayers: DEFAULT_COMPANY_MAX_PLAYERS });
+app.get("/api/app-config", (_req, res) => {
+  res.json({
+    appMode: APP_MODE,
+    paymentProvider: PAYMENT_PROVIDER,
+    paymentsEnabled: APP_MODE === "PAID",
+    companyMaxPlayers: DEFAULT_COMPANY_MAX_PLAYERS
+  });
 });
 
 app.post("/api/torneo", (req, res) => {
@@ -2404,33 +2477,63 @@ app.post("/api/payments/create-checkout-session", async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
   if (APP_MODE === "FREE") return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
-  if (user.role === "admin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
+  if (user.role === "admin" || user.role === "superadmin" || user.role === "company_admin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
   if (user.paymentStatus === "paid") return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
 
   const origin = getRequestOrigin(req);
-  const params = new URLSearchParams();
-  params.set("mode", "payment");
-  params.set("customer_email", user.email);
-  params.set("success_url", `${origin}/?payment=success&session_id={CHECKOUT_SESSION_ID}`);
-  params.set("cancel_url", `${origin}/?payment=cancelled`);
-  params.set("line_items[0][quantity]", "1");
-  params.set("line_items[0][price_data][currency]", "usd");
-  params.set("line_items[0][price_data][unit_amount]", String(ENTRY_FEE_CENTS));
-  params.set("line_items[0][price_data][product_data][name]", "Inscripcion Polla Mundialista 2026");
-  params.set("line_items[0][price_data][product_data][description]", "Participacion oficial en la Polla Mundialista 2026");
-  params.set("metadata[userId]", user.id);
-  params.set("metadata[email]", user.email);
 
   try {
+    if (PAYMENT_PROVIDER === "wompi") {
+      const publicKey = process.env.WOMPI_PUBLIC_KEY;
+      if (!publicKey) throw new Error("Falta configurar WOMPI_PUBLIC_KEY en Railway.");
+
+      const amountInCents = getWompiCheckoutAmount();
+      const reference = `polla-${user.id}-${Date.now()}`;
+      const checkoutParams = new URLSearchParams();
+      checkoutParams.set("public-key", publicKey);
+      checkoutParams.set("currency", WOMPI_CURRENCY);
+      checkoutParams.set("amount-in-cents", String(amountInCents));
+      checkoutParams.set("reference", reference);
+      checkoutParams.set("signature:integrity", createWompiIntegritySignature(reference, amountInCents, WOMPI_CURRENCY));
+      checkoutParams.set("redirect-url", `${origin}/?payment=success&provider=wompi&reference=${encodeURIComponent(reference)}`);
+      checkoutParams.set("customer-email", user.email);
+
+      const db = loadDb();
+      const dbUser = db.users.find((u) => u.id === user.id);
+      if (dbUser) {
+        dbUser.paymentStatus = "pending";
+        dbUser.paymentProvider = "wompi";
+        dbUser.paymentReference = reference;
+        dbUser.stripeCheckoutSessionId = reference;
+        saveDb(db);
+      }
+      return res.json({ url: `https://checkout.wompi.co/p/?${checkoutParams.toString()}`, sessionId: reference, provider: "wompi" });
+    }
+
+    const params = new URLSearchParams();
+    params.set("mode", "payment");
+    params.set("customer_email", user.email);
+    params.set("success_url", `${origin}/?payment=success&provider=stripe&session_id={CHECKOUT_SESSION_ID}`);
+    params.set("cancel_url", `${origin}/?payment=cancelled`);
+    params.set("line_items[0][quantity]", "1");
+    params.set("line_items[0][price_data][currency]", "usd");
+    params.set("line_items[0][price_data][unit_amount]", String(ENTRY_FEE_CENTS));
+    params.set("line_items[0][price_data][product_data][name]", "Inscripcion Polla Mundialista 2026");
+    params.set("line_items[0][price_data][product_data][description]", "Participacion oficial en la Polla Mundialista 2026");
+    params.set("metadata[userId]", user.id);
+    params.set("metadata[email]", user.email);
+
     const session = await stripeRequest("checkout/sessions", params);
     const db = loadDb();
     const dbUser = db.users.find((u) => u.id === user.id);
     if (dbUser) {
       dbUser.paymentStatus = "pending";
+      dbUser.paymentProvider = "stripe";
+      dbUser.paymentReference = session.id;
       dbUser.stripeCheckoutSessionId = session.id;
       saveDb(db);
     }
-    res.json({ url: session.url, sessionId: session.id });
+    res.json({ url: session.url, sessionId: session.id, provider: "stripe" });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "No se pudo crear la pasarela de pago." });
   }
@@ -2440,10 +2543,39 @@ app.post("/api/payments/confirm-checkout-session", async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
 
-  const { sessionId } = req.body;
-  if (!sessionId) return res.status(400).json({ error: "Falta el identificador de sesion de Stripe." });
+  const requestedProvider = req.body.provider === "wompi" ? "wompi" : req.body.provider === "stripe" ? "stripe" : PAYMENT_PROVIDER;
+  const sessionId = req.body.sessionId || req.body.reference || req.body.transactionId;
+  const transactionId = req.body.transactionId || (req.body.reference ? sessionId : undefined);
+  const reference = req.body.reference || sessionId;
+  if (!sessionId && !reference) return res.status(400).json({ error: "Falta el identificador de la transaccion." });
 
   try {
+    if (requestedProvider === "wompi") {
+      const db = loadDb();
+      const dbUser = db.users.find((u) => u.id === user.id);
+      if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
+      if (dbUser.paymentReference && reference && dbUser.paymentReference !== reference) {
+        return res.status(403).json({ error: "Esta referencia de pago no pertenece a tu usuario." });
+      }
+
+      const transaction = await getWompiTransaction(String(transactionId || ""), String(reference || ""));
+      if (!transaction || transaction.status !== "APPROVED") {
+        return res.status(400).json({ error: "El pago todavia no aparece aprobado en Wompi." });
+      }
+      if (transaction.reference && dbUser.paymentReference && transaction.reference !== dbUser.paymentReference) {
+        return res.status(403).json({ error: "Esta transaccion de Wompi no pertenece a tu usuario." });
+      }
+
+      markUserAsPaid(dbUser, {
+        id: transaction.id,
+        reference: transaction.reference || reference,
+        payment_intent: transaction.id
+      }, "wompi");
+      saveDb(db);
+      const { password: _, ...cleanUser } = dbUser;
+      return res.json({ message: "Pago confirmado. Ya estas participando oficialmente.", user: cleanUser });
+    }
+
     const session = await stripeRequest(`checkout/sessions/${encodeURIComponent(String(sessionId))}`, undefined, "GET");
     if (session.payment_status !== "paid") {
       return res.status(400).json({ error: "El pago todavia no aparece confirmado en Stripe." });
@@ -2458,7 +2590,7 @@ app.post("/api/payments/confirm-checkout-session", async (req, res) => {
     const dbUser = db.users.find((u) => u.id === user.id);
     if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
 
-    markUserAsPaid(dbUser, session);
+    markUserAsPaid(dbUser, session, "stripe");
     saveDb(db);
     const { password: _, ...cleanUser } = dbUser;
     res.json({ message: "Pago confirmado. Ya estas participando oficialmente.", user: cleanUser });
@@ -2490,6 +2622,9 @@ app.get("/api/admin/users", (req, res) => {
     predictCount: u.predictCount,
     paymentStatus: u.paymentStatus || "pending",
     paidAt: u.paidAt,
+    paymentProvider: u.paymentProvider,
+    paymentReference: u.paymentReference,
+    paymentTransactionId: u.paymentTransactionId,
     stripeCheckoutSessionId: u.stripeCheckoutSessionId,
     password: u.password // accessible for administrator manual reset view
   })));

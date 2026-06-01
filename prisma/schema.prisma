@@ -40,6 +40,9 @@ model User {
   emailSubscribed    Boolean  @default(true)
   paymentStatus      String   @default("pending")
   paidAt             DateTime?
+  paymentProvider    String?
+  paymentReference   String?
+  paymentTransactionId String?
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
   groupPoints        Int?

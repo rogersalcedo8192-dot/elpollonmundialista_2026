@@ -1596,6 +1596,7 @@ export default function App() {
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const [isUserLoading, setIsUserLoading] = useState(false);
   const [appMode, setAppMode] = useState<"FREE" | "PAID">("PAID");
+  const [paymentProvider, setPaymentProvider] = useState<"stripe" | "wompi">("stripe");
   const [companies, setCompanies] = useState<Array<Company & { playersCount?: number; availableSlots?: number }>>([]);
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitation[]>([]);
   const [companyRanking, setCompanyRanking] = useState<Array<Ranking & { companyPosition?: number }>>([]);
@@ -1708,6 +1709,7 @@ export default function App() {
       if (cfgRes.ok) {
         const cfg = await cfgRes.json();
         setAppMode(cfg.appMode === "FREE" ? "FREE" : "PAID");
+        setPaymentProvider(cfg.paymentProvider === "wompi" ? "wompi" : "stripe");
       }
 
       const trRes = await fetch("/api/torneo");
@@ -1951,7 +1953,10 @@ export default function App() {
     if (!currentUser) return;
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
-    const sessionId = params.get("session_id");
+    const provider = params.get("provider") === "wompi" ? "wompi" : params.get("provider") === "stripe" ? "stripe" : paymentProvider;
+    const transactionId = params.get("id") || params.get("transaction_id");
+    const sessionId = params.get("session_id") || transactionId || params.get("reference");
+    const reference = params.get("reference") || sessionId;
 
     if (paymentStatus === "cancelled") {
       showToast("Pago cancelado. Puedes intentarlo nuevamente cuando quieras.", "info");
@@ -1968,7 +1973,7 @@ export default function App() {
         const res = await fetch("/api/payments/confirm-checkout-session", {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ sessionId })
+          body: JSON.stringify({ sessionId, reference, transactionId, provider })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "No se pudo confirmar el pago.");
@@ -1987,7 +1992,7 @@ export default function App() {
     };
 
     confirmPayment();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, paymentProvider]);
 
   // Actions implementations
   const handleLogin = async (e: React.FormEvent) => {
@@ -2087,7 +2092,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar el pago.");
-      if (!data.url) throw new Error("Stripe no devolvio una URL de pago.");
+      if (!data.url) throw new Error("La pasarela no devolvio una URL de pago.");
       window.location.href = data.url;
     } catch (err: any) {
       showToast(err.message, "error");
@@ -3999,7 +4004,7 @@ export default function App() {
                           className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow ${paymentBusy ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
                         >
                           <CreditCard className="w-4 h-4" />
-                          {paymentBusy ? "Conectando con Stripe..." : "Pagar inscripción con Stripe"}
+                          {paymentBusy ? `Conectando con ${paymentProvider === "wompi" ? "Wompi" : "Stripe"}...` : `Pagar inscripción con ${paymentProvider === "wompi" ? "Wompi" : "Stripe"}`}
                         </button>
                       )}
                     </div>
