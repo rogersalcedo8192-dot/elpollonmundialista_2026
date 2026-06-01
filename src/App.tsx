@@ -1512,6 +1512,8 @@ export default function App() {
   const [publicPrizePool, setPublicPrizePool] = useState<PublicPrizePool | null>(null);
   const [winnerCertificate, setWinnerCertificate] = useState<Ranking | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [isGlobalLoading, setIsGlobalLoading] = useState(true);
+  const [isUserLoading, setIsUserLoading] = useState(false);
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1611,6 +1613,7 @@ export default function App() {
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authEmail);
 
   const fetchGlobalData = async () => {
+    setIsGlobalLoading(true);
     try {
       const trRes = await fetch("/api/torneo");
       if (trRes.ok) setTorneo(await trRes.json());
@@ -1637,11 +1640,14 @@ export default function App() {
       if (toRes.ok) setTournamentOutcomes(await toRes.json());
     } catch (err) {
       console.error("Error loading static global datas:", err);
+    } finally {
+      setIsGlobalLoading(false);
     }
   };
 
   const fetchUserSpecificData = async () => {
     if (!currentUser) return;
+    setIsUserLoading(true);
     try {
       const pRes = await fetch(`/api/predictions?userId=${currentUser.id}`, { headers: getHeaders() });
       if (pRes.ok) {
@@ -1678,6 +1684,8 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error loading user explicit data:", err);
+    } finally {
+      setIsUserLoading(false);
     }
   };
 
@@ -2595,6 +2603,10 @@ export default function App() {
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
   const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
+  const currentRanking = currentUser ? rankings.find((r) => r.userId === currentUser.id) : null;
+  const nextOpenMatch = matches
+    .filter((m) => m.status === "pending" && !isMatchPredictionLocked(m))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
   const finalMatch = matches.find((m) => m.stage === "Final");
   const finalClosedByMatch = finalMatch?.status === "finished" && nowMs >= new Date(finalMatch.date).getTime() + 60 * 1000;
   const finalClosedByOutcome = Boolean(tournamentOutcomes?.champion);
@@ -2800,7 +2812,7 @@ export default function App() {
               <select
                 value={lang}
                 onChange={(e) => setLang(e.target.value as any)}
-                className="appearance-none bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/60 transition-all text-xs font-bold py-1.5 pl-8 pr-3.5 outline-none cursor-pointer shadow-sm focus:ring-1 focus:ring-emerald-500"
+                className="min-h-12 md:min-h-0 appearance-none bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/60 transition-all text-xs font-bold py-1.5 pl-8 pr-3.5 outline-none cursor-pointer shadow-sm focus:ring-1 focus:ring-emerald-500"
                 title="Cambiar idioma / Change language"
               >
                 <option value="es" className="bg-slate-900 text-white">🇪🇸 ES</option>
@@ -2824,7 +2836,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTheme("light")}
-                className={`p-1.5 rounded-lg transition-all ${theme === "light" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`min-h-12 min-w-12 md:min-h-0 md:min-w-0 p-1.5 rounded-lg transition-all ${theme === "light" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
                 title={t("theme_light", "Claro")}
               >
                 <Sun className="w-3.5 h-3.5" />
@@ -2832,7 +2844,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTheme("dark")}
-                className={`p-1.5 rounded-lg transition-all ${theme === "dark" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`min-h-12 min-w-12 md:min-h-0 md:min-w-0 p-1.5 rounded-lg transition-all ${theme === "dark" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
                 title={t("theme_dark", "Oscuro")}
               >
                 <Moon className="w-3.5 h-3.5" />
@@ -2840,7 +2852,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTheme("system")}
-                className={`p-1.5 rounded-lg transition-all ${theme === "system" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`min-h-12 min-w-12 md:min-h-0 md:min-w-0 p-1.5 rounded-lg transition-all ${theme === "system" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-white"}`}
                 title={t("theme_system", "Sistema")}
               >
                 <Laptop className="w-3.5 h-3.5" />
@@ -2853,7 +2865,7 @@ export default function App() {
                 <div className="relative" ref={notificationPanelRef}>
                   <button
                     onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-                    className="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative"
+                    className="min-h-12 min-w-12 p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative flex items-center justify-center"
                     id="bell_notification_trigger"
                   >
                     <Bell className="w-4 h-4" />
@@ -2922,7 +2934,7 @@ export default function App() {
                   <button
                     onClick={handleLogout}
                     title={t("logout", "Cerrar Sesión")}
-                    className="p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-lg transition-colors ml-1"
+                    className="min-h-12 min-w-12 p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-lg transition-colors ml-1 flex items-center justify-center"
                     id="logout_action_btn"
                   >
                     <LogOut className="w-4 h-4" />
@@ -2937,7 +2949,7 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 pt-4 pb-28 md:py-6 flex flex-col md:flex-row gap-5 md:gap-6">
 
         {!currentUser ? (
           /* Authentication Screen */
@@ -3172,7 +3184,7 @@ export default function App() {
                   
                   <button
                     onClick={() => { setActiveTab("dashboard"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "dashboard" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "dashboard" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">🏠</span>
                     <BarChart3 className="hidden md:block w-4 h-4 shrink-0" />
@@ -3182,7 +3194,7 @@ export default function App() {
 
                   <button
                     onClick={() => { setActiveTab("predictions"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "predictions" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "predictions" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">🌐</span>
                     <Calendar className="hidden md:block w-4 h-4 shrink-0" />
@@ -3192,7 +3204,7 @@ export default function App() {
 
                   <button
                     onClick={() => { setActiveTab("participate"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "participate" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "participate" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">🧾</span>
                     <CreditCard className="hidden md:block w-4 h-4 shrink-0" />
@@ -3205,7 +3217,7 @@ export default function App() {
 
                   <button
                     onClick={() => { setActiveTab("ranking"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "ranking" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "ranking" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">🏆</span>
                     <Trophy className="hidden md:block w-4 h-4 shrink-0" />
@@ -3215,7 +3227,7 @@ export default function App() {
 
                   <button
                     onClick={() => { setActiveTab("rules-prizes"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "rules-prizes" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "rules-prizes" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">💰</span>
                     <Info className="hidden md:block w-4 h-4 shrink-0" />
@@ -3278,7 +3290,7 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-config"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-config" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-config" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <span className="md:hidden" aria-hidden="true">⚙️</span>
                         <Settings className="hidden md:block w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
@@ -3395,6 +3407,69 @@ export default function App() {
                       <BarChart3 className="text-emerald-600 w-5 h-5" /> {t("db_title", "Mi Resumen & Evolución de Puntos")}
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">{t("db_desc", "Sigue tu progreso, aciertos y estadísticas particulares")}</p>
+                  </div>
+
+                  {(isGlobalLoading || isUserLoading) && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Cargando resumen">
+                      {[0, 1, 2, 3].map((item) => (
+                        <div key={item} className="h-24 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 animate-pulse">
+                          <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800" />
+                          <div className="mt-4 h-7 w-14 rounded bg-slate-200 dark:bg-slate-800" />
+                          <div className="mt-3 h-2 w-24 rounded bg-slate-100 dark:bg-slate-800/70" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="md:hidden bg-slate-950 text-white rounded-2xl border border-slate-800 shadow-sm p-4 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-emerald-300">Tu estado</span>
+                        <div className="mt-1 flex items-end gap-2">
+                          <span className="text-3xl font-black leading-none">{currentUser.points}</span>
+                          <span className="text-xs text-slate-300 mb-1">pts</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("ranking")}
+                        className="min-h-12 px-4 rounded-xl bg-white/10 border border-white/10 text-left"
+                      >
+                        <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold">Posición</span>
+                        <span className="text-xl font-black text-amber-300">#{currentRanking?.position || "-"}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("predictions")}
+                        className="min-h-12 rounded-xl bg-emerald-500 text-emerald-950 font-black shadow-sm"
+                      >
+                        Pronosticar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("ranking")}
+                        className="min-h-12 rounded-xl bg-white/10 border border-white/10 text-white font-black"
+                      >
+                        Ver ranking
+                      </button>
+                    </div>
+
+                    {nextOpenMatch && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("predictions")}
+                        className="w-full min-h-12 rounded-xl bg-white/5 border border-white/10 p-3 text-left"
+                      >
+                        <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold">Próximo partido</span>
+                        <span className="block text-sm font-black text-white truncate">
+                          {getShortTeamName(nextOpenMatch.local, lang)} vs {getShortTeamName(nextOpenMatch.visitor, lang)}
+                        </span>
+                        <span className="block text-[11px] text-slate-400 mt-0.5">{formatMatchDate(nextOpenMatch.date)}</span>
+                      </button>
+                    )}
                   </div>
 
                   {publicPrizePool && (
@@ -3702,10 +3777,10 @@ export default function App() {
                   )}
 
                   {/* Mode Selector for Predictions */}
-                  <div className="flex gap-2 border-b border-slate-105 dark:border-slate-800 pb-2">
+                  <div className="flex gap-2 border-b border-slate-105 dark:border-slate-800 pb-2 overflow-x-auto snap-x">
                     <button
                       onClick={() => setPredictionsMode("matches")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      className={`min-h-12 shrink-0 snap-start px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                         predictionsMode === "matches"
                           ? "bg-emerald-600 text-white shadow-sm"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
@@ -3715,7 +3790,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setPredictionsMode("knockout")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      className={`min-h-12 shrink-0 snap-start px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                         predictionsMode === "knockout"
                           ? "bg-emerald-600 text-white shadow-sm"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
@@ -3726,7 +3801,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setPredictionsMode("favorites")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      className={`min-h-12 shrink-0 snap-start px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                         predictionsMode === "favorites"
                           ? "bg-emerald-600 text-white shadow-sm"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
@@ -3785,11 +3860,11 @@ export default function App() {
                   ) : (
                     <>
                       {/* Filters bar */}
-                      <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center gap-3 flex-wrap text-xs">
+                      <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl grid grid-cols-1 sm:flex sm:items-center gap-3 sm:flex-wrap text-xs">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">{t("stage", "Etapa")}:</span>
                       <select
-                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
+                        className="min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm sm:text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
                         value={selectedStage}
                         onChange={(e) => setSelectedStage(e.target.value)}
                       >
@@ -3800,7 +3875,7 @@ export default function App() {
                     <div className="flex items-center gap-1">
                       <span className="font-medium">{t("status", "Estado")}:</span>
                       <select
-                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
+                        className="min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm sm:text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
                         value={matchStatusFilter}
                         onChange={(e) => setMatchStatusFilter(e.target.value as any)}
                       >
@@ -3814,7 +3889,7 @@ export default function App() {
                       <input
                         type="text"
                         placeholder={t("pred_search_placeholder", "Buscar por equipo o estadio...")}
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                        className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-3 text-sm sm:text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                         value={teamSearch}
                         onChange={(e) => setTeamSearch(e.target.value)}
                       />
@@ -3822,7 +3897,7 @@ export default function App() {
                   </div>
 
                   {/* Core Matches Prediction Loop */}
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl max-h-[500px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[500px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
                     {filteredMatches.length === 0 ? (
                       <p className="p-8 text-center text-xs text-slate-400">{t("pred_no_results", "No se encontraron partidos programados con los filtros indicados.")}</p>
                     ) : (
@@ -3887,10 +3962,12 @@ export default function App() {
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="number"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     min="0"
                                     placeholder="?"
                                     disabled={!canSubmitPredictions}
-                                    className={`w-10 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-1 text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
+                                    className={`w-12 h-12 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl text-base md:text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                                     value={localVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
@@ -3903,10 +3980,12 @@ export default function App() {
                                   <span className="text-slate-400 font-bold">-</span>
                                   <input
                                     type="number"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     min="0"
                                     placeholder="?"
                                     disabled={!canSubmitPredictions}
-                                    className={`w-10 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-1 text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
+                                    className={`w-12 h-12 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl text-base md:text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                                     value={visVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
@@ -3932,7 +4011,7 @@ export default function App() {
                                   <button
                                     onClick={() => handleClearPrediction(m.id)}
                                     disabled={!canSubmitPredictions || (!pred && localVal === "" && visVal === "")}
-                                    className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 border ${
+                                    className={`min-h-12 px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 border ${
                                       !canSubmitPredictions || (!pred && localVal === "" && visVal === "")
                                         ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700"
                                         : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
@@ -3943,7 +4022,7 @@ export default function App() {
                                   <button
                                     onClick={() => handleSavePrediction(m.id)}
                                     disabled={!canSubmitPredictions}
-                                    className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-sm ${
+                                    className={`min-h-12 px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-sm ${
                                       canSubmitPredictions
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                                         : "bg-slate-300 text-slate-500 cursor-not-allowed"
@@ -5599,8 +5678,61 @@ export default function App() {
         )}
       </main>
 
+      {currentUser && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("predictions");
+              setPredictionsMode("matches");
+              setMobileMenuOpen(false);
+            }}
+            className="md:hidden fixed right-4 bottom-24 z-40 min-h-14 px-5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black text-sm shadow-2xl shadow-emerald-950/30 border border-emerald-300 flex items-center gap-2"
+          >
+            <Check className="w-4 h-4" />
+            Pronosticar
+          </button>
+
+          <nav
+            aria-label="Navegación principal móvil"
+            className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+8px)] shadow-[0_-12px_30px_rgba(15,23,42,0.12)]"
+          >
+            <div className="grid grid-cols-4 gap-1 max-w-md mx-auto">
+              {[
+                { key: "dashboard", label: "Resumen", icon: BarChart3 },
+                { key: "predictions", label: "Pronósticos", icon: Calendar },
+                { key: "ranking", label: "Ranking", icon: Trophy },
+                { key: "rules-prizes", label: "Premios", icon: Info }
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => {
+                      setActiveTab(item.key);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`min-h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-[10px] font-black transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="leading-none">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        </>
+      )}
+
       {/* Football-inspired high contrast informational footer line */}
-      <footer className="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 shrink-0 text-xs">
+      <footer className="bg-slate-900 text-slate-400 pt-6 pb-28 md:pb-6 text-center border-t border-slate-800 shrink-0 text-xs">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p className="font-mono text-emerald-400 font-bold tracking-widest text-[11px] uppercase">
             ⚽ Polla Mundialista FIFA 2026 • Bogotá UTC-5 Base
