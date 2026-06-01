@@ -252,6 +252,7 @@ const PRIZE_POOL_RATE = 1 - BANK_COMMISSION_RATE - OWNER_PROFIT_RATE;
 const FIRST_PLACE_RATE = 0.8;
 const SECOND_PLACE_RATE = 0.15;
 const THIRD_PLACE_RATE = 0.05;
+const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 24 horas antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
@@ -1456,7 +1457,7 @@ function createDefaultDb(): DatabaseSchema {
     timezone: "Bogotá (UTC-5)",
     allowPublicRegistration: true,
     welcomeMessage: "¡Bienvenido a la Polla Mundialista FIFA 2026! Predice y demuestra tus dotes como estratega del fútbol.",
-    rulesText: "REGLAS DE PUNTUACIÓN DE PARTIDOS:\n- Si aciertas un EMPATE EXACTO (marcador correcto), ¡obtienes 25 puntos!\n- Si aciertas el MARCADOR EXACTO de un partido con ganador, ¡obtienes 15 puntos!\n- Si NO aciertas el marcador exacto pero sí el RESULTADO FINAL (ganador local, empate o ganador visitante), obtienes un BONUS de +10 puntos.\n- De lo contrario, obtienes 5 puntos por participación.\n- Partido sin marcador: 0 puntos.\n\nREGLAS DE PREMIACIÓN FAVORITOS REALES (DEBE ENVIARSE HASTA 24 HORAS ANTES DEL PRIMER PARTIDO):\n- Acierta favorito por grupo: gane 100 puntos.\n- Acierta quien clasifica en cada fase eliminatoria (sin contar grupos): gana 200 puntos.\n- Acierta los 1 finalista de la gran final: gana 300 puntos.\n- Acierta subcampeón: gana 500 puntos.\n- Acierta campeón: gana 1000 puntos.",
+    rulesText: DEFAULT_RULES_TEXT,
     prizesText: "PREMIACIONES Y RECONOCIMIENTOS:\n- 1er Lugar: Camiseta Autografiada + Copa de Campeón de la Polla.\n- 2do Lugar: Balón Adidas Al Rihla Edición 2026.\n- 3er Lugar: Suscripción VIP de streaming deportivo.",
     popupEnabled: false,
     popupTitle: "Aviso importante",
@@ -1793,8 +1794,8 @@ function loadDb(): DatabaseSchema {
           dbState.torneo.rulesImageUrlEn = "/src/assets/images/polla_rules_en_1780083217819.png";
         }
         
-        if (!dbState.torneo.rulesText || !dbState.torneo.rulesText.includes("FAVORITOS REALES")) {
-          dbState.torneo.rulesText = "REGLAS DE PUNTUACIÓN DE PARTIDOS:\n- Si aciertas un EMPATE EXACTO (marcador correcto), ¡obtienes 25 puntos!\n- Si aciertas el MARCADOR EXACTO de un partido con ganador, ¡obtienes 15 puntos!\n- Si NO aciertas el marcador exacto pero sí el RESULTADO FINAL (ganador local, empate o ganador visitante), obtienes un BONUS de +10 puntos.\n- De lo contrario, obtienes 5 puntos por participación.\n- Partido sin marcador: 0 puntos.\n\nREGLAS DE PREMIACIÓN FAVORITOS REALES (DEBE ENVIARSE HASTA 24 HORAS ANTES DEL PRIMER PARTIDO):\n- Acierta favorito por grupo: gane 100 puntos.\n- Acierta quien clasifica en cada fase eliminatoria (sin contar grupos): gana 200 puntos.\n- Acierta los 1 finalista de la gran final: gana 300 puntos.\n- Acierta subcampeón: gana 500 puntos.\n- Acierta campeón: gana 1000 puntos.";
+        if (!dbState.torneo.rulesText || dbState.torneo.rulesText.includes("REGLAS DE PUNTUACIÓN DE PARTIDOS")) {
+          dbState.torneo.rulesText = DEFAULT_RULES_TEXT;
         }
         saveDb(dbState);
       }
@@ -3042,10 +3043,6 @@ app.post("/api/admin/reset-tournament", (req, res) => {
     subchampion: "",
     champion: ""
   };
-  
-  if (db.torneo) {
-    db.torneo.rulesText = "REGLAS DE PUNTUACIÓN DE PARTIDOS:\n- Si aciertas un EMPATE EXACTO (marcador correcto), ¡obtienes 25 puntos!\n- Si aciertas el MARCADOR EXACTO de un partido con ganador, ¡obtienes 15 puntos!\n- Si NO aciertas el marcador exacto pero sí el RESULTADO FINAL (ganador local, empate o ganador visitante), obtienes un BONUS de +10 puntos.\n- De lo contrario, obtienes 5 puntos por participación.\n- Partido sin marcador: 0 puntos.\n\nREGLAS DE PREMIACIÓN FAVORITOS REALES (DEBE ENVIARSE HASTA 24 HORAS ANTES DEL PRIMER PARTIDO):\n- Acierta favorito por grupo: gane 100 puntos.\n- Acierta quien clasifica en cada fase eliminatoria (sin contar grupos): gana 200 puntos.\n- Acierta los 1 finalista de la gran final: gana 300 puntos.\n- Acierta subcampeón: gana 500 puntos.\n- Acierta campeón: gana 1000 puntos.";
-  }
   
   // 3. Reset notifications and reminders
   db.notifications = [];
