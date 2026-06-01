@@ -202,11 +202,11 @@ const hasCloudinaryConfig = Boolean(
 );
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
-const ENTRY_FEE_USD = 25;
+const ENTRY_FEE_USD = 5;
 const ENTRY_FEE_CENTS = ENTRY_FEE_USD * 100;
 const BANK_COMMISSION_RATE = 0.035;
-const PRIZE_POOL_RATE = 0.7;
-const OWNER_PROFIT_RATE = 0.3;
+const OWNER_PROFIT_RATE = 0.1;
+const PRIZE_POOL_RATE = 1 - BANK_COMMISSION_RATE - OWNER_PROFIT_RATE;
 const FIRST_PLACE_RATE = 0.8;
 const SECOND_PLACE_RATE = 0.15;
 const THIRD_PLACE_RATE = 0.05;
@@ -218,9 +218,8 @@ function roundMoney(value: number) {
 function calculatePrizePool(paidParticipants: number) {
   const grossPool = paidParticipants * ENTRY_FEE_USD;
   const bankCommission = grossPool * BANK_COMMISSION_RATE;
-  const prizePool = grossPool * PRIZE_POOL_RATE;
   const ownerGrossProfit = grossPool * OWNER_PROFIT_RATE;
-  const ownerNetProfit = ownerGrossProfit - bankCommission;
+  const prizePool = grossPool - bankCommission - ownerGrossProfit;
 
   return {
     entryFeeUsd: ENTRY_FEE_USD,
@@ -233,7 +232,7 @@ function calculatePrizePool(paidParticipants: number) {
     prizePool: roundMoney(prizePool),
     ownerProfitRate: OWNER_PROFIT_RATE,
     ownerGrossProfit: roundMoney(ownerGrossProfit),
-    ownerProfit: roundMoney(ownerNetProfit),
+    ownerProfit: roundMoney(ownerGrossProfit),
     payouts: {
       first: roundMoney(prizePool * FIRST_PLACE_RATE),
       second: roundMoney(prizePool * SECOND_PLACE_RATE),

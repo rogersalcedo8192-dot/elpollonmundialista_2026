@@ -25,12 +25,13 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Notificaciones internas para recordatorios, resultados, ranking y comunicados.
 - Integracion con Stripe Checkout para cobrar inscripcion.
 - Calculo de bolsa de premios:
-  - Inscripcion: USD 25.
-  - 70% para premios.
+  - Inscripcion: USD 5.
+  - 10% para administracion.
+  - 3.5% para comision bancaria/pasarela.
+  - 86.5% restante para premios.
   - 80% del premio para primer puesto.
   - 15% para segundo puesto.
   - 5% para tercer puesto.
-  - Comision bancaria fija 3.5% descontada de la ganancia admin.
 - Dashboard de usuario con premio acumulado visible.
 - Dashboard admin con desglose de participantes pagos, premio y ganancia estimada.
 - Navegacion mobile integrada en el header con menu desplegable compacto.
@@ -249,5 +250,6 @@ Criterio de cierre:
 ## Ultima Actualizacion
 
 - 2026-06-01: actualizado tras integrar menu mobile en header, resumen mobile above the fold, filtros mobile de partidos corregidos, busqueda sin tildes, boton limpiar filtros, mejoras tactiles en pronosticos y skeleton loaders basicos.
+- 2026-06-01: actualizado esquema de premios: entrada USD 5, administracion 10%, pasarela 3.5%, premios con el restante 86.5% distribuido 80/15/5.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.

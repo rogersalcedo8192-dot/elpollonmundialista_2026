@@ -3632,7 +3632,7 @@ export default function App() {
                               {formatUsd(publicPrizePool.prizePool)}
                             </span>
                             <span className="mb-1 text-[11px] font-semibold text-slate-300">
-                              {Math.round(publicPrizePool.prizePoolRate * 100)}% de la bolsa de participantes pagos
+                              {Math.round(publicPrizePool.prizePoolRate * 1000) / 10}% de la bolsa de participantes pagos
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-2 text-[10px] text-slate-300">
@@ -3825,7 +3825,7 @@ export default function App() {
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                           <span className="text-[10px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-black">Inscripción oficial</span>
-                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatUsd(25)}</h3>
+                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatUsd(publicPrizePool?.entryFeeUsd || 5)}</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pago único para entrar a la Polla Mundialista 2026.</p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${currentUser.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
@@ -4668,7 +4668,7 @@ export default function App() {
                               Bolsa de premios estimada
                             </h3>
                             <p className="text-[11px] text-slate-400 mt-1">
-                              Cuota fija {formatUsd(stats.prizePool.entryFeeUsd)} por participante. El 70% va a premios y la comisión bancaria fija {(stats.prizePool.bankCommissionRate * 100).toFixed(1)}% se descuenta de tu 30%.
+                              Cuota fija {formatUsd(stats.prizePool.entryFeeUsd)} por participante. Administracion {(stats.prizePool.ownerProfitRate * 100).toFixed(1)}%, pasarela {(stats.prizePool.bankCommissionRate * 100).toFixed(1)}% y el restante {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}% va a premios.
                             </p>
                           </div>
                           <div className="text-right">
@@ -4687,11 +4687,11 @@ export default function App() {
                             <span className="text-sm font-black text-rose-300">-{formatUsd(stats.prizePool.bankCommission)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Tu bruto 30%</span>
+                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Admin 10%</span>
                             <span className="text-sm font-black">{formatUsd(stats.prizePool.ownerGrossProfit)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                            <span className="text-[9px] text-emerald-300 uppercase font-bold block">Premios 70%</span>
+                            <span className="text-[9px] text-emerald-300 uppercase font-bold block">Premios {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}%</span>
                             <span className="text-sm font-black text-emerald-300">{formatUsd(stats.prizePool.prizePool)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
