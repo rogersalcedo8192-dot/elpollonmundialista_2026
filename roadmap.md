@@ -33,6 +33,11 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
   - Comision bancaria fija 3.5% descontada de la ganancia admin.
 - Dashboard de usuario con premio acumulado visible.
 - Dashboard admin con desglose de participantes pagos, premio y ganancia estimada.
+- Navegacion mobile integrada en el header con menu desplegable compacto.
+- Resumen mobile above the fold con puntos, posicion, CTA de pronosticos/ranking y proximo partido.
+- Filtros mobile de partidos corregidos con controles full-width, busqueda tolerante a tildes y boton para limpiar filtros.
+- Mejoras de accesibilidad tactil en pronosticos: inputs numericos de marcador, botones de accion y filtros con areas tactiles mas comodas.
+- Skeleton loaders basicos en dashboard durante carga inicial y carga de datos del usuario.
 
 ## Fase 1 - Estabilizacion Inmediata
 
@@ -126,7 +131,9 @@ Objetivo: que participar sea rapido, claro y usable desde celular.
 - Pulir pantalla de registro en todos los idiomas principales.
 - Mejorar selector de pais con busqueda si la lista crece.
 - Destacar partidos pendientes de pronostico y proximos cierres.
-- Agregar filtros por fecha, grupo, equipo y estado en vista mobile.
+- COMPLETADO PARCIAL: filtros por grupo/etapa, equipo/estadio/texto y estado en vista mobile.
+- Pendiente: agregar filtro por fecha o rango de fechas.
+- Pendiente: convertir ranking mobile a tarjetas para evitar lectura tipo tabla en pantallas pequenas.
 - Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
 - Mejorar mensajes cuando el usuario no ha pagado.
@@ -224,8 +231,8 @@ Criterio de cierre:
 2. MUY IMPORTANTE - PENDIENTE: recuperar contrasena de forma segura con hash, token temporal y envio real por correo.
 3. Limpieza definitiva de datos demo antes de abrir inscripciones reales.
 4. Pruebas del motor de puntuacion.
-5. Auditoria admin y exportes de operacion.
-6. Pulido mobile de registro, pronosticos y ranking.
+5. Pulido mobile pendiente: ranking en cards, filtro por fecha y pronostico rapido de proximos partidos.
+6. Auditoria admin y exportes de operacion.
 
 ## Riesgos a Vigilar
 
@@ -241,5 +248,6 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-01: actualizado tras integrar menu mobile en header, resumen mobile above the fold, filtros mobile de partidos corregidos, busqueda sin tildes, boton limpiar filtros, mejoras tactiles en pronosticos y skeleton loaders basicos.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.
