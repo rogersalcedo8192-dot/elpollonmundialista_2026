@@ -2583,6 +2583,13 @@ export default function App() {
     return ui("closes_in_days", { value: Math.floor(diffHours / 24) });
   };
 
+  const normalizeSearchText = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
   // Filtered lists
   const filteredMatches = matches.filter((m) => {
     const stageMatch = selectedStage === "Todos" || m.stage === selectedStage;
@@ -2590,17 +2597,25 @@ export default function App() {
       matchStatusFilter === "all" ||
       (matchStatusFilter === "pending" && m.status === "pending") ||
       (matchStatusFilter === "finished" && m.status === "finished");
-    const searchText = teamSearch.toLowerCase();
-    const contentMatch =
-      m.local.toLowerCase().includes(searchText) ||
-      m.visitor.toLowerCase().includes(searchText) ||
-      getTeamDisplayName(m.local, lang).toLowerCase().includes(searchText) ||
-      getTeamDisplayName(m.visitor, lang).toLowerCase().includes(searchText) ||
-      getStageLabel(m.stage).toLowerCase().includes(searchText) ||
-      m.stadium.toLowerCase().includes(searchText) ||
-      m.stage.toLowerCase().includes(searchText);
+    const searchText = normalizeSearchText(teamSearch);
+    const searchableContent = normalizeSearchText([
+      m.local,
+      m.visitor,
+      getTeamDisplayName(m.local, lang),
+      getTeamDisplayName(m.visitor, lang),
+      getStageLabel(m.stage),
+      m.stadium,
+      m.stage
+    ].join(" "));
+    const contentMatch = !searchText || searchText.split(/\s+/).every((term) => searchableContent.includes(term));
     return stageMatch && statusMatch && contentMatch;
   });
+  const hasMatchFilters = selectedStage !== "Todos" || matchStatusFilter !== "all" || teamSearch.trim().length > 0;
+  const clearMatchFilters = () => {
+    setSelectedStage("Todos");
+    setMatchStatusFilter("all");
+    setTeamSearch("");
+  };
   const canSubmitPredictions = currentUser?.role === "admin" || currentUser?.paymentStatus === "paid";
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
@@ -3913,41 +3928,60 @@ export default function App() {
                   ) : (
                     <>
                       {/* Filters bar */}
-                      <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl grid grid-cols-1 sm:flex sm:items-center gap-3 sm:flex-wrap text-xs">
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">{t("stage", "Etapa")}:</span>
-                      <select
-                        className="min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm sm:text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
-                        value={selectedStage}
-                        onChange={(e) => setSelectedStage(e.target.value)}
-                      >
-                        {STAGES.map((s) => <option key={s} value={s}>{getStageLabel(s)}</option>)}
-                      </select>
-                    </div>
+                      <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(150px,190px)_minmax(150px,210px)_1fr] gap-3">
+                          <label className="block">
+                            <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">{t("stage", "Etapa")}</span>
+                            <select
+                              className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              value={selectedStage}
+                              onChange={(e) => setSelectedStage(e.target.value)}
+                            >
+                              {STAGES.map((s) => <option key={s} value={s}>{getStageLabel(s)}</option>)}
+                            </select>
+                          </label>
 
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">{t("status", "Estado")}:</span>
-                      <select
-                        className="min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm sm:text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
-                        value={matchStatusFilter}
-                        onChange={(e) => setMatchStatusFilter(e.target.value as any)}
-                      >
-                        <option value="all">{t("pred_status_all", "Ver Todos")}</option>
-                        <option value="pending">{t("pred_status_open", "Abiertos para Predico")}</option>
-                        <option value="finished">{t("pred_status_finished", "Finalizados / Oficiales")}</option>
-                      </select>
-                    </div>
+                          <label className="block">
+                            <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">{t("status", "Estado")}</span>
+                            <select
+                              className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              value={matchStatusFilter}
+                              onChange={(e) => setMatchStatusFilter(e.target.value as any)}
+                            >
+                              <option value="all">{t("pred_status_all", "Ver Todos")}</option>
+                              <option value="pending">{t("pred_status_open", "Abiertos")}</option>
+                              <option value="finished">{t("pred_status_finished", "Finalizados")}</option>
+                            </select>
+                          </label>
 
-                    <div className="flex-1 min-w-[150px]">
-                      <input
-                        type="text"
-                        placeholder={t("pred_search_placeholder", "Buscar por equipo o estadio...")}
-                        className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-3 text-sm sm:text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                        value={teamSearch}
-                        onChange={(e) => setTeamSearch(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                          <label className="block">
+                            <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">Buscar</span>
+                            <input
+                              type="search"
+                              autoComplete="off"
+                              placeholder={t("pred_search_placeholder", "Equipo, estadio o etapa...")}
+                              className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                              value={teamSearch}
+                              onChange={(e) => setTeamSearch(e.target.value)}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {filteredMatches.length} de {matches.length} partidos
+                          </span>
+                          {hasMatchFilters && (
+                            <button
+                              type="button"
+                              onClick={clearMatchFilters}
+                              className="min-h-10 px-3 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black"
+                            >
+                              Limpiar filtros
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
                   {/* Core Matches Prediction Loop */}
                   <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[500px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
