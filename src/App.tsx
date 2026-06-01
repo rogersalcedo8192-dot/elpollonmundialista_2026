@@ -163,7 +163,65 @@ const normalizeCountryName = (country?: string) => {
 };
 
 const getCountryFlag = (country?: string) => COUNTRY_FLAGS[normalizeCountryName(country)] || "🌍";
-const getCountryOptionLabel = (country: { name: string; flag: string }) => `${country.flag} ${country.name}`;
+
+const COUNTRY_SHORT_CODES: Record<string, string> = {
+  Colombia: "COL",
+  México: "MEX",
+  Sudáfrica: "ZAF",
+  "Rep. de Corea": "KOR",
+  "Rep. Checa": "CZE",
+  Canadá: "CAN",
+  "Bosnia y Herzegovina": "BIH",
+  "Estados Unidos": "USA",
+  Paraguay: "PAR",
+  Catar: "QAT",
+  Suiza: "SUI",
+  Brasil: "BRA",
+  Marruecos: "MAR",
+  Haití: "HAI",
+  Escocia: "SCO",
+  Australia: "AUS",
+  Turquía: "TUR",
+  Alemania: "GER",
+  Curazao: "CUW",
+  "Países Bajos": "NED",
+  Japón: "JPN",
+  "Costa de Marfil": "CIV",
+  Ecuador: "ECU",
+  Suecia: "SWE",
+  Túnez: "TUN",
+  España: "ESP",
+  "Cabo Verde": "CPV",
+  Bélgica: "BEL",
+  Egipto: "EGY",
+  "Arabia Saudí": "KSA",
+  Uruguay: "URU",
+  Irán: "IRN",
+  "Nueva Zelanda": "NZL",
+  Francia: "FRA",
+  Senegal: "SEN",
+  Irak: "IRQ",
+  Noruega: "NOR",
+  Argentina: "ARG",
+  Argelia: "ALG",
+  Austria: "AUT",
+  Jordania: "JOR",
+  Portugal: "POR",
+  "RD Congo": "COD",
+  Inglaterra: "ENG",
+  Croacia: "CRO",
+  Ghana: "GHA",
+  Panamá: "PAN",
+  Uzbekistán: "UZB",
+  Otro: "OTR"
+};
+
+const getCountryShortCode = (country?: string) => {
+  const normalized = normalizeCountryName(country);
+  return COUNTRY_SHORT_CODES[normalized] || normalized.slice(0, 3).toUpperCase();
+};
+
+const getCountryOptionLabel = (country: { name: string; flag: string }) => `${country.flag} ${getCountryShortCode(country.name)}`;
 
 const STAGES = [
   "Todos",
@@ -1436,6 +1494,27 @@ export function getShortTeamName(name: string, lang: string = "es"): string {
   }
   return displayName.length > 16 ? displayName.slice(0, 14).trimEnd() + "." : displayName;
 }
+
+const TEAM_SHORT_CODES: Record<string, string> = {
+  "Estados Unidos": "USA",
+  "Rep. de Corea": "KOR",
+  "Corea del Sur": "KOR",
+  "Rep. Checa": "CZE",
+  "Costa de Marfil": "CIV",
+  "Arabia Saudita": "KSA",
+  "Arabia Saudí": "KSA",
+  "Nueva Zelanda": "NZL",
+  "Países Bajos": "NED",
+  "RD Congo": "COD",
+  "RI de Irán": "IRN",
+  "Bosnia y Herzegovina": "BIH",
+  "Cabo Verde": "CPV"
+};
+
+const getTeamShortCode = (name: string) => {
+  const normalized = name.trim();
+  return TEAM_SHORT_CODES[normalized] || getCountryShortCode(normalized);
+};
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -4017,8 +4096,8 @@ export default function App() {
                             {/* Teams & Prediction Scoring Board Inputs */}
                             <div className="w-full md:w-2/5 flex items-center justify-center gap-3">
                               {/* HOME TEAM */}
-                              <div className="w-24 text-right font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={getTeamDisplayName(m.local, lang)}>
-                                {getShortTeamName(m.local, lang)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span>
+                              <div className="w-16 text-right font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.local, lang)}>
+                                {getTeamShortCode(m.local)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span>
                               </div>
                               
                               {/* INPUT SCORES CONTAINER */}
@@ -4086,8 +4165,8 @@ export default function App() {
                               )}
                               
                               {/* VISITOR TEAM */}
-                              <div className="w-24 text-left font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={getTeamDisplayName(m.visitor, lang)}>
-                                <span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getShortTeamName(m.visitor, lang)}
+                              <div className="w-16 text-left font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.visitor, lang)}>
+                                <span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getTeamShortCode(m.visitor)}
                               </div>
                             </div>
 
@@ -4221,7 +4300,7 @@ export default function App() {
                                 <td className="py-2.5 px-3 hidden md:table-cell text-slate-600 dark:text-slate-300">
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
                                     <span className="text-sm leading-none">{getCountryFlag(r.userCountry)}</span>
-                                    {normalizeCountryName(r.userCountry)}
+                                    <span title={normalizeCountryName(r.userCountry)}>{getCountryShortCode(r.userCountry)}</span>
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">{r.points}</td>
@@ -4836,7 +4915,8 @@ export default function App() {
                           .filter((u) =>
                             u.name.toLowerCase().includes(searchUser.toLowerCase()) ||
                             u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
-                            normalizeCountryName(u.country).toLowerCase().includes(searchUser.toLowerCase())
+                            normalizeCountryName(u.country).toLowerCase().includes(searchUser.toLowerCase()) ||
+                            getCountryShortCode(u.country).toLowerCase().includes(searchUser.toLowerCase())
                           )
                           .map((u) => (
                             <tr key={u.id} className="hover:bg-slate-50/50">
@@ -4849,7 +4929,7 @@ export default function App() {
                               <td className="py-2.5 px-3 text-[11px] text-slate-600">
                                 <span className="inline-flex items-center gap-1.5">
                                   <span className="text-sm leading-none">{getCountryFlag(u.country)}</span>
-                                  {normalizeCountryName(u.country)}
+                                  <span title={normalizeCountryName(u.country)}>{getCountryShortCode(u.country)}</span>
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">{u.email}</td>
