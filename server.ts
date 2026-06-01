@@ -2503,7 +2503,7 @@ app.post("/api/payments/create-checkout-session", async (req, res) => {
   const realUpgrade = req.body?.realUpgrade === true;
   const hasPaymentProviderRecord = Boolean(user.paymentProvider || user.paymentReference || user.paymentTransactionId || user.stripeCheckoutSessionId || user.stripePaymentIntentId);
   if (APP_MODE === "FREE" && !realUpgrade) return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
-  if (user.role === "admin" || user.role === "superadmin" || user.role === "company_admin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
+  if (user.role === "admin" || user.role === "superadmin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
   if (user.paymentStatus === "paid" && hasPaymentProviderRecord) return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
 
   const origin = getRequestOrigin(req);

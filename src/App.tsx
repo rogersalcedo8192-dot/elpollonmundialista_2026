@@ -5205,8 +5205,9 @@ export default function App() {
                           <button
                             type="button"
                             onClick={handleSaveCompanyPrizePolicy}
-                            className="min-h-11 px-4 rounded-lg bg-emerald-600 text-white font-black text-xs"
+                            className="inline-flex min-h-12 items-center justify-center gap-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:translate-y-px text-white font-black text-xs shadow-md shadow-emerald-900/15 border border-emerald-500 transition-all"
                           >
+                            <Check className="w-4 h-4" />
                             Guardar premiaciones de empresa
                           </button>
                         </div>
