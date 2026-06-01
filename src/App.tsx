@@ -3122,31 +3122,29 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden w-full flex items-center justify-between bg-slate-900 hover:bg-slate-800 text-white px-4 py-3 rounded-2xl shadow-md border border-emerald-800 transition-all duration-300"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="sidebar_nav"
+                className="md:hidden w-full min-h-[106px] flex items-start justify-between bg-slate-50 hover:bg-white text-slate-950 px-6 py-5 rounded-[22px] shadow-sm border border-slate-100 transition-all duration-200"
               >
-                <div className="flex items-center gap-2">
-                  <SoccerBallIcon className={`w-5 h-5 text-emerald-400 transition-transform duration-500 ease-out ${mobileMenuOpen ? 'rotate-180' : 'rotate-0'}`} />
-                  <span className="font-bold text-xs tracking-wide">
-                    {mobileMenuOpen ? (lang === "es" ? "Ocultar Menú ⚽" : "Hide Menu ⚽") : (lang === "es" ? "Mostrar Menú de la Polla ⚽" : "Show Prediction Menu ⚽")}
+                <span className="relative inline-flex min-w-[145px] flex-col gap-1 px-3 py-2 font-mono text-[12px] leading-5 text-left">
+                  <span className="absolute left-0 top-0 h-2 w-2 border-l border-t border-slate-950" />
+                  <span className="absolute right-0 top-0 h-2 w-2 border-r border-t border-slate-950" />
+                  <span className="absolute bottom-0 left-0 h-2 w-2 border-b border-l border-slate-950" />
+                  <span className="absolute bottom-0 right-0 h-2 w-2 border-b border-r border-slate-950" />
+                  <span>El Pollón Mundialista</span>
+                  <span className="flex items-center justify-between">
+                    <span aria-hidden="true">|</span>
+                    <span className="text-lg leading-none" aria-hidden="true">≡</span>
                   </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                    {activeTab === "dashboard" ? (lang === "es" ? "Resumen" : "Summary") :
-                     activeTab === "predictions" ? (lang === "es" ? "Pronósticos" : "Predictions") :
-                     activeTab === "participate" ? "Participar" :
-                     activeTab === "ranking" ? "Ranking" :
-                     activeTab === "rules-prizes" ? (lang === "es" ? "Reglas" : "Rules") : "Menú"}
-                  </span>
-                  {mobileMenuOpen ? <ChevronUp className="w-4 h-4 text-emerald-400" /> : <ChevronDown className="w-4 h-4 text-emerald-400" />}
-                </div>
+                </span>
+                <Copy className="mt-0.5 h-4 w-4 text-slate-950" aria-hidden="true" />
               </button>
 
               {/* Collapsible Content wrapper */}
               <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col gap-4 w-full`}>
                 
                 {/* Profile Card Summary */}
-                <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-md border border-slate-850">
+                <div className="hidden md:block bg-slate-900 text-white rounded-2xl p-4 shadow-md border border-slate-850">
                   <div className="flex items-center gap-3">
                     <img src={currentUser.avatar} alt={currentUser.name} className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500" />
                     <div>
@@ -3168,61 +3166,71 @@ export default function App() {
                 </div>
 
                 {/* Navigation Actions Menu */}
-                <nav className="flex flex-col gap-1 p-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm" id="sidebar_nav">
+                <nav className="flex flex-col gap-0.5 p-5 md:p-2 bg-slate-50 md:bg-white dark:bg-slate-900 rounded-[22px] md:rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm font-mono md:font-sans" id="sidebar_nav">
                   
-                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-2 pb-1 uppercase tracking-wider block">{t("menu_user", "Menú Usuario")}</span>
+                  <span className="hidden md:block text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-2 pb-1 uppercase tracking-wider">{t("menu_user", "Menú Usuario")}</span>
                   
                   <button
                     onClick={() => { setActiveTab("dashboard"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "dashboard" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "dashboard" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
-                    <BarChart3 className="w-4 h-4 shrink-0" />
-                    {t("tab_dashboard", "Mi Resumen & Estadísticas")}
+                    <span className="md:hidden" aria-hidden="true">🏠</span>
+                    <BarChart3 className="hidden md:block w-4 h-4 shrink-0" />
+                    <span className="md:hidden">Resumen</span>
+                    <span className="hidden md:inline">{t("tab_dashboard", "Mi Resumen & Estadísticas")}</span>
                   </button>
 
                   <button
                     onClick={() => { setActiveTab("predictions"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "predictions" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "predictions" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
-                    <Calendar className="w-4 h-4 shrink-0" />
-                    {t("tab_predictions", "Calendario & Pronósticos")}
+                    <span className="md:hidden" aria-hidden="true">🌐</span>
+                    <Calendar className="hidden md:block w-4 h-4 shrink-0" />
+                    <span className="md:hidden">Mis Pronósticos</span>
+                    <span className="hidden md:inline">{t("tab_predictions", "Calendario & Pronósticos")}</span>
                   </button>
 
                   <button
                     onClick={() => { setActiveTab("participate"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "participate" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "participate" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
-                    <CreditCard className="w-4 h-4 shrink-0" />
-                    Participar en Polla
+                    <span className="md:hidden" aria-hidden="true">🧾</span>
+                    <CreditCard className="hidden md:block w-4 h-4 shrink-0" />
+                    <span className="md:hidden">Partidos</span>
+                    <span className="hidden md:inline">Participar en Polla</span>
                     {currentUser.paymentStatus === "paid" && (
-                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">Pago</span>
+                      <span className="hidden md:inline ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">Pago</span>
                     )}
                   </button>
 
                   <button
                     onClick={() => { setActiveTab("ranking"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "ranking" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "ranking" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
-                    <Trophy className="w-4 h-4 shrink-0" />
-                    {t("tab_ranking", "Tabla de Clasificación")}
+                    <span className="md:hidden" aria-hidden="true">🏆</span>
+                    <Trophy className="hidden md:block w-4 h-4 shrink-0" />
+                    <span className="md:hidden">Clasificación</span>
+                    <span className="hidden md:inline">{t("tab_ranking", "Tabla de Clasificación")}</span>
                   </button>
 
                   <button
                     onClick={() => { setActiveTab("rules-prizes"); setMobileMenuOpen(false); }}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "rules-prizes" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "rules-prizes" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
-                    <Info className="w-4 h-4 shrink-0" />
-                    {t("tab_rules", "Reglas y Premiaciones")}
+                    <span className="md:hidden" aria-hidden="true">💰</span>
+                    <Info className="hidden md:block w-4 h-4 shrink-0" />
+                    <span className="md:hidden">Premios</span>
+                    <span className="hidden md:inline">{t("tab_rules", "Reglas y Premiaciones")}</span>
                   </button>
 
                   {/* ADMINS MODULE ENTRY CHANGER */}
                   {currentUser.role === "admin" && (
                     <>
-                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1 uppercase tracking-wider block border-t border-slate-100 dark:border-slate-800 mt-2">{t("admin_title", "ADMINISTRACIÓN")}</span>
+                      <span className="hidden md:block text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1 uppercase tracking-wider border-t border-slate-100 dark:border-slate-800 mt-2">{t("admin_title", "ADMINISTRACIÓN")}</span>
 
                       <button
                         onClick={() => { setActiveTab("admin-stats"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-stats" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-stats" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <BarChart3 className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_stats", "Dashboard & Métricas")}
@@ -3230,7 +3238,7 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-users"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-users" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-users" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Users className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_users", "Gestión de Usuarios")}
@@ -3238,7 +3246,7 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-matches"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-matches" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-matches" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Calendar className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_matches", "Gestión de Partidos")}
@@ -3246,7 +3254,7 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-announcements"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-announcements" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-announcements" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Bell className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_announcement", "Publicar Comunicados")}
@@ -3254,7 +3262,7 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-assets"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-assets" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-assets" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <FileText className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         Biblioteca de Assets
@@ -3262,7 +3270,7 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-banners"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-banners" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-banners" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Megaphone className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         Banners de Pauta
@@ -3270,10 +3278,12 @@ export default function App() {
 
                       <button
                         onClick={() => { setActiveTab("admin-config"); setMobileMenuOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-config" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                        className={`flex items-center gap-2.5 px-3 py-1 md:py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-config" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
-                        <Settings className="w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
-                        {t("admin_config", "Políticas de la Polla")}
+                        <span className="md:hidden" aria-hidden="true">⚙️</span>
+                        <Settings className="hidden md:block w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                        <span className="md:hidden">Configuración</span>
+                        <span className="hidden md:inline">{t("admin_config", "Políticas de la Polla")}</span>
                       </button>
                     </>
                   )}
@@ -3288,7 +3298,7 @@ export default function App() {
                   if (displayMatches.length === 0) return null;
 
                   return (
-                    <div className="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-4 shadow-md border border-emerald-800/40 space-y-3">
+                    <div className="hidden md:block bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-4 shadow-md border border-emerald-800/40 space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="text-[10px] font-extrabold text-amber-350 uppercase tracking-widest flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> 
