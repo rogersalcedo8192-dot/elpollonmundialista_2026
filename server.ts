@@ -308,8 +308,9 @@ function buildEmailLayout(title: string, bodyHtml: string, cta?: { label: string
 
 async function sendEmail(to: string, subject: string, html: string, text?: string) {
   if (!isEmailEnabled()) {
-    console.warn(`Email disabled. Missing RESEND_API_KEY or EMAIL_FROM. Skipped: ${subject} -> ${to}`);
-    return false;
+    const error = "Missing RESEND_API_KEY or EMAIL_FROM";
+    console.warn(`Email disabled. ${error}. Skipped: ${subject} -> ${to}`);
+    return { ok: false, error };
   }
 
   try {
@@ -332,12 +333,13 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Resend email failed (${response.status}) ${subject} -> ${to}: ${errorText}`);
-      return false;
+      return { ok: false, status: response.status, error: errorText };
     }
-    return true;
+    const payload = await response.json().catch(() => ({}));
+    return { ok: true, status: response.status, id: payload?.id };
   } catch (err) {
     console.error(`Resend email error ${subject} -> ${to}:`, err);
-    return false;
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -380,7 +382,7 @@ function sendPasswordRecoveryEmail(user: User, temporaryPassword: string) {
 }
 
 function sendEventEmail(user: User, subject: string, title: string, message: string, force = false) {
-  if (!force && !user.emailSubscribed) return;
+  if (!force && !user.emailSubscribed) return { ok: true, skipped: true };
   return sendEmail(
     user.email,
     subject,
@@ -2296,6 +2298,36 @@ app.get("/api/app-config", (_req, res) => {
   });
 });
 
+app.post("/api/admin/email-test", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+
+  const to = String(req.body?.to || admin.email).trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    return res.status(400).json({ error: "Correo destino invalido." });
+  }
+
+  const result = await sendEmail(
+    to,
+    "Prueba Resend - El Pollon Mundialista",
+    buildEmailLayout(
+      "Prueba de correo",
+      `<p style="font-size:15px;line-height:1.6;margin:0">Si recibes este mensaje, Resend esta configurado correctamente en Railway.</p>`
+    ),
+    "Si recibes este mensaje, Resend esta configurado correctamente en Railway."
+  );
+
+  if (!result.ok) {
+    return res.status(500).json({
+      error: "No se pudo enviar el correo de prueba.",
+      detail: result.error,
+      status: result.status
+    });
+  }
+
+  res.json({ message: "Correo de prueba enviado.", result });
+});
+
 app.post("/api/torneo", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") {
@@ -2485,9 +2517,10 @@ app.post("/api/auth/recover-password", async (req, res) => {
   }
 
   const temporaryPassword = generateTemporaryPassword();
-  const sent = await sendPasswordRecoveryEmail(user, temporaryPassword);
-  if (!sent) {
-    return res.status(500).json({ error: "No pudimos enviar el correo de recuperacion. Verifica la configuracion de Resend." });
+  const emailResult = await sendPasswordRecoveryEmail(user, temporaryPassword);
+  if (!emailResult.ok) {
+    const detail = emailResult.status ? ` Resend status ${emailResult.status}.` : "";
+    return res.status(500).json({ error: `No pudimos enviar el correo de recuperacion.${detail} Revisa los logs de Railway/Resend.` });
   }
   user.password = temporaryPassword;
 
