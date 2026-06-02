@@ -2968,6 +2968,13 @@ export default function App() {
     };
     return participantLabels[lang] || participantLabels.es;
   };
+  const getHeaderUserBadge = (user: User) => {
+    if (user.role === "admin" || user.role === "superadmin") return "ADMIN";
+    if (user.role === "company_admin") return "ADMIN EMPRESA";
+    if (user.paymentStatus === "paid") return "USUARIO PAGO";
+    return "USUARIO FREE";
+  };
+  const formatHeaderPoints = (value?: number) => `${new Intl.NumberFormat("es-CO").format(value || 0)} Pts`;
 
   const unreadNotifications = notifications.filter((n) => !n.read);
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
@@ -3316,7 +3323,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab("dashboard");
+                      setActiveTab("account");
                       setMobileMenuOpen(false);
                     }}
                     className="min-h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-2 transition-colors"
@@ -3327,9 +3334,15 @@ export default function App() {
                       alt={currentUser.name}
                       className="w-8 h-8 rounded-full border border-emerald-500 object-cover"
                     />
-                  <div className="hidden md:block text-left">
-                    <span className="text-xs font-semibold block leading-tight">{currentUser.name}</span>
-                    <span className="text-[10px] text-emerald-400 block font-mono">
+                    <div className="hidden md:block text-left min-w-[180px]">
+                      <span className="text-xs font-semibold block leading-tight max-w-44 truncate">{currentUser.name}</span>
+                      <span className="mt-1 inline-flex px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-[9px] font-black text-emerald-300">
+                        {getHeaderUserBadge(currentUser)}
+                      </span>
+                      <span className="block text-[10px] text-slate-300 font-mono mt-0.5">
+                        POS: #{currentRanking?.position || "-"} · PUNTAJE: {formatHeaderPoints(currentUser.points)}
+                      </span>
+                    <span className="hidden">
                       {currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin" ? getUserRoleLabel(currentUser) : `${t("points", "PUNTUACIÓN")}: ${currentUser.points} pts`}
                     </span>
                   </div>
@@ -3904,6 +3917,100 @@ export default function App() {
                 </div>
               )}
               
+              {activeTab === "account" && (
+                <div className="space-y-5">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <Settings className="text-emerald-600 w-5 h-5" /> Mi cuenta y preferencias
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Configura tu perfil sin publicidad ni paneles adicionales.</p>
+                  </div>
+
+                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <form onSubmit={handleUpdateProfile} className="space-y-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4">
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <img src={profileAvatar || currentUser.avatar} alt={profileName || currentUser.name} className="w-28 h-28 rounded-full object-cover border-4 border-emerald-500 shadow-sm" />
+                          <div>
+                            <p className="text-sm font-black text-slate-950 dark:text-white">{profileName || currentUser.name}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">POS: #{currentRanking?.position || "-"} · {formatHeaderPoints(currentUser.points)}</p>
+                            <span className="mt-2 inline-flex px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-black">{getHeaderUserBadge(currentUser)}</span>
+                          </div>
+                          <label htmlFor="account_profile_image_upload" className="w-full min-h-10 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 cursor-pointer">
+                            <Upload className="w-4 h-4" /> Cargar imagen
+                          </label>
+                          <input id="account_profile_image_upload" type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2">Avatares disponibles</p>
+                            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                              {AVATARS.slice(0, 10).map((avatar, idx) => (
+                                <button key={idx} type="button" onClick={() => setProfileAvatar(avatar)} className={`rounded-full border-2 p-0.5 transition-all ${profileAvatar === avatar ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-transparent hover:border-slate-300 dark:hover:border-slate-700"}`} aria-label={`Usar avatar ${idx + 1}`}>
+                                  <img src={avatar} alt={`Avatar ${idx + 1}`} className="w-full aspect-square rounded-full object-cover" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Nombre de usuario</label>
+                              <input type="text" className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100" value={profileName} onChange={(e) => setProfileName(e.target.value)} required />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Pais</label>
+                              <select className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100" value={normalizeCountryName(profileCountry)} onChange={(e) => setProfileCountry(e.target.value)} required>
+                                {COUNTRY_OPTIONS.map((country) => <option key={country.name} value={country.name}>{getCountryOptionLabel(country)}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Idioma</label>
+                              <select className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100" value={lang} onChange={(e) => setLang(e.target.value as any)}>
+                                <option value="es">ES - Espanol</option><option value="en">EN - English</option><option value="pt">PT - Portugues</option><option value="fr">FR - Francais</option><option value="it">IT - Italiano</option><option value="de">DE - Deutsch</option><option value="ar">AR</option><option value="ja">JA</option><option value="ko">KO</option><option value="ru">RU</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Nueva contrasena</label>
+                              <input type="password" className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100" placeholder="Dejar vacio para conservar actual" value={profileNewPass} onChange={(e) => setProfileNewPass(e.target.value)} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-2">Tema</span>
+                            <div className="grid grid-cols-3 gap-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1">
+                              {[{ value: "light", label: "Claro", icon: Sun }, { value: "dark", label: "Oscuro", icon: Moon }, { value: "system", label: "Sistema", icon: Laptop }].map((item) => {
+                                const Icon = item.icon;
+                                const selected = theme === item.value;
+                                return <button key={item.value} type="button" onClick={() => setTheme(item.value as "light" | "dark" | "system")} className={`min-h-11 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-colors ${selected ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"}`}><Icon className="w-4 h-4" />{item.label}</button>;
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label className="min-h-12 flex items-center gap-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 cursor-pointer">
+                              <input type="checkbox" checked={notificationSoundEnabled} onChange={(e) => setNotificationSoundEnabled(e.target.checked)} className="w-4 h-4 rounded text-emerald-600 border-slate-300" />
+                              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sonido de notificaciones</span>
+                            </label>
+                            <label className="min-h-12 flex items-center gap-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 cursor-pointer">
+                              <input type="checkbox" checked={profileEmailSubscribed} onChange={(e) => setProfileEmailSubscribed(e.target.checked)} className="w-4 h-4 rounded text-emerald-600 border-slate-300" />
+                              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Notificaciones por correo</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button type="submit" className="min-h-11 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer shadow-sm">
+                          <Check className="w-4 h-4" /> Guardar perfil
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
               {/* 1. MÓDULO USER: DASHBOARD TAB */}
               {activeTab === "dashboard" && (
                 <div className="space-y-6">
@@ -4336,7 +4443,7 @@ export default function App() {
                               <Sparkles className="w-4 h-4 text-amber-500" /> Premios y beneficios de tu modalidad
                             </h3>
                             <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
-                              {renderFormattedText(companyPrizePolicy || torneo?.prizesText, "Premiaciones por definir en el Libro de Premiaciones.")}
+                              {renderFormattedText(currentUser.role === "standard" && currentUser.companyId ? (companyPrizePolicy || torneo?.prizesText) : torneo?.prizesText, "Premiaciones por definir en el Libro de Premiaciones.")}
                             </div>
                           </div>
                         </div>
@@ -4379,7 +4486,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      {currentUser.companyId && companyPrizePolicy ? (
+                      {currentUser.role === "standard" && currentUser.companyId && companyPrizePolicy ? (
                         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 space-y-2">
                           <h3 className="text-sm font-black text-amber-900 dark:text-amber-100 flex items-center gap-2">
                             <Sparkles className="w-4 h-4" /> Premios de tu empresa
@@ -5036,6 +5143,8 @@ export default function App() {
                   ? "rules_flyer_2026.png"
                   : "reglamento_polla_2026.png";
                 const isUsingDefaultEnglishFlyer = rulesFlyerPreviewLang === "en" && !torneo?.rulesImageUrlEn;
+                const shouldShowCompanyPrizes = Boolean(currentUser.companyId && currentUser.role === "standard");
+                const visiblePrizesText = shouldShowCompanyPrizes ? (companyPrizePolicy || torneo?.prizesText) : torneo?.prizesText;
 
                 return (
                   <div className="space-y-6">
@@ -5054,9 +5163,9 @@ export default function App() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6">
                       {/* COLUMNS 1 & 2: TEXT DETAILS */}
-                      <div className="lg:col-span-2 space-y-6">
+                      <div className="order-2 space-y-6">
                         <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/15 rounded-2xl border border-emerald-100/80 dark:border-emerald-900/40 space-y-3 shadow-sm">
                           <h3 className="font-bold text-sm text-emerald-900 dark:text-emerald-350 flex items-center gap-2">
                             <Trophy className="w-4.5 h-4.5 text-emerald-600" /> {t("rules_dist_pt", "Distribución de Puntos")}
@@ -5071,13 +5180,13 @@ export default function App() {
                             <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" /> {t("rules_prizes_rec", "Premios & Reconocimientos")}
                           </h3>
                           <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
-                            {renderFormattedText(companyPrizePolicy || torneo?.prizesText, t("rules_no_prizes", "Por definir por el administrador."))}
+                            {renderFormattedText(visiblePrizesText, t("rules_no_prizes", "Por definir por el administrador."))}
                           </div>
                         </div>
                       </div>
 
                       {/* COLUMN 3: GRAPHICAL BROCHURE / FLYER DOWNLOAD */}
-                      <div className="lg:col-span-1">
+                      <div className="order-1">
                         <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 shadow-lg border border-slate-800 space-y-4">
                           <div className="flex items-center justify-between">
                             <h3 className="font-bold text-xs uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
@@ -5125,7 +5234,7 @@ export default function App() {
                           {/* Image Preview Container */}
                           <div 
                             onClick={() => setRulesImageZoom(true)}
-                            className="relative aspect-[3/4] rounded-xl overflow-hidden group cursor-zoom-in border border-slate-800/80 hover:border-emerald-500/40 transition-all duration-300 shadow-inner bg-slate-910"
+                            className="relative aspect-[3/4] max-w-md mx-auto rounded-xl overflow-hidden group cursor-zoom-in border border-slate-800/80 hover:border-emerald-500/40 transition-all duration-300 shadow-inner bg-slate-910"
                           >
                             <img 
                               src={selectedRulesImageUrl} 
@@ -5146,7 +5255,7 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="space-y-2">
+                          <div className="space-y-2 max-w-md mx-auto">
                             <button
                               onClick={() => setRulesImageZoom(true)}
                               className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors border border-slate-700 cursor-pointer"
