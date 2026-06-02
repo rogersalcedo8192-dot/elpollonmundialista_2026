@@ -236,6 +236,9 @@ const STAGES = [
   "16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal", "Tercer Puesto", "Final"
 ];
 
+const GROUP_STAGE_NAMES = STAGES.filter((stage) => stage.startsWith("Grupo "));
+const KNOCKOUT_STAGE_ORDER = ["16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal", "Tercer Puesto", "Final"];
+
 const DATE_LOCALES: Record<string, string> = {
   es: "es-CO",
   en: "en-US",
@@ -2915,21 +2918,45 @@ export default function App() {
       .trim();
 
   // Filtered lists
+  const matchPhaseById = new Map<number, { key: string; label: string; detail: string; sortOrder: number }>();
+  GROUP_STAGE_NAMES.forEach((stage) => {
+    const groupMatches = matches
+      .filter((match) => match.stage === stage)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id);
+
+    groupMatches.forEach((match, index) => {
+      const groupDate = Math.min(Math.floor(index / 2) + 1, 3);
+      matchPhaseById.set(match.id, {
+        key: `grupo-fecha-${groupDate}`,
+        label: `Fecha ${groupDate}`,
+        detail: "Fase de grupos",
+        sortOrder: groupDate
+      });
+    });
+  });
+
+  matches.forEach((match) => {
+    if (matchPhaseById.has(match.id)) return;
+    const knockoutIndex = KNOCKOUT_STAGE_ORDER.indexOf(match.stage);
+    matchPhaseById.set(match.id, {
+      key: `fase-${normalizeSearchText(match.stage).replace(/\s+/g, "-")}`,
+      label: getStageLabel(match.stage),
+      detail: "Eliminatorias",
+      sortOrder: knockoutIndex >= 0 ? 10 + knockoutIndex : 99
+    });
+  });
+
   const matchDateOptions = Array.from(
     new Map(
-      [...matches]
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .map((match) => [getMatchDateKey(match.date), match])
-    ).entries()
-  ).map(([dateKey, match], index) => ({
-    key: dateKey,
-    label: `Fecha ${index + 1}`,
-    dateLabel: formatMatchDateOnly(match.date)
-  }));
+      Array.from(matchPhaseById.values())
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((phase) => [phase.key, phase])
+    ).values()
+  );
 
   const filteredMatches = matches.filter((m) => {
     const stageMatch = selectedStage === "Todos" || m.stage === selectedStage;
-    const dateMatch = selectedMatchDateKey === "Todas" || getMatchDateKey(m.date) === selectedMatchDateKey;
+    const phaseMatch = selectedMatchDateKey === "Todas" || matchPhaseById.get(m.id)?.key === selectedMatchDateKey;
     const statusMatch =
       matchStatusFilter === "all" ||
       (matchStatusFilter === "pending" && m.status === "pending") ||
@@ -2945,7 +2972,7 @@ export default function App() {
       m.stage
     ].join(" "));
     const contentMatch = !searchText || searchText.split(/\s+/).every((term) => searchableContent.includes(term));
-    return stageMatch && dateMatch && statusMatch && contentMatch;
+    return stageMatch && phaseMatch && statusMatch && contentMatch;
   });
   const hasMatchFilters = selectedStage !== "Todos" || selectedMatchDateKey !== "Todas" || matchStatusFilter !== "all" || teamSearch.trim().length > 0;
   const clearMatchFilters = () => {
@@ -3004,8 +3031,12 @@ export default function App() {
     return participantLabels[lang] || participantLabels.es;
   };
   const getHeaderUserBadge = (user: User) => {
-    if (user.role === "admin" || user.role === "superadmin") return "ADMIN";
+    if (user.role === "admin" || user.role === "superadmin") return "SUPER ADMIN";
     if (user.role === "company_admin") return "ADMIN EMPRESA";
+    if (user.companyId) {
+      const company = companies.find((item) => item.id === user.companyId);
+      return `INVITADO - ${company?.name || "EMPRESA"}`;
+    }
     if (user.paymentStatus === "paid") return "USUARIO PAGO";
     return "USUARIO FREE";
   };
@@ -3195,7 +3226,7 @@ export default function App() {
 
       {/* Hero Header */}
       <header className="bg-slate-900 text-white shadow-md border-b border-emerald-800 shrink-0">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {currentUser && (
               <button
@@ -3218,13 +3249,13 @@ export default function App() {
               />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2 leading-tight">
+              <h1 className="text-[15px] sm:text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2 leading-tight">
                 {torneo?.title || t("title", "Polla Mundialista 2026")}
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal hidden sm:inline">
                   Mundial FIFA 2026
                 </span>
               </h1>
-              <p className="text-[11px] md:text-xs text-slate-300 leading-snug max-w-[54vw] sm:max-w-md md:max-w-xl">
+              <p className="hidden sm:block text-[11px] md:text-xs text-slate-300 leading-snug max-w-md md:max-w-xl truncate">
                 {torneo?.description || t("subtitle", "Consigue puntos prediciendo resultados reales")}
               </p>
             </div>
@@ -3361,20 +3392,23 @@ export default function App() {
                       setActiveTab("account");
                       setMobileMenuOpen(false);
                     }}
-                    className="min-h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-2 transition-colors"
+                    className="min-h-10 max-w-[132px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors"
                     title="Cuenta y preferencias"
                   >
                     <img
                       src={currentUser.avatar}
                       alt={currentUser.name}
-                      className="w-8 h-8 rounded-full border border-emerald-500 object-cover"
+                      className="w-8 h-8 rounded-full border border-emerald-500 object-cover shrink-0"
                     />
-                    <div className="hidden md:block text-left min-w-[180px]">
-                      <span className="text-xs font-semibold block leading-tight max-w-44 truncate">{currentUser.name}</span>
-                      <span className="mt-1 inline-flex px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-[9px] font-black text-emerald-300">
+                    <div className="block text-left min-w-0 sm:min-w-[150px] md:min-w-[180px]">
+                      <span className="hidden sm:block text-xs font-semibold leading-tight max-w-44 truncate">{currentUser.name}</span>
+                      <span className="block mt-0.5 sm:mt-1 truncate text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase leading-tight">
                         {getHeaderUserBadge(currentUser)}
                       </span>
-                      <span className="block text-[10px] text-slate-300 font-mono mt-0.5">
+                      <span className="block text-[8px] sm:text-[10px] text-slate-300 font-mono mt-0.5 leading-tight whitespace-nowrap">
+                        POS: #{currentRanking?.position || "-"} · #Pts: {formatHeaderPoints(currentRanking?.points ?? currentUser.points)}
+                      </span>
+                      <span className="hidden">
                         POS: #{currentRanking?.position || "-"} · PUNTAJE: {formatHeaderPoints(currentUser.points)}
                       </span>
                     <span className="hidden">
@@ -4741,16 +4775,16 @@ export default function App() {
                           </label>
 
                           <label className="block">
-                            <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">Fecha</span>
+                            <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">Fase / fecha</span>
                             <select
                               className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                               value={selectedMatchDateKey}
                               onChange={(e) => setSelectedMatchDateKey(e.target.value)}
                             >
-                              <option value="Todas">Todas las fechas</option>
+                              <option value="Todas">Todas las fases y fechas</option>
                               {matchDateOptions.map((option) => (
                                 <option key={option.key} value={option.key}>
-                                  {option.label} - {option.dateLabel}
+                                  {option.label} - {option.detail}
                                 </option>
                               ))}
                             </select>
@@ -4785,7 +4819,7 @@ export default function App() {
 
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            {matchFiltersOpen ? "Ajusta la lista con etapa, fecha, estado o busqueda." : hasMatchFilters ? "Hay filtros activos aplicados a la lista." : "Pulsa Filtros para acotar los partidos."}
+                            {matchFiltersOpen ? "Ajusta la lista con etapa, fase/fecha, estado o busqueda." : hasMatchFilters ? "Hay filtros activos aplicados a la lista." : "Pulsa Filtros para acotar los partidos."}
                           </span>
                           {hasMatchFilters && (
                             <button
