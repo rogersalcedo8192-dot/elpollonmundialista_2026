@@ -1824,6 +1824,16 @@ export default function App() {
     }
   };
 
+  const refreshNotifications = async () => {
+    if (!currentUser) return;
+    try {
+      const nRes = await fetch(`/api/notifications/${currentUser.id}`, { headers: getHeaders() });
+      if (nRes.ok) setNotifications(await nRes.json());
+    } catch (err) {
+      console.error("Error refreshing notifications:", err);
+    }
+  };
+
   const fetchAdminStats = async () => {
     try {
       const sRes = await fetch("/api/admin/stats", { headers: getHeaders() });
@@ -1993,6 +2003,12 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     const timer = window.setInterval(refreshPrizePool, 15000);
+    return () => window.clearInterval(timer);
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const timer = window.setInterval(refreshNotifications, 30000);
     return () => window.clearInterval(timer);
   }, [currentUser?.id]);
 
@@ -2864,12 +2880,12 @@ export default function App() {
       day: "numeric"
     });
 
-  // Checks block 15 mins before kick-off
+  // Checks block 5 mins before kick-off
   const isMatchPredictionLocked = (match: Match) => {
     if (match.status !== "pending") return true;
     const matchTime = new Date(match.date).getTime();
-    const lockTime = matchTime - 15 * 60 * 1000;
-    return Date.now() > lockTime;
+    const lockTime = matchTime - 5 * 60 * 1000;
+    return Date.now() >= lockTime;
   };
 
   const getMatchTimeRemainingLabel = (match: Match) => {
@@ -2879,7 +2895,7 @@ export default function App() {
       return match.status === "finished" ? ui("finished") : ui("live_locked");
     }
     const diffMinutes = Math.floor(diff / 60000);
-    if (diffMinutes < 15) return `🔒 ${ui("locked")}`;
+    if (diffMinutes < 5) return `🔒 ${ui("locked")}`;
     if (diffMinutes < 60) return ui("closes_in_min", { value: diffMinutes });
     const diffHours = Math.floor(diffMinutes / 60);
     if (diffHours < 24) return ui("closes_in_hours", { value: diffHours });
@@ -4631,7 +4647,7 @@ export default function App() {
                         <Calendar className="text-emerald-600 w-5 h-5" id="user_predictions_calendar_icon" /> {t("tab_predictions", "Calendario & Pronósticos")}
                       </h2>
                       <p className="text-xs text-slate-500 mt-1">
-                        {t("pred_desc", "Introduce marcadores. Se bloquea el registro 15 minutos antes del partido. UTC-5 Bogotá Base.")}
+                        {t("pred_desc", "Introduce marcadores. Se bloquea el registro 5 minutos antes del partido. UTC-5 Bogotá Base.")}
                       </p>
                     </div>
 
@@ -6757,7 +6773,7 @@ export default function App() {
                                 notificationConfig: { ...torneo.notificationConfig, reminders: e.target.checked }
                               })}
                             />
-                            <label htmlFor="not_remind_ch">Alertas de predicciones faltantes (24h de anticipación)</label>
+                            <label htmlFor="not_remind_ch">Alertas de predicciones faltantes (24h y 30 min antes)</label>
                           </div>
 
                           <div className="flex items-center gap-2">
@@ -7050,7 +7066,7 @@ export default function App() {
             ⚽ Polla Mundialista FIFA 2026 • Bogotá UTC-5 Base
           </p>
           <p className="text-slate-500 text-[11px]">
-            Diseñada para gestionar pronósticos con cierre automático de postulaciones 15 minutos antes de cada partido.
+            Diseñada para gestionar pronósticos con cierre automático de postulaciones 5 minutos antes de cada partido.
           </p>
         </div>
       </footer>

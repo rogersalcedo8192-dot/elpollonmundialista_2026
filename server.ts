@@ -252,6 +252,11 @@ const PRIZE_POOL_RATE = 1 - BANK_COMMISSION_RATE - OWNER_PROFIT_RATE;
 const FIRST_PLACE_RATE = 0.8;
 const SECOND_PLACE_RATE = 0.15;
 const THIRD_PLACE_RATE = 0.05;
+const PREDICTION_LOCK_MINUTES = 5;
+const REMINDER_24H_WINDOW_START_MS = 24 * 60 * 60 * 1000 + 30 * 60 * 1000;
+const REMINDER_24H_WINDOW_END_MS = 24 * 60 * 60 * 1000 - 5 * 60 * 1000;
+const REMINDER_30M_WINDOW_START_MS = 30 * 60 * 1000;
+const REMINDER_30M_WINDOW_END_MS = 5 * 60 * 1000;
 const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 24 horas antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
 
 function roundMoney(value: number) {
@@ -1704,7 +1709,7 @@ function createDefaultDb(): DatabaseSchema {
     {
       id: "announce-1",
       title: "⚽ ¡Bienvenidos a la Gran Polla del Mundial 2026!",
-      content: "La Polla Oficial está oficialmente inaugurada. Recuerda que puedes ingresar o editar tus predicciones para cada partido hasta 15 minutos antes del silbatazo inicial. Hemos cargado los 104 partidos del torneo completo. ¡A por la victoria!",
+      content: "La Polla Oficial esta oficialmente inaugurada. Recuerda que puedes ingresar o editar tus predicciones para cada partido hasta 5 minutos antes del silbatazo inicial. Hemos cargado los 104 partidos del torneo completo. A por la victoria!",
       date: new Date().toISOString(),
       urgent: true
     },
@@ -3397,13 +3402,13 @@ app.post("/api/predictions", (req, res) => {
   const m = db.matches.find((match) => match.id === matchId);
   if (!m) return res.status(404).json({ error: "Partido no encontrado." });
 
-  // REGLA: Bloquear predicciones 15 minutos antes
+  // REGLA: Bloquear predicciones 5 minutos antes
   const matchTime = new Date(m.date).getTime();
-  const lockTime = matchTime - 15 * 60 * 1000; // 15 mins before kick-off
+  const lockTime = matchTime - PREDICTION_LOCK_MINUTES * 60 * 1000;
   const now = Date.now();
 
-  if (now > lockTime) {
-    return res.status(400).json({ error: "La predicción para este partido ya está cerrada (se bloquea 15 minutos antes del partido)." });
+  if (now >= lockTime) {
+    return res.status(400).json({ error: "La prediccion para este partido ya esta cerrada (se bloquea 5 minutos antes del partido)." });
   }
 
   if (m.status !== "pending") {
@@ -3459,8 +3464,8 @@ app.delete("/api/predictions/:matchId", (req, res) => {
   if (!m) return res.status(404).json({ error: "Partido no encontrado." });
 
   const matchTime = new Date(m.date).getTime();
-  const lockTime = matchTime - 15 * 60 * 1000;
-  if (Date.now() > lockTime) {
+  const lockTime = matchTime - PREDICTION_LOCK_MINUTES * 60 * 1000;
+  if (Date.now() >= lockTime) {
     return res.status(400).json({ error: "La prediccion para este partido ya esta cerrada." });
   }
 
@@ -3795,8 +3800,7 @@ app.get("/api/admin/stats", (req, res) => {
 });
 
 // Background scheduler running every 30 seconds
-// 1. Locks predictions 15 minutes before kick-off (simulated - can inspect match statuses)
-// 2. Looks up matches airing in approximately 24 hours. Sends alert notification to users without registered prediction.
+// Sends alert notifications to users without registered prediction at 24 hours and 30 minutes before kick-off.
 setInterval(() => {
   try {
     const db = loadDb();
@@ -3804,41 +3808,50 @@ setInterval(() => {
     let updated = false;
 
     db.matches.forEach((m) => {
-      // Automatic locked states based on time
       const matchTime = new Date(m.date).getTime();
-      const lockThreshold = matchTime - 15 * 60 * 1000;
-      
-      // Auto locked checks for reminders (24h alert interval check)
-      const warningThresholdStart = matchTime - 24 * 60 * 60 * 1000 - 30 * 60 * 1000; // 24h & 30 min before
-      const warningThresholdEnd = matchTime - 24 * 60 * 60 * 1000; // 24h before kick-off
+      const diffToKickoff = matchTime - now;
+      if (!db.torneo.notificationConfig.reminders || m.status !== "pending" || diffToKickoff <= REMINDER_30M_WINDOW_END_MS) return;
 
-      // If within 24 hours warning check, alert users of pending predictions!
-      if (now >= warningThresholdStart && now <= (warningThresholdEnd + 5 * 60 * 1000)) {
-        if (db.torneo.notificationConfig.reminders) {
-          db.users.forEach((u) => {
-            if (u.role === "admin") return;
-            const predKey = `${u.id}_${m.id}`;
-            // If reminder already sent, neglect
-            if (db.sentReminders.indexOf(predKey) !== -1) return;
-
-            // Check if user already predicted
-            const hasPrediction = db.predictions.some((p) => p.userId === u.id && p.matchId === m.id);
-            if (!hasPrediction) {
-              db.notifications.push({
-                id: `not_remind_${Date.now()}_${u.id}_${m.id}`,
-                userId: u.id,
-                title: "⏰ Recordatorio de Pronóstico",
-                message: `Quedan menos de 24 horas para el inicio del partido ${m.local} vs ${m.visitor}. Recuerda ingresar tu marcador pronosticado antes de que cierre el plazo.`,
-                type: "reminder",
-                date: new Date().toISOString(),
-                read: false
-              });
-              db.sentReminders.push(predKey);
-              updated = true;
-            }
-          });
+      const reminderWindows = [
+        {
+          keySuffix: "24h",
+          startMs: REMINDER_24H_WINDOW_START_MS,
+          endMs: REMINDER_24H_WINDOW_END_MS,
+          message: `Quedan menos de 24 horas para el inicio del partido ${m.local} vs ${m.visitor}. Recuerda ingresar tu marcador pronosticado antes de que cierre el plazo.`
+        },
+        {
+          keySuffix: "30m",
+          startMs: REMINDER_30M_WINDOW_START_MS,
+          endMs: REMINDER_30M_WINDOW_END_MS,
+          message: `Quedan menos de 30 minutos para el partido ${m.local} vs ${m.visitor}. Si aun no tienes pronostico, registralo ahora: el cierre es 5 minutos antes del inicio.`
         }
-      }
+      ];
+
+      reminderWindows.forEach((windowConfig) => {
+        if (diffToKickoff > windowConfig.startMs || diffToKickoff < windowConfig.endMs) return;
+
+        db.users.forEach((u) => {
+          if (u.role === "admin") return;
+          const reminderKey = `${windowConfig.keySuffix}_${u.id}_${m.id}`;
+          const legacyReminderKey = `${u.id}_${m.id}`;
+          if (db.sentReminders.includes(reminderKey) || (windowConfig.keySuffix === "24h" && db.sentReminders.includes(legacyReminderKey))) return;
+
+          const hasPrediction = db.predictions.some((p) => p.userId === u.id && p.matchId === m.id);
+          if (hasPrediction) return;
+
+          db.notifications.push({
+            id: `not_remind_${windowConfig.keySuffix}_${Date.now()}_${u.id}_${m.id}`,
+            userId: u.id,
+            title: "Recordatorio de Pronostico",
+            message: windowConfig.message,
+            type: "reminder",
+            date: new Date().toISOString(),
+            read: false
+          });
+          db.sentReminders.push(reminderKey);
+          updated = true;
+        });
+      });
     });
 
     if (updated) {
