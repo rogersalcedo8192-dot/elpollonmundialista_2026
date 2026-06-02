@@ -1628,6 +1628,7 @@ export default function App() {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showAuthConfirmPassword, setShowAuthConfirmPassword] = useState(false);
   const [showAuthAvatarModal, setShowAuthAvatarModal] = useState(false);
+  const [showPrivacyNoticeModal, setShowPrivacyNoticeModal] = useState(false);
   const [authPrivacyAccepted, setAuthPrivacyAccepted] = useState(false);
   
   // Forecast Forms
@@ -3152,9 +3153,21 @@ export default function App() {
 
       {/* Hero Header */}
       <header className="bg-slate-900 text-white shadow-md border-b border-emerald-800 shrink-0">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-white rounded-xl shadow-inner border border-emerald-400 overflow-hidden flex items-center justify-center">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {currentUser && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile_header_nav"
+                className="md:hidden min-h-10 min-w-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center shadow-sm border border-slate-700/60 shrink-0"
+                title="Abrir navegacion"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            )}
+            <div className="w-11 h-11 bg-white rounded-xl shadow-inner border border-emerald-400 overflow-hidden flex items-center justify-center shrink-0">
               <img
                 src="/favicon.png"
                 alt="El Pollon Mundialista"
@@ -3162,22 +3175,22 @@ export default function App() {
                 id="header_trophy_icon"
               />
             </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2 leading-tight">
                 {torneo?.title || t("title", "Polla Mundialista 2026")}
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal hidden sm:inline">
                   Mundial FIFA 2026
                 </span>
               </h1>
-              <p className="text-[11px] md:text-xs text-slate-400 truncate max-w-[280px] md:max-w-md">
+              <p className="text-[11px] md:text-xs text-slate-300 leading-snug max-w-[54vw] sm:max-w-md md:max-w-xl">
                 {torneo?.description || t("subtitle", "Consigue puntos prediciendo resultados reales")}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Language Selector (10 Languages) */}
-            <div className="relative flex items-center shrink-0">
+            <div className="hidden">
               <select
                 value={lang}
                 onChange={(e) => setLang(e.target.value as any)}
@@ -3201,7 +3214,7 @@ export default function App() {
             </div>
 
             {/* Aesthetic Segmented Theme Picker */}
-            <div className="hidden md:flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700/60 shrink-0 shadow-sm">
+            <div className="hidden">
               <button
                 type="button"
                 onClick={() => setTheme("light")}
@@ -3235,7 +3248,7 @@ export default function App() {
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-expanded={mobileMenuOpen}
                   aria-controls="mobile_header_nav"
-                  className="md:hidden min-h-10 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 shadow-sm"
+                  className="hidden"
                 >
                   {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
                   Menú
@@ -3299,22 +3312,32 @@ export default function App() {
                 </div>
 
                 {/* Profile Widget */}
-                <div className="flex items-center gap-2">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-8 h-8 rounded-full border border-emerald-500 object-cover"
-                  />
-                  <div className="hidden sm:block text-left">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("dashboard");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="min-h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-2 transition-colors"
+                    title="Cuenta y preferencias"
+                  >
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-8 h-8 rounded-full border border-emerald-500 object-cover"
+                    />
+                  <div className="hidden md:block text-left">
                     <span className="text-xs font-semibold block leading-tight">{currentUser.name}</span>
                     <span className="text-[10px] text-emerald-400 block font-mono">
                       {currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin" ? getUserRoleLabel(currentUser) : `${t("points", "PUNTUACIÓN")}: ${currentUser.points} pts`}
                     </span>
                   </div>
+                  </button>
                   <button
                     onClick={handleLogout}
                     title={t("logout", "Cerrar Sesión")}
-                    className="min-h-10 min-w-10 p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-lg transition-colors ml-1 flex items-center justify-center"
+                    className="hidden sm:flex min-h-10 min-w-10 p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-xl transition-colors items-center justify-center"
                     id="logout_action_btn"
                   >
                     <LogOut className="w-4 h-4" />
@@ -3522,19 +3545,29 @@ export default function App() {
               )}
 
               {authMode === "register" && (
-                <label className="flex items-start gap-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-3 cursor-pointer">
+                <div className="flex items-start gap-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-3">
                   <input
+                    id="auth_privacy_accepted"
                     type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500"
+                    className="mt-0.5 h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500"
                     checked={authPrivacyAccepted}
                     onChange={(e) => setAuthPrivacyAccepted(e.target.checked)}
                     required
                   />
                   <span className="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
-                    <span className="block font-black text-slate-900 dark:text-white uppercase">Acepto AVISO DE PRIVACIDAD y politica de tratamiento de datos</span>
-                    {privacyNoticeText}
+                    <label htmlFor="auth_privacy_accepted" className="font-semibold cursor-pointer">
+                      Acepto el{" "}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPrivacyNoticeModal(true)}
+                      className="font-black text-emerald-700 dark:text-emerald-300 underline underline-offset-2 hover:text-emerald-800 dark:hover:text-emerald-200"
+                    >
+                      Aviso de Privacidad
+                    </button>
+                    <span> y la politica de tratamiento de datos.</span>
                   </span>
-                </label>
+                </div>
               )}
 
               <button
@@ -6633,6 +6666,60 @@ export default function App() {
                   );
                 })}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!currentUser && authMode === "register" && showPrivacyNoticeModal && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/60 px-4 py-4"
+          onClick={() => setShowPrivacyNoticeModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-slate-950 dark:text-white">Aviso de Privacidad</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">M&P Enterprise Marketing y Publicidad SAS</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPrivacyNoticeModal(false)}
+                className="w-11 h-11 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500"
+                aria-label="Cerrar aviso de privacidad"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed max-h-[55vh] overflow-y-auto">
+              <p>{privacyNoticeText}</p>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyNoticeModal(false)}
+                className="min-h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthPrivacyAccepted(true);
+                  setShowPrivacyNoticeModal(false);
+                }}
+                className="min-h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black"
+              >
+                Aceptar aviso
+              </button>
             </div>
           </div>
         </div>
