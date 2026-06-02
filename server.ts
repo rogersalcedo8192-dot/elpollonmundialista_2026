@@ -344,6 +344,11 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
 function sendWelcomeEmail(user: User, torneo: TorneoConfig) {
   const subject = "Bienvenido a El Pollon Mundialista FIFA 2026";
   const message = torneo.welcomeMessage || "Bienvenido a la Polla Mundialista FIFA 2026.";
+  const hasPredictionAccess = APP_MODE === "FREE" || Boolean(user.companyId) || user.paymentStatus === "paid";
+  const accessMessage = hasPredictionAccess
+    ? "Ya puedes entrar, revisar el calendario y registrar tus pronosticos antes del cierre de cada partido."
+    : "Tu cuenta ya fue creada. Para registrar pronosticos y competir oficialmente debes completar el pago de la inscripcion, salvo que recibas una invitacion de un administrador de empresa.";
+
   return sendEmail(
     user.email,
     subject,
@@ -351,10 +356,10 @@ function sendWelcomeEmail(user: User, torneo: TorneoConfig) {
       "Registro exitoso",
       `<p style="font-size:16px;line-height:1.6;margin:0">Hola <strong>${escapeHtml(user.name)}</strong>,</p>
        <p style="font-size:15px;line-height:1.6">${escapeHtml(message)}</p>
-       <p style="font-size:15px;line-height:1.6">Ya puedes entrar, revisar el calendario y registrar tus pronosticos antes del cierre de cada partido.</p>`,
+       <p style="font-size:15px;line-height:1.6">${escapeHtml(accessMessage)}</p>`,
       appLink() ? { label: "Entrar a la polla", href: appLink() } : undefined
     ),
-    `Hola ${user.name}. ${message}`
+    `Hola ${user.name}. ${message} ${accessMessage}`
   );
 }
 
@@ -2392,11 +2397,14 @@ app.post("/api/auth/register", (req, res) => {
 
   // Send register notifications
   const successDb = loadDb();
+  const welcomeAccessMessage = APP_MODE === "FREE" || Boolean(newUser.companyId) || newUser.paymentStatus === "paid"
+    ? successDb.torneo.welcomeMessage || "Bienvenido a la Polla Mundialista FIFA 2026."
+    : "Tu cuenta fue creada. Completa el pago de la inscripcion para registrar pronosticos, salvo que ingreses por invitacion de una empresa.";
   successDb.notifications.push({
     id: `not_welcome_${Date.now()}_${newUser.id}`,
     userId: newUser.id,
     title: "🎉 ¡Registro exitoso!",
-    message: successDb.torneo.welcomeMessage || "¡Bienvenido a la Polla Mundialista FIFA 2026!",
+    message: welcomeAccessMessage,
     type: "announcement",
     date: new Date().toISOString(),
     read: false
