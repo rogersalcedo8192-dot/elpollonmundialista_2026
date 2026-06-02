@@ -3226,21 +3226,9 @@ export default function App() {
 
       {/* Hero Header */}
       <header className="bg-slate-900 text-white shadow-md border-b border-emerald-800 shrink-0">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            {currentUser && (
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile_header_nav"
-                className="md:hidden min-h-10 min-w-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center shadow-sm border border-slate-700/60 shrink-0"
-                title="Abrir navegacion"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-            )}
-            <div className="w-11 h-11 bg-white rounded-xl shadow-inner border border-emerald-400 overflow-hidden flex items-center justify-center shrink-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 w-full md:flex-1">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl shadow-inner border border-emerald-400 overflow-hidden flex items-center justify-center shrink-0">
               <img
                 src="/favicon.png"
                 alt="El Pollon Mundialista"
@@ -3248,9 +3236,14 @@ export default function App() {
                 id="header_trophy_icon"
               />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-[15px] sm:text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2 leading-tight">
-                {torneo?.title || t("title", "Polla Mundialista 2026")}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[11px] min-[390px]:text-xs sm:text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2 leading-tight uppercase whitespace-nowrap">
+                <span className="sm:hidden block truncate">
+                  EL POLLÓN MUNDIALISTA FIFA 2026
+                </span>
+                <span className="hidden sm:block truncate">
+                  {torneo?.title || t("title", "Polla Mundialista 2026")}
+                </span>
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal hidden sm:inline">
                   Mundial FIFA 2026
                 </span>
@@ -3261,7 +3254,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto shrink-0">
             {/* Language Selector (10 Languages) */}
             <div className="hidden">
               <select
@@ -3315,23 +3308,24 @@ export default function App() {
             </div>
 
             {currentUser ? (
-              <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3 w-full md:w-auto">
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-expanded={mobileMenuOpen}
                   aria-controls="mobile_header_nav"
-                  className="hidden"
+                  className="md:hidden h-10 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center gap-2 shadow-sm border border-slate-700/60 shrink-0"
+                  title="Abrir navegacion"
                 >
-                  {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                   Menú
                 </button>
 
                 {/* Notification Bell Trigger */}
-                <div className="relative" ref={notificationPanelRef}>
+                <div className="relative ml-auto md:ml-0" ref={notificationPanelRef}>
                   <button
                     onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-                    className="min-h-10 min-w-10 p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative flex items-center justify-center"
+                    className="h-9 w-9 sm:h-10 sm:w-10 p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors relative flex items-center justify-center"
                     id="bell_notification_trigger"
                   >
                     <Bell className="w-4 h-4" />
@@ -3385,28 +3379,29 @@ export default function App() {
                 </div>
 
                 {/* Profile Widget */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <button
                     type="button"
                     onClick={() => {
                       setActiveTab("account");
                       setMobileMenuOpen(false);
                     }}
-                    className="min-h-10 max-w-[142px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors overflow-hidden"
+                    className="h-10 max-w-[170px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 sm:pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors overflow-hidden"
                     title="Cuenta y preferencias"
                   >
                     <img
                       src={currentUser.avatar}
                       alt={currentUser.name}
-                      className="w-8 h-8 rounded-full border border-emerald-500 object-cover shrink-0"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-emerald-500 object-cover shrink-0"
                     />
                     <div className="block text-left min-w-0 sm:min-w-[150px] md:min-w-[180px]">
                       <span className="hidden sm:block text-xs font-semibold leading-tight max-w-44 truncate">{currentUser.name}</span>
-                      <span className="block mt-0.5 sm:mt-1 truncate text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase leading-tight max-w-[90px] sm:max-w-44">
+                      <span className="block mt-0.5 sm:mt-1 truncate text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase leading-tight max-w-[120px] sm:max-w-44">
                         {getHeaderUserBadge(currentUser)}
                       </span>
-                      <span className="block text-[8px] sm:text-[10px] text-slate-300 font-mono mt-0.5 leading-tight whitespace-nowrap truncate max-w-[90px] sm:max-w-44">
-                        POS: #{currentRanking?.position || "-"} · Puntaje: {formatHeaderPoints(currentRanking?.points ?? currentUser.points)}
+                      <span className="block text-[8px] sm:text-[10px] text-slate-300 font-mono mt-0.5 leading-tight whitespace-nowrap truncate max-w-[120px] sm:max-w-44">
+                        <span className="sm:hidden">#{currentRanking?.position || "-"} · {formatHeaderPoints(currentRanking?.points ?? currentUser.points)} pts</span>
+                        <span className="hidden sm:inline">POS: #{currentRanking?.position || "-"} · Puntaje: {formatHeaderPoints(currentRanking?.points ?? currentUser.points)}</span>
                       </span>
                       <span className="hidden">
                         POS: #{currentRanking?.position || "-"} · #Pts: {formatHeaderPoints(currentRanking?.points ?? currentUser.points)}
