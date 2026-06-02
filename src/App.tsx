@@ -60,7 +60,9 @@ const createEmojiAvatar = (emoji: string, background: string) => {
 };
 
 const getManagedPopupKey = (torneo?: TorneoConfig | null, userId = "") => {
-  if (!torneo?.popupEnabled || !torneo.popupMessage?.trim()) return "";
+  if (!torneo?.popupEnabled) return "";
+  const hasPopupContent = Boolean(torneo.popupMessage?.trim() || torneo.popupImageUrl || torneo.popupTitle?.trim());
+  if (!hasPopupContent) return "";
   return `polla_popup_seen_${encodeURIComponent(`${userId}|${torneo.popupTitle || ""}|${torneo.popupMessage}|${torneo.popupImageUrl || ""}|${torneo.popupCtaLabel || ""}`)}`;
 };
 
@@ -1993,12 +1995,15 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!currentUser) return;
-    const popupKey = getManagedPopupKey(torneo, currentUser.id);
-    if (!popupKey) return;
-    if (localStorage.getItem(popupKey)) return;
-    setManagedPopupOpen(true);
-  }, [torneo?.popupEnabled, torneo?.popupTitle, torneo?.popupMessage, currentUser?.id]);
+    openManagedPopupIfNeeded(torneo, currentUser?.id);
+  }, [
+    torneo?.popupEnabled,
+    torneo?.popupTitle,
+    torneo?.popupMessage,
+    torneo?.popupImageUrl,
+    torneo?.popupCtaLabel,
+    currentUser?.id
+  ]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -2114,6 +2119,7 @@ export default function App() {
 
       localStorage.setItem("polla_user_session", JSON.stringify(data.user));
       setCurrentUser(data.user);
+      openManagedPopupIfNeeded(torneo, data.user.id);
       showToast(`¡Tu cuenta ha sido creada y registrada! Bienvenido, ${data.user.name}.`, "success");
       setAuthPassword("");
       setAuthConfirmPassword("");
@@ -3062,6 +3068,14 @@ export default function App() {
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
   const sidebarBanners = sponsorBanners.filter((banner) => banner.placement === "sidebar");
   const rulesBanners = sponsorBanners.filter((banner) => banner.placement === "rules");
+
+  const openManagedPopupIfNeeded = (popupTorneo: TorneoConfig | null, userId?: string) => {
+    if (!userId) return;
+    const popupKey = getManagedPopupKey(popupTorneo, userId);
+    if (!popupKey) return;
+    if (localStorage.getItem(popupKey)) return;
+    setManagedPopupOpen(true);
+  };
 
   useEffect(() => {
     const unreadCount = unreadNotifications.length;
@@ -6992,7 +7006,7 @@ export default function App() {
         </div>
       )}
 
-      {managedPopupOpen && torneo?.popupEnabled && torneo.popupMessage?.trim() && (
+      {managedPopupOpen && getManagedPopupKey(torneo, currentUser?.id) && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/60 px-4 py-4">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
@@ -7025,9 +7039,11 @@ export default function App() {
                 </div>
               </div>
             )}
-            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-2 max-h-[55vh] overflow-y-auto">
-              {renderFormattedText(torneo.popupMessage, "")}
-            </div>
+            {torneo?.popupMessage?.trim() && (
+              <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-2 max-h-[55vh] overflow-y-auto">
+                {renderFormattedText(torneo.popupMessage, "")}
+              </div>
+            )}
             <div className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row gap-2 sm:justify-end">
               <button
                 type="button"
