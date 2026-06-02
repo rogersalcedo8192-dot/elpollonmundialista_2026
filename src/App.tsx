@@ -3040,7 +3040,7 @@ export default function App() {
     if (user.paymentStatus === "paid") return "USUARIO PAGO";
     return "USUARIO FREE";
   };
-  const formatHeaderPoints = (value?: number) => `${new Intl.NumberFormat("es-CO").format(value || 0)} Pts`;
+  const formatHeaderPoints = (value?: number) => new Intl.NumberFormat("es-CO").format(value || 0);
 
   const unreadNotifications = notifications.filter((n) => !n.read);
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
@@ -3392,7 +3392,7 @@ export default function App() {
                       setActiveTab("account");
                       setMobileMenuOpen(false);
                     }}
-                    className="min-h-10 max-w-[132px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors"
+                    className="min-h-10 max-w-[142px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors overflow-hidden"
                     title="Cuenta y preferencias"
                   >
                     <img
@@ -3402,10 +3402,13 @@ export default function App() {
                     />
                     <div className="block text-left min-w-0 sm:min-w-[150px] md:min-w-[180px]">
                       <span className="hidden sm:block text-xs font-semibold leading-tight max-w-44 truncate">{currentUser.name}</span>
-                      <span className="block mt-0.5 sm:mt-1 truncate text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase leading-tight">
+                      <span className="block mt-0.5 sm:mt-1 truncate text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase leading-tight max-w-[90px] sm:max-w-44">
                         {getHeaderUserBadge(currentUser)}
                       </span>
-                      <span className="block text-[8px] sm:text-[10px] text-slate-300 font-mono mt-0.5 leading-tight whitespace-nowrap">
+                      <span className="block text-[8px] sm:text-[10px] text-slate-300 font-mono mt-0.5 leading-tight whitespace-nowrap truncate max-w-[90px] sm:max-w-44">
+                        POS: #{currentRanking?.position || "-"} · Puntaje: {formatHeaderPoints(currentRanking?.points ?? currentUser.points)}
+                      </span>
+                      <span className="hidden">
                         POS: #{currentRanking?.position || "-"} · #Pts: {formatHeaderPoints(currentRanking?.points ?? currentUser.points)}
                       </span>
                       <span className="hidden">
@@ -4512,7 +4515,7 @@ export default function App() {
                               <Sparkles className="w-4 h-4 text-amber-500" /> Premios y beneficios de tu modalidad
                             </h3>
                             <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
-                              {renderFormattedText(currentUser.role === "standard" && currentUser.companyId ? (companyPrizePolicy || torneo?.prizesText) : torneo?.prizesText, "Premiaciones por definir en el Libro de Premiaciones.")}
+                              {renderFormattedText(currentUser.companyId ? companyPrizePolicy : torneo?.prizesText, currentUser.companyId ? "Premiaciones por definir por el administrador de la empresa." : "Premiaciones por definir en el Libro de Premiaciones.")}
                             </div>
                           </div>
                         </div>
@@ -5250,8 +5253,25 @@ export default function App() {
                   ? "rules_flyer_2026.png"
                   : "reglamento_polla_2026.png";
                 const isUsingDefaultEnglishFlyer = rulesFlyerPreviewLang === "en" && !torneo?.rulesImageUrlEn;
-                const shouldShowCompanyPrizes = Boolean(currentUser.companyId && currentUser.role === "standard");
-                const visiblePrizesText = shouldShowCompanyPrizes ? (companyPrizePolicy || torneo?.prizesText) : torneo?.prizesText;
+                const canSeeCompanyPrizePolicy = Boolean(currentUser.companyId && (currentUser.role === "standard" || currentUser.role === "company_admin"));
+                const canSeeMoneyPrizePolicy = Boolean(!currentUser.companyId || hasRealPrizeAccess || isSuperAdminUser);
+                const currentCompanyName = companies.find((company) => company.id === currentUser.companyId)?.name || "tu empresa";
+                const prizePolicyCards = [
+                  ...(canSeeMoneyPrizePolicy ? [{
+                    key: "money",
+                    title: "Políticas de premios en dinero",
+                    badge: "Bolsa de premios",
+                    text: torneo?.prizesText,
+                    fallback: t("rules_no_prizes", "Por definir por el administrador.")
+                  }] : []),
+                  ...(canSeeCompanyPrizePolicy ? [{
+                    key: "company",
+                    title: `Políticas de premios de ${currentCompanyName}`,
+                    badge: "Empresa",
+                    text: companyPrizePolicy,
+                    fallback: "Premiaciones por definir por el administrador de la empresa."
+                  }] : [])
+                ];
 
                 return (
                   <div className="space-y-6">
@@ -5282,13 +5302,33 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="p-5 bg-slate-50/80 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
-                          <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" /> {t("rules_prizes_rec", "Premios & Reconocimientos")}
-                          </h3>
-                          <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
-                            {renderFormattedText(visiblePrizesText, t("rules_no_prizes", "Por definir por el administrador."))}
-                          </div>
+                        <div className="space-y-4">
+                          {prizePolicyCards.length === 0 ? (
+                            <div className="p-5 bg-slate-50/80 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+                              <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" /> {t("rules_prizes_rec", "Premios & Reconocimientos")}
+                              </h3>
+                              <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
+                                {renderFormattedText("", t("rules_no_prizes", "Por definir por el administrador."))}
+                              </div>
+                            </div>
+                          ) : (
+                            prizePolicyCards.map((policy) => (
+                              <div key={policy.key} className="p-5 bg-slate-50/80 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+                                <div className="flex items-start justify-between gap-3 flex-wrap">
+                                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                    <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" /> {policy.title}
+                                  </h3>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[9px] font-black uppercase">
+                                    {policy.badge}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
+                                  {renderFormattedText(policy.text, policy.fallback)}
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
 

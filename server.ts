@@ -2370,7 +2370,7 @@ app.get("/api/company-policy", (req, res) => {
   res.json({
     companyId: company?.id,
     companyName: company?.name,
-    prizesText: company?.prizesText || db.torneo.prizesText
+    prizesText: company?.prizesText || ""
   });
 });
 
