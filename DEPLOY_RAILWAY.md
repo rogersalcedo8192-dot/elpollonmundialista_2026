@@ -71,6 +71,21 @@ CLOUDINARY_API_SECRET=...
 
 Con esas variables, las nuevas cargas desde la Biblioteca de Assets se guardan en Cloudinary. Los assets viejos que ya apunten a `/uploads/...` seguiran funcionando como archivos locales si existen en el deploy, pero los nuevos ya no dependeran del filesystem de Railway.
 
+## Correos transaccionales
+
+Para que recuperacion de contrasena, bienvenida y notificaciones lleguen al correo de cada usuario, configura Resend con un dominio verificado. Si usas `onboarding@resend.dev` o un dominio no verificado, Resend solo permite correos de prueba al correo propietario de la cuenta, por ejemplo `admin@elpollonmundialista.com`.
+
+Variables recomendadas en Railway:
+
+```env
+RESEND_API_KEY=re_xxx
+EMAIL_FROM=El Pollon Mundialista <notificaciones@elpollonmundialista.com>
+EMAIL_REPLY_TO=admin@elpollonmundialista.com
+APP_URL=https://tu-dominio.up.railway.app
+```
+
+En Resend, verifica `elpollonmundialista.com` y agrega los registros DNS que Resend indique para SPF/DKIM. Despues prueba desde el panel admin con `/api/admin/email-test` enviando a un correo distinto al admin.
+
 ## API dinamica de partidos
 
 La app puede sincronizar calendario y resultados desde football-data.org. Crea una cuenta, genera tu token y agrega estas variables al servicio web en Railway:

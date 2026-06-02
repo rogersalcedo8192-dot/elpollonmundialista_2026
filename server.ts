@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -271,6 +272,23 @@ function isEmailEnabled() {
   return Boolean(RESEND_API_KEY && EMAIL_FROM);
 }
 
+function getEmailSenderAddress() {
+  const match = EMAIL_FROM.match(/<([^>]+)>/);
+  return (match?.[1] || EMAIL_FROM).trim().toLowerCase();
+}
+
+function getEmailSenderDomain() {
+  return getEmailSenderAddress().split("@")[1] || "";
+}
+
+function buildEmailDeliveryHint(to: string) {
+  const senderDomain = getEmailSenderDomain();
+  if (senderDomain === "resend.dev") {
+    return `El remitente actual usa resend.dev, que Resend limita a correos de prueba. Verifica el dominio elpollonmundialista.com en Resend y configura EMAIL_FROM con un correo de ese dominio para enviar a ${to}.`;
+  }
+  return "";
+}
+
 function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -307,13 +325,15 @@ function buildEmailLayout(title: string, bodyHtml: string, cta?: { label: string
 }
 
 async function sendEmail(to: string, subject: string, html: string, text?: string) {
+  const normalizedTo = to.trim().toLowerCase();
   if (!isEmailEnabled()) {
     const error = "Missing RESEND_API_KEY or EMAIL_FROM";
-    console.warn(`Email disabled. ${error}. Skipped: ${subject} -> ${to}`);
-    return { ok: false, error };
+    console.warn(`Email disabled. ${error}. Skipped: ${subject} -> ${normalizedTo}`);
+    return { ok: false, error, to: normalizedTo, from: EMAIL_FROM };
   }
 
   try {
+    console.info(`Sending email: ${subject} -> ${normalizedTo}`);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -322,7 +342,7 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
       },
       body: JSON.stringify({
         from: EMAIL_FROM,
-        to: [to],
+        to: [normalizedTo],
         subject,
         html,
         text,
@@ -332,14 +352,14 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Resend email failed (${response.status}) ${subject} -> ${to}: ${errorText}`);
-      return { ok: false, status: response.status, error: errorText };
+      console.error(`Resend email failed (${response.status}) ${subject} -> ${normalizedTo}: ${errorText}`);
+      return { ok: false, status: response.status, error: errorText, to: normalizedTo, from: EMAIL_FROM, hint: buildEmailDeliveryHint(normalizedTo) };
     }
     const payload = await response.json().catch(() => ({}));
-    return { ok: true, status: response.status, id: payload?.id };
+    return { ok: true, status: response.status, id: payload?.id, to: normalizedTo, from: EMAIL_FROM };
   } catch (err) {
-    console.error(`Resend email error ${subject} -> ${to}:`, err);
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.error(`Resend email error ${subject} -> ${normalizedTo}:`, err);
+    return { ok: false, error: err instanceof Error ? err.message : String(err), to: normalizedTo, from: EMAIL_FROM, hint: buildEmailDeliveryHint(normalizedTo) };
   }
 }
 
@@ -2321,7 +2341,10 @@ app.post("/api/admin/email-test", async (req, res) => {
     return res.status(500).json({
       error: "No se pudo enviar el correo de prueba.",
       detail: result.error,
-      status: result.status
+      status: result.status,
+      to: result.to,
+      from: result.from,
+      hint: result.hint
     });
   }
 
@@ -2520,7 +2543,12 @@ app.post("/api/auth/recover-password", async (req, res) => {
   const emailResult = await sendPasswordRecoveryEmail(user, temporaryPassword);
   if (!emailResult.ok) {
     const detail = emailResult.status ? ` Resend status ${emailResult.status}.` : "";
-    return res.status(500).json({ error: `No pudimos enviar el correo de recuperacion.${detail} Revisa los logs de Railway/Resend.` });
+    const hint = emailResult.hint ? ` ${emailResult.hint}` : "";
+    return res.status(500).json({
+      error: `No pudimos enviar el correo de recuperacion.${detail}${hint}`,
+      to: emailResult.to,
+      from: emailResult.from
+    });
   }
   user.password = temporaryPassword;
 

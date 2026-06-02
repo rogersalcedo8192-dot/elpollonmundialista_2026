@@ -3077,6 +3077,31 @@ export default function App() {
     setManagedPopupOpen(true);
   };
 
+  const markManagedPopupSeen = () => {
+    const popupKey = getManagedPopupKey(torneo, currentUser?.id);
+    if (popupKey) localStorage.setItem(popupKey, "1");
+  };
+
+  const closeManagedPopup = () => {
+    markManagedPopupSeen();
+    setManagedPopupOpen(false);
+  };
+
+  const handleManagedPopupCta = () => {
+    markManagedPopupSeen();
+    setActiveTab(torneo?.popupCtaTab || "dashboard");
+    setManagedPopupOpen(false);
+  };
+
+  useEffect(() => {
+    if (!managedPopupOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeManagedPopup();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [managedPopupOpen, torneo, currentUser?.id]);
+
   useEffect(() => {
     const unreadCount = unreadNotifications.length;
     if (notificationSoundEnabled && unreadCount > previousUnreadCountRef.current && previousUnreadCountRef.current > 0) {
@@ -7010,64 +7035,63 @@ export default function App() {
       )}
 
       {managedPopupOpen && getManagedPopupKey(torneo, currentUser?.id) && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/60 px-4 py-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-6"
+          onMouseDown={closeManagedPopup}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-lg max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="managed-popup-title"
+          >
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
               <div className="flex items-start gap-3">
                 <span className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
                   <Megaphone className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 className="text-base font-black text-slate-950 dark:text-white">{torneo.popupTitle || "Aviso importante"}</h3>
+                  <h3 id="managed-popup-title" className="text-base font-black text-slate-950 dark:text-white">{torneo.popupTitle || "Aviso importante"}</h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Comunicado oficial de la polla</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  const popupKey = getManagedPopupKey(torneo, currentUser?.id);
-                  if (popupKey) localStorage.setItem(popupKey, "1");
-                  setManagedPopupOpen(false);
-                }}
-                className="w-11 h-11 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500"
+                onClick={closeManagedPopup}
+                className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
                 aria-label="Cerrar popup"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            {torneo.popupImageUrl && (
-              <div className="px-5 pt-5">
-                <div className="aspect-video rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
-                  <img src={torneo.popupImageUrl} alt={torneo.popupTitle || "Imagen del aviso"} className="w-full h-full object-cover" />
+            <div className="overflow-y-auto">
+              {torneo.popupImageUrl && (
+                <div className="px-4 sm:px-5 pt-4 sm:pt-5">
+                  <div className="aspect-video rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                    <img src={torneo.popupImageUrl} alt={torneo.popupTitle || "Imagen del aviso"} className="w-full h-full object-cover" />
+                  </div>
                 </div>
-              </div>
-            )}
-            {torneo?.popupMessage?.trim() && (
-              <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-2 max-h-[55vh] overflow-y-auto">
-                {renderFormattedText(torneo.popupMessage, "")}
-              </div>
-            )}
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row gap-2 sm:justify-end">
+              )}
+              {torneo?.popupMessage?.trim() && (
+                <div className="p-4 sm:p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-2">
+                  {renderFormattedText(torneo.popupMessage, "")}
+                </div>
+              )}
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2 sm:justify-end shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  const popupKey = getManagedPopupKey(torneo, currentUser?.id);
-                  if (popupKey) localStorage.setItem(popupKey, "1");
-                  setManagedPopupOpen(false);
-                }}
-                className="min-h-12 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200"
+                onClick={closeManagedPopup}
+                className="min-h-12 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm font-bold text-slate-700 dark:text-slate-200"
               >
                 Entendido
               </button>
               {torneo.popupCtaLabel && torneo.popupCtaTab && (
                 <button
                   type="button"
-                  onClick={() => {
-                    const popupKey = getManagedPopupKey(torneo, currentUser?.id);
-                    if (popupKey) localStorage.setItem(popupKey, "1");
-                    setActiveTab(torneo.popupCtaTab || "dashboard");
-                    setManagedPopupOpen(false);
-                  }}
+                  onClick={handleManagedPopupCta}
                   className="min-h-12 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black"
                 >
                   {torneo.popupCtaLabel}
