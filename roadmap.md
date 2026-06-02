@@ -10,7 +10,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Importacion inicial desde JSON hacia Postgres disponible en `scripts/import-db-to-postgres.ts`.
 - Archivos subidos con metadata en Postgres y almacenamiento en Cloudinary.
 - Registro, login, recuperacion simple de password y perfil de usuario.
-- Roles `admin` y `standard`.
+- Roles `superadmin/admin`, `company_admin` y `standard`.
 - Campo de pais por usuario, con bandera en registro, perfil, admin y ranking.
 - Normalizacion de paises/codigos, por ejemplo `CO` -> `Colombia`.
 - Multilenguaje parcial con mejoras en autenticacion, calendario, pronosticos y ranking.
@@ -35,8 +35,9 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Dashboard de usuario con premio acumulado visible.
 - Dashboard admin con desglose de participantes pagos, premio y ganancia estimada.
 - Navegacion mobile integrada en el header con menu desplegable compacto.
+- Header mobile compacto con avatar, etiqueta de usuario, posicion en ranking y puntaje visible sin desbordar la tarjeta.
 - Resumen mobile above the fold con puntos, posicion, CTA de pronosticos/ranking y proximo partido.
-- Filtros mobile de partidos corregidos con controles full-width, busqueda tolerante a tildes y boton para limpiar filtros.
+- Filtros mobile de partidos corregidos con controles full-width, busqueda tolerante a tildes, boton para limpiar filtros y selector de fase/fecha futbolera.
 - Mejoras de accesibilidad tactil en pronosticos: inputs numericos de marcador, botones de accion y filtros con areas tactiles mas comodas.
 - Skeleton loaders basicos en dashboard durante carga inicial y carga de datos del usuario.
 - Base multitenant incremental: empresas, invitaciones, ranking empresarial y `APP_MODE` FREE/PAID sin eliminar la pasarela.
@@ -44,6 +45,11 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Popup administrable desde configuracion global y reinicio de polla con saldos de premio acumulado en cero.
 - Popup administrable con imagen seleccionable desde biblioteca de assets.
 - Empresas muestran premios como texto informativo desde su propio Libro de Premiaciones.
+- Reglas y Premiaciones separa politicas de premios en dinero y politicas de premios de empresa:
+  - Usuarios FREE invitados por superadmin pueden ver las politicas de premios en dinero.
+  - Usuarios invitados de empresa ven las politicas de premios de su empresa.
+  - Usuarios de empresa que tambien pagan la Polla REAL pueden ver ambas politicas.
+  - Admin empresa ve la politica de su empresa y, si participa pagando, tambien la politica de la bolsa en dinero.
 - Tarjetas de pronosticos mejoradas: toque para expandir, controles +/-, y marcador 1X2 resaltado.
 
 ## Fase 1 - Estabilizacion Inmediata
@@ -139,13 +145,13 @@ Objetivo: que participar sea rapido, claro y usable desde celular.
 - Pulir pantalla de registro en todos los idiomas principales.
 - Mejorar selector de pais con busqueda si la lista crece.
 - Destacar partidos pendientes de pronostico y proximos cierres.
-- COMPLETADO PARCIAL: filtros por grupo/etapa, equipo/estadio/texto y estado en vista mobile.
-- Pendiente: agregar filtro por fecha o rango de fechas.
+- COMPLETADO: filtros por grupo/etapa, fase/fecha, equipo/estadio/texto y estado en vista mobile.
+- COMPLETADO: filtro fase/fecha usa la logica futbolera del torneo: Fecha 1, Fecha 2 y Fecha 3 para grupos, luego 16avos, octavos, cuartos, semifinales, tercer puesto y final.
 - Pendiente: convertir ranking mobile a tarjetas para evitar lectura tipo tabla en pantallas pequenas.
 - Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
 - Mejorar mensajes cuando el usuario no ha pagado.
-- Pulir reglas y premios con textos finales.
+- Pulir textos finales de reglas y premios una vez queden definidas las premiaciones reales y empresariales.
 
 Criterio de cierre:
 
@@ -239,7 +245,7 @@ Criterio de cierre:
 2. MUY IMPORTANTE - PENDIENTE: recuperar contrasena de forma segura con hash, token temporal y envio real por correo.
 3. Limpieza definitiva de datos demo antes de abrir inscripciones reales.
 4. Pruebas del motor de puntuacion.
-5. Pulido mobile pendiente: ranking en cards, filtro por fecha y pronostico rapido de proximos partidos.
+5. Pulido mobile pendiente: ranking en cards y pronostico rapido de proximos partidos.
 6. Auditoria admin y exportes de operacion.
 
 ## Riesgos a Vigilar
@@ -253,9 +259,11 @@ Criterio de cierre:
 - Cambios de API externa que alteren nombres de equipos o ids.
 - Problemas de codificacion en textos, paises y nombres de selecciones.
 - Falta de backups antes de cambios grandes en Postgres.
+- Empresas sin Libro de Premiaciones definido mostrando mensajes genericos; revisar contenido antes de activar empresas reales.
 
 ## Ultima Actualizacion
 
+- 2026-06-02: actualizado header mobile con etiqueta de usuario, posicion y `Puntaje: X`; agregado filtro fase/fecha por logica futbolera; separadas politicas de premios en dinero y premios de empresa segun rol, empresa y pago.
 - 2026-06-01: agregado primer bloque multitenant incremental con empresas, invitaciones, administradores de empresa, ranking empresarial, migracion Prisma y modo `APP_MODE=FREE|PAID`.
 - 2026-06-01: agregado `PAYMENT_PROVIDER` para migrar de Stripe a Wompi sin eliminar Stripe; Wompi queda como proveedor principal configurable.
 - 2026-06-01: agregado popup administrable, reinicio de polla con pagos/premios en cero y premios empresariales informativos por Libro de Premiaciones.
