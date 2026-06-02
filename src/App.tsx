@@ -1644,6 +1644,8 @@ export default function App() {
   const [profileAvatar, setProfileAvatar] = useState("");
   const [profileEmailSubscribed, setProfileEmailSubscribed] = useState(true);
   const [profileNewPass, setProfileNewPass] = useState("");
+  const [notificationSoundEnabled, setNotificationSoundEnabled] = useState(() => localStorage.getItem("polla_notification_sound") !== "off");
+  const previousUnreadCountRef = useRef(0);
 
   // Admin users state list
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
@@ -1938,6 +1940,10 @@ export default function App() {
   }, [lang]);
 
   useEffect(() => {
+    localStorage.setItem("polla_notification_sound", notificationSoundEnabled ? "on" : "off");
+  }, [notificationSoundEnabled]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
@@ -2140,6 +2146,28 @@ export default function App() {
       showToast(err.message, "error");
       setPaymentBusy(false);
     }
+  };
+
+  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("Selecciona una imagen valida para tu perfil.", "error");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("La imagen debe pesar maximo 2 MB.", "error");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setProfileAvatar(reader.result);
+    };
+    reader.onerror = () => showToast("No se pudo cargar la imagen de perfil.", "error");
+    reader.readAsDataURL(file);
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -2929,6 +2957,31 @@ export default function App() {
   const rulesBanners = sponsorBanners.filter((banner) => banner.placement === "rules");
 
   useEffect(() => {
+    const unreadCount = unreadNotifications.length;
+    if (notificationSoundEnabled && unreadCount > previousUnreadCountRef.current && previousUnreadCountRef.current > 0) {
+      try {
+        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+        const audioContext = new AudioContextCtor();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.24);
+      } catch {
+        // Browsers can block audio until the user has interacted with the page.
+      }
+    }
+    previousUnreadCountRef.current = unreadCount;
+  }, [unreadNotifications.length, notificationSoundEnabled]);
+
+  useEffect(() => {
     const placements: SponsorBanner["placement"][] = ["home_top", "sidebar", "rules"];
     const timers = placements.map((placement) => {
       const bannersForPlacement = sponsorBanners.filter((banner) => banner.placement === placement);
@@ -3532,10 +3585,14 @@ export default function App() {
                     <div>
                       <h3 className="font-bold text-sm leading-tight">{currentUser.name}</h3>
                       <p className="text-[10px] text-slate-400 capitalize">{currentUser.role === "admin" ? (lang === "es" ? "Administrador 🛠️" : "Admin 🛠️") : (lang === "es" ? "Participante Oficial" : "Official Participant")}</p>
+                      <p className="text-[10px] text-slate-300 mt-1 flex items-center gap-1.5">
+                        <span className="text-sm leading-none">{getCountryFlag(currentUser.country)}</span>
+                        <span className="truncate max-w-[120px]">{normalizeCountryName(currentUser.country)}</span>
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800 text-center">
+                  <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800 text-center">
                     <div className="bg-slate-800/40 p-2 rounded-lg">
                       <span className="block text-[8px] md:text-[9px] text-slate-400 uppercase font-semibold">{t("points", "PUNTUACIÓN")}</span>
                       <span className="text-base font-bold text-amber-400">{currentUser.points}</span>
@@ -3544,6 +3601,14 @@ export default function App() {
                       <span className="block text-[8px] md:text-[9px] text-slate-400 uppercase font-semibold">{t("predictions", "PRONÓSTICOS")}</span>
                       <span className="text-base font-bold text-emerald-400">{currentUser.predictCount}</span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("ranking")}
+                      className="bg-slate-800/40 hover:bg-slate-800/70 p-2 rounded-lg transition-colors"
+                    >
+                      <span className="block text-[8px] md:text-[9px] text-slate-400 uppercase font-semibold">Ranking</span>
+                      <span className="text-base font-bold text-sky-300">#{currentRanking?.position || "-"}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -3994,6 +4059,38 @@ export default function App() {
                   <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                     <h3 className="font-bold text-xs text-slate-700 dark:text-slate-300 uppercase border-b dark:border-slate-800 pb-2 mb-3">{t("db_account_pref", "Mi Cuenta & Preferencias")}</h3>
                     <form onSubmit={handleUpdateProfile} className="space-y-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4">
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <img src={profileAvatar || currentUser.avatar} alt={profileName || currentUser.name} className="w-24 h-24 rounded-full object-cover border-4 border-emerald-500 shadow-sm" />
+                          <div>
+                            <p className="text-sm font-black text-slate-950 dark:text-white">{profileName || currentUser.name}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{getCountryFlag(profileCountry)} {normalizeCountryName(profileCountry)} · #{currentRanking?.position || "-"}</p>
+                          </div>
+                          <label htmlFor="profile_image_upload" className="w-full min-h-10 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 cursor-pointer">
+                            <Upload className="w-4 h-4" />
+                            Cargar imagen
+                          </label>
+                          <input id="profile_image_upload" type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2">Avatares disponibles</p>
+                          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                            {AVATARS.slice(0, 10).map((avatar, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setProfileAvatar(avatar)}
+                                className={`rounded-full border-2 p-0.5 transition-all ${profileAvatar === avatar ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-transparent hover:border-slate-300 dark:hover:border-slate-700"}`}
+                                aria-label={`Usar avatar ${idx + 1}`}
+                              >
+                                <img src={avatar} alt={`Avatar ${idx + 1}`} className="w-full aspect-square rounded-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">{t("db_label_name", "Nombre para clasificación")}</label>
@@ -4030,6 +4127,61 @@ export default function App() {
                             onChange={(e) => setProfileNewPass(e.target.value)}
                           />
                         </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Idioma</label>
+                          <select
+                            className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                            value={lang}
+                            onChange={(e) => setLang(e.target.value as any)}
+                          >
+                            <option value="es">ES - Espanol</option>
+                            <option value="en">EN - English</option>
+                            <option value="pt">PT - Portugues</option>
+                            <option value="fr">FR - Francais</option>
+                            <option value="it">IT - Italiano</option>
+                            <option value="de">DE - Deutsch</option>
+                            <option value="ar">AR</option>
+                            <option value="ja">JA</option>
+                            <option value="ko">KO</option>
+                            <option value="ru">RU</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-2">{t("change_theme", "Tema")}</span>
+                        <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-1">
+                          {[
+                            { value: "light", label: t("theme_light", "Claro"), icon: Sun },
+                            { value: "dark", label: t("theme_dark", "Oscuro"), icon: Moon },
+                            { value: "system", label: t("theme_system", "Sistema"), icon: Laptop }
+                          ].map((item) => {
+                            const Icon = item.icon;
+                            const selected = theme === item.value;
+                            return (
+                              <button
+                                key={item.value}
+                                type="button"
+                                onClick={() => setTheme(item.value as "light" | "dark" | "system")}
+                                className={`min-h-11 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-colors ${selected ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"}`}
+                              >
+                                <Icon className="w-4 h-4" />
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 py-1">
+                        <input
+                          type="checkbox"
+                          id="notif_sound"
+                          checked={notificationSoundEnabled}
+                          onChange={(e) => setNotificationSoundEnabled(e.target.checked)}
+                          className="w-4 h-4 rounded text-emerald-600 border-slate-300"
+                        />
+                        <label htmlFor="notif_sound" className="text-xs text-slate-600 dark:text-slate-400">Activar sonido de notificaciones</label>
                       </div>
 
                       <div className="flex items-center gap-3 py-1">
