@@ -1636,8 +1636,10 @@ export default function App() {
   
   // Filters
   const [selectedStage, setSelectedStage] = useState("Todos");
+  const [selectedMatchDateKey, setSelectedMatchDateKey] = useState("Todas");
   const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | "pending" | "finished">("all");
   const [teamSearch, setTeamSearch] = useState("");
+  const [matchFiltersOpen, setMatchFiltersOpen] = useState(false);
 
   // Manage Profiles states
   const [profileName, setProfileName] = useState("");
@@ -2840,6 +2842,25 @@ export default function App() {
     return d.toLocaleString(DATE_LOCALES[lang] || "es-CO", options) + ` (${ui("bogota")})`;
   };
 
+  const getMatchDateKey = (isoString: string) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date(isoString));
+    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${byType.year}-${byType.month}-${byType.day}`;
+  };
+
+  const formatMatchDateOnly = (isoString: string) =>
+    new Date(isoString).toLocaleDateString(DATE_LOCALES[lang] || "es-CO", {
+      timeZone: "America/Bogota",
+      weekday: "short",
+      month: "short",
+      day: "numeric"
+    });
+
   // Checks block 15 mins before kick-off
   const isMatchPredictionLocked = (match: Match) => {
     if (match.status !== "pending") return true;
@@ -2894,8 +2915,21 @@ export default function App() {
       .trim();
 
   // Filtered lists
+  const matchDateOptions = Array.from(
+    new Map(
+      [...matches]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .map((match) => [getMatchDateKey(match.date), match])
+    ).entries()
+  ).map(([dateKey, match], index) => ({
+    key: dateKey,
+    label: `Fecha ${index + 1}`,
+    dateLabel: formatMatchDateOnly(match.date)
+  }));
+
   const filteredMatches = matches.filter((m) => {
     const stageMatch = selectedStage === "Todos" || m.stage === selectedStage;
+    const dateMatch = selectedMatchDateKey === "Todas" || getMatchDateKey(m.date) === selectedMatchDateKey;
     const statusMatch =
       matchStatusFilter === "all" ||
       (matchStatusFilter === "pending" && m.status === "pending") ||
@@ -2911,11 +2945,12 @@ export default function App() {
       m.stage
     ].join(" "));
     const contentMatch = !searchText || searchText.split(/\s+/).every((term) => searchableContent.includes(term));
-    return stageMatch && statusMatch && contentMatch;
+    return stageMatch && dateMatch && statusMatch && contentMatch;
   });
-  const hasMatchFilters = selectedStage !== "Todos" || matchStatusFilter !== "all" || teamSearch.trim().length > 0;
+  const hasMatchFilters = selectedStage !== "Todos" || selectedMatchDateKey !== "Todas" || matchStatusFilter !== "all" || teamSearch.trim().length > 0;
   const clearMatchFilters = () => {
     setSelectedStage("Todos");
+    setSelectedMatchDateKey("Todas");
     setMatchStatusFilter("all");
     setTeamSearch("");
   };
@@ -4672,7 +4707,28 @@ export default function App() {
                     <>
                       {/* Filters bar */}
                       <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 text-xs">
-                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(150px,190px)_minmax(150px,210px)_1fr] gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setMatchFiltersOpen((open) => !open)}
+                            className={`min-h-11 px-3 rounded-xl text-xs font-black flex items-center gap-2 transition-colors ${
+                              matchFiltersOpen || hasMatchFilters
+                                ? "bg-emerald-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+                            }`}
+                            aria-expanded={matchFiltersOpen}
+                          >
+                            {matchFiltersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            Filtros
+                            {hasMatchFilters && <span className="ml-1 rounded-full bg-white/20 px-1.5 py-0.5 text-[9px]">activos</span>}
+                          </button>
+                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {filteredMatches.length} de {matches.length} partidos
+                          </span>
+                        </div>
+
+                        {matchFiltersOpen && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(150px,190px)_minmax(150px,210px)_minmax(150px,210px)_1fr] gap-3">
                           <label className="block">
                             <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">{t("stage", "Etapa")}</span>
                             <select
@@ -4681,6 +4737,22 @@ export default function App() {
                               onChange={(e) => setSelectedStage(e.target.value)}
                             >
                               {STAGES.map((s) => <option key={s} value={s}>{getStageLabel(s)}</option>)}
+                            </select>
+                          </label>
+
+                          <label className="block">
+                            <span className="block font-bold text-slate-600 dark:text-slate-300 mb-1">Fecha</span>
+                            <select
+                              className="w-full min-h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              value={selectedMatchDateKey}
+                              onChange={(e) => setSelectedMatchDateKey(e.target.value)}
+                            >
+                              <option value="Todas">Todas las fechas</option>
+                              {matchDateOptions.map((option) => (
+                                <option key={option.key} value={option.key}>
+                                  {option.label} - {option.dateLabel}
+                                </option>
+                              ))}
                             </select>
                           </label>
 
@@ -4709,10 +4781,11 @@ export default function App() {
                             />
                           </label>
                         </div>
+                        )}
 
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            {filteredMatches.length} de {matches.length} partidos
+                            {matchFiltersOpen ? "Ajusta la lista con etapa, fecha, estado o busqueda." : hasMatchFilters ? "Hay filtros activos aplicados a la lista." : "Pulsa Filtros para acotar los partidos."}
                           </span>
                           {hasMatchFilters && (
                             <button
