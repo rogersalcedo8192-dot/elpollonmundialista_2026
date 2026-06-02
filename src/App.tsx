@@ -1543,16 +1543,16 @@ export default function App() {
   const t = (key: string, fallback?: string): string => {
     const dict = TRANSLATIONS[lang];
     if (!dict) return fallback || key;
-    return dict[key] || fallback || key;
+    return dict[key] || TRANSLATIONS.es[key] || fallback || key;
   };
 
   const authT = (key: string) => {
-    return AUTH_COPY_BY_LANG[lang]?.[key] || AUTH_COPY_BY_LANG.en[key] || AUTH_COPY_BY_LANG.es[key] || key;
+    return AUTH_COPY_BY_LANG[lang]?.[key] || AUTH_COPY_BY_LANG.es[key] || AUTH_COPY_BY_LANG.en[key] || key;
   };
 
   const ui = (key: string, replacements: Record<string, string | number> = {}) => {
     const dict = UI_COPY_BY_LANG[lang] || UI_COPY_BY_LANG.es;
-    let value = dict[key] || UI_COPY_BY_LANG.en[key] || key;
+    let value = dict[key] || UI_COPY_BY_LANG.es[key] || UI_COPY_BY_LANG.en[key] || key;
     Object.entries(replacements).forEach(([token, replacement]) => {
       value = value.replace(`{${token}}`, String(replacement));
     });
@@ -2950,6 +2950,23 @@ export default function App() {
     if (position === 3) return "3er puesto";
     return `puesto ${position}`;
   };
+  const getUserRoleLabel = (user: User) => {
+    if (user.role === "admin" || user.role === "superadmin") return t("admin_title", "Administrador");
+    if (user.role === "company_admin") return "Admin empresa";
+    const participantLabels: Record<string, string> = {
+      es: "Participante Oficial",
+      en: "Official Participant",
+      pt: "Participante oficial",
+      fr: "Participant officiel",
+      it: "Partecipante ufficiale",
+      de: "Offizieller Teilnehmer",
+      ar: "مشارك رسمي",
+      ja: "公式参加者",
+      ko: "공식 참가자",
+      ru: "Официальный участник"
+    };
+    return participantLabels[lang] || participantLabels.es;
+  };
 
   const unreadNotifications = notifications.filter((n) => !n.read);
   const topBanners = sponsorBanners.filter((banner) => banner.placement === "home_top");
@@ -3147,13 +3164,13 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                {lang === "es" ? (torneo?.title || "Polla Mundialista 2026") : "World Cup Bracket 2026"}
+                {torneo?.title || t("title", "Polla Mundialista 2026")}
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal hidden sm:inline">
                   Mundial FIFA 2026
                 </span>
               </h1>
               <p className="text-[11px] md:text-xs text-slate-400 truncate max-w-[280px] md:max-w-md">
-                {lang === "es" ? (torneo?.description || "Visualiza estadísticas, registra tus marcadores y gana puntos.") : "Track statistics, log predictions, and win points."}
+                {torneo?.description || t("subtitle", "Consigue puntos prediciendo resultados reales")}
               </p>
             </div>
           </div>
@@ -3291,7 +3308,7 @@ export default function App() {
                   <div className="hidden sm:block text-left">
                     <span className="text-xs font-semibold block leading-tight">{currentUser.name}</span>
                     <span className="text-[10px] text-emerald-400 block font-mono">
-                      {currentUser.role === "admin" ? (lang === "es" ? "Administrador 🛠️" : "Admin 🛠️") : `${t("points", "PUNTUACIÓN")}: ${currentUser.points} pts 🏅`}
+                      {currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin" ? getUserRoleLabel(currentUser) : `${t("points", "PUNTUACIÓN")}: ${currentUser.points} pts`}
                     </span>
                   </div>
                   <button
@@ -3584,7 +3601,7 @@ export default function App() {
                     <img src={currentUser.avatar} alt={currentUser.name} className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500" />
                     <div>
                       <h3 className="font-bold text-sm leading-tight">{currentUser.name}</h3>
-                      <p className="text-[10px] text-slate-400 capitalize">{currentUser.role === "admin" ? (lang === "es" ? "Administrador 🛠️" : "Admin 🛠️") : (lang === "es" ? "Participante Oficial" : "Official Participant")}</p>
+                      <p className="text-[10px] text-slate-400 capitalize">{getUserRoleLabel(currentUser)}</p>
                       <p className="text-[10px] text-slate-300 mt-1 flex items-center gap-1.5">
                         <span className="text-sm leading-none">{getCountryFlag(currentUser.country)}</span>
                         <span className="truncate max-w-[120px]">{normalizeCountryName(currentUser.country)}</span>
