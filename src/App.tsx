@@ -3278,7 +3278,10 @@ export default function App() {
                   Mundial FIFA 2026
                 </span>
               </h1>
-              <p className="hidden sm:block text-[11px] md:text-xs text-slate-300 leading-snug max-w-md md:max-w-xl truncate">
+              <span className="mt-1 inline-flex sm:hidden w-fit text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold leading-none">
+                Mundial FIFA 2026
+              </span>
+              <p className="hidden sm:block text-[11px] md:text-[13px] text-slate-200 leading-snug max-w-2xl xl:max-w-3xl">
                 {torneo?.description || t("subtitle", "Consigue puntos prediciendo resultados reales")}
               </p>
             </div>
