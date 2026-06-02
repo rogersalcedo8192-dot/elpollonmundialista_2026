@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { createServer as createViteServer } from "vite";
 import { PrismaClient } from "@prisma/client";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
@@ -257,10 +257,139 @@ const REMINDER_24H_WINDOW_START_MS = 24 * 60 * 60 * 1000 + 30 * 60 * 1000;
 const REMINDER_24H_WINDOW_END_MS = 24 * 60 * 60 * 1000 - 5 * 60 * 1000;
 const REMINDER_30M_WINDOW_START_MS = 30 * 60 * 1000;
 const REMINDER_30M_WINDOW_END_MS = 5 * 60 * 1000;
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const EMAIL_FROM = process.env.EMAIL_FROM || "";
+const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || "";
+const EMAIL_APP_URL = process.env.APP_URL || "";
 const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 24 horas antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function isEmailEnabled() {
+  return Boolean(RESEND_API_KEY && EMAIL_FROM);
+}
+
+function escapeHtml(value: string | number | null | undefined) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function appLink(pathname = "") {
+  if (!EMAIL_APP_URL) return "";
+  return `${EMAIL_APP_URL.replace(/\/$/, "")}${pathname}`;
+}
+
+function buildEmailLayout(title: string, bodyHtml: string, cta?: { label: string; href: string }) {
+  const ctaHtml = cta?.href
+    ? `<p style="margin:28px 0 0"><a href="${escapeHtml(cta.href)}" style="background:#059669;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:800;display:inline-block">${escapeHtml(cta.label)}</a></p>`
+    : "";
+
+  return `
+  <div style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a">
+    <div style="max-width:620px;margin:0 auto;padding:28px 16px">
+      <div style="background:#020617;color:#ffffff;border-radius:14px;padding:22px 24px;border-bottom:4px solid #10b981">
+        <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#6ee7b7;font-weight:800">El Pollon Mundialista FIFA 2026</div>
+        <h1 style="font-size:24px;line-height:1.2;margin:10px 0 0">${escapeHtml(title)}</h1>
+      </div>
+      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;margin-top:14px">
+        ${bodyHtml}
+        ${ctaHtml}
+      </div>
+      <p style="font-size:11px;color:#64748b;text-align:center;margin-top:18px">Recibes este correo por tu cuenta en El Pollon Mundialista FIFA 2026.</p>
+    </div>
+  </div>`;
+}
+
+async function sendEmail(to: string, subject: string, html: string, text?: string) {
+  if (!isEmailEnabled()) {
+    console.warn(`Email disabled. Missing RESEND_API_KEY or EMAIL_FROM. Skipped: ${subject} -> ${to}`);
+    return false;
+  }
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to: [to],
+        subject,
+        html,
+        text,
+        ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {})
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Resend email failed (${response.status}) ${subject} -> ${to}: ${errorText}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`Resend email error ${subject} -> ${to}:`, err);
+    return false;
+  }
+}
+
+function sendWelcomeEmail(user: User, torneo: TorneoConfig) {
+  const subject = "Bienvenido a El Pollon Mundialista FIFA 2026";
+  const message = torneo.welcomeMessage || "Bienvenido a la Polla Mundialista FIFA 2026.";
+  return sendEmail(
+    user.email,
+    subject,
+    buildEmailLayout(
+      "Registro exitoso",
+      `<p style="font-size:16px;line-height:1.6;margin:0">Hola <strong>${escapeHtml(user.name)}</strong>,</p>
+       <p style="font-size:15px;line-height:1.6">${escapeHtml(message)}</p>
+       <p style="font-size:15px;line-height:1.6">Ya puedes entrar, revisar el calendario y registrar tus pronosticos antes del cierre de cada partido.</p>`,
+      appLink() ? { label: "Entrar a la polla", href: appLink() } : undefined
+    ),
+    `Hola ${user.name}. ${message}`
+  );
+}
+
+function sendPasswordRecoveryEmail(user: User, temporaryPassword: string) {
+  return sendEmail(
+    user.email,
+    "Recuperacion de clave - El Pollon Mundialista",
+    buildEmailLayout(
+      "Recuperacion de clave",
+      `<p style="font-size:16px;line-height:1.6;margin:0">Hola <strong>${escapeHtml(user.name)}</strong>,</p>
+       <p style="font-size:15px;line-height:1.6">Recibimos una solicitud para recuperar tu acceso. Generamos una clave temporal para que puedas iniciar sesion:</p>
+       <p style="font-size:22px;line-height:1.4;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:10px;padding:14px 16px;font-weight:900;letter-spacing:.08em">${escapeHtml(temporaryPassword)}</p>
+       <p style="font-size:15px;line-height:1.6">Por seguridad, cambiala desde tu perfil despues de entrar.</p>`,
+      appLink() ? { label: "Entrar y cambiar clave", href: appLink() } : undefined
+    ),
+    `Tu clave temporal es: ${temporaryPassword}`
+  );
+}
+
+function sendEventEmail(user: User, subject: string, title: string, message: string, force = false) {
+  if (!force && !user.emailSubscribed) return;
+  return sendEmail(
+    user.email,
+    subject,
+    buildEmailLayout(
+      title,
+      `<p style="font-size:15px;line-height:1.6;margin:0">${escapeHtml(message)}</p>`,
+      appLink() ? { label: "Ver en la plataforma", href: appLink() } : undefined
+    ),
+    message
+  );
+}
+
+function generateTemporaryPassword() {
+  return `PM-${randomBytes(4).toString("hex").toUpperCase()}`;
 }
 
 function calculatePrizePool(paidParticipants: number) {
@@ -432,6 +561,7 @@ async function getWompiTransaction(transactionId?: string, reference?: string) {
 }
 
 function markUserAsPaid(user: User, session: any, provider: "stripe" | "wompi" = "stripe") {
+  const wasPaid = user.paymentStatus === "paid";
   user.paymentStatus = "paid";
   user.paidAt = new Date().toISOString();
   user.paymentProvider = provider;
@@ -439,6 +569,15 @@ function markUserAsPaid(user: User, session: any, provider: "stripe" | "wompi" =
   user.paymentTransactionId = session.payment_intent || session.id || user.paymentTransactionId;
   user.stripeCheckoutSessionId = session.id || user.stripeCheckoutSessionId;
   user.stripePaymentIntentId = session.payment_intent || user.stripePaymentIntentId;
+  if (!wasPaid) {
+    void sendEventEmail(
+      user,
+      "Inscripcion confirmada",
+      "Pago confirmado",
+      "Tu inscripcion fue confirmada. Ya puedes registrar pronosticos y competir oficialmente en El Pollon Mundialista.",
+      true
+    );
+  }
 }
 
 const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
@@ -2040,15 +2179,17 @@ function recalculateScoresAndRankings() {
     if (shift !== "equal" && ru.userId.indexOf("player") === -1 && ru.userId !== "user-admin") {
       // Create notification for active regular user
       const diffWord = shift === "up" ? "subido" : "bajado";
+      const rankMessage = `Has ${diffWord} posiciones. Ahora ocupas el puesto #${newPos} en la clasificacion general de la Polla.`;
       db.notifications.push({
         id: `not_rank_${Date.now()}_${ru.userId}`,
         userId: ru.userId,
-        title: "⚡ Cambio en el Ranking",
-        message: `¡Has ${diffWord} posiciones! Ahora ocupas el puesto #${newPos} en la clasificación general de la Polla.`,
+        title: "Cambio en el Ranking",
+        message: rankMessage,
         type: "ranking",
         date: new Date().toISOString(),
         read: false
       });
+      void sendEventEmail(ru, "Cambio en tu ranking", "Cambio en el Ranking", rankMessage);
     }
 
     return {
@@ -2261,6 +2402,7 @@ app.post("/api/auth/register", (req, res) => {
     read: false
   });
   saveDb(successDb);
+  void sendWelcomeEmail(newUser, successDb.torneo);
 
   // Return session (omit password)
   const { password: _, ...cleanUser } = newUser;
@@ -2324,7 +2466,7 @@ app.put("/api/auth/profile", (req, res) => {
 });
 
 // Recover Password
-app.post("/api/auth/recover-password", (req, res) => {
+app.post("/api/auth/recover-password", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Ingrese su correo." });
 
@@ -2334,19 +2476,26 @@ app.post("/api/auth/recover-password", (req, res) => {
     return res.status(400).json({ error: "No se encontró ninguna cuenta asociada a este correo electrónico." });
   }
 
+  const temporaryPassword = generateTemporaryPassword();
+  const sent = await sendPasswordRecoveryEmail(user, temporaryPassword);
+  if (!sent) {
+    return res.status(500).json({ error: "No pudimos enviar el correo de recuperacion. Verifica la configuracion de Resend." });
+  }
+  user.password = temporaryPassword;
+
   // Create a visual/notifications confirmation
   db.notifications.push({
     id: `not_recover_${Date.now()}_${user.id}`,
     userId: user.id,
-    title: "🔑 Solicitud de Recuperación",
-    message: `Hemos recibido tu solicitud de recuperación. Tu contraseña actual es: "${user.password}". Por seguridad, te sugerimos cambiarla en tu perfil.`,
+    title: "Solicitud de Recuperacion",
+    message: "Hemos recibido tu solicitud de recuperacion. Te enviamos una clave temporal a tu correo. Por seguridad, cambiala desde tu perfil despues de entrar.",
     type: "announcement",
     date: new Date().toISOString(),
     read: false
   });
   saveDb(db);
 
-  res.json({ message: "Se ha enviado un código de recuperación simulado a su dirección de correo y se registró una alerta en su panel." });
+  res.json({ message: "Te enviamos una clave temporal a tu correo y registramos una alerta en tu panel." });
 });
 
 app.get("/api/companies", (req, res) => {
@@ -3303,15 +3452,18 @@ app.put("/api/matches/:id", (req, res) => {
           else diffReason = "participación (5 pts)";
         }
 
+        const resultMessage = `El partido ${m.local} vs ${m.visitor} finalizo con marcador real ${m.localScore}-${m.visitorScore}. ${pred ? `Tu prediccion fue ${pred.localScore}-${pred.visitorScore}. Ganaste ${ptsEarned} puntos por ${diffReason}.` : "No tenias ninguna prediccion registrada para este partido."}`;
+
         updatedDb.notifications.push({
           id: `not_res_${Date.now()}_${u.id}_${m.id}`,
           userId: u.id,
-          title: "📌 Resultado del Partido Publicado",
-          message: `El partido ${m.local} vs ${m.visitor} finalizó con marcador real ${m.localScore}-${m.visitorScore}. ${pred ? `Tu predicción fue ${pred.localScore}-${pred.visitorScore}. Ganaste ${ptsEarned} puntos por ${diffReason}.` : "No tenías ninguna predicción registrada para este partido."}`,
+          title: "Resultado del Partido Publicado",
+          message: resultMessage,
           type: "result",
           date: new Date().toISOString(),
           read: false
         });
+        void sendEventEmail(u, `Resultado: ${m.local} vs ${m.visitor}`, "Resultado del Partido Publicado", resultMessage);
       });
       saveDb(updatedDb);
     }
@@ -3354,15 +3506,18 @@ app.post("/api/matches/:id/simulate", (req, res) => {
       else if (pred.reason === "draw") reasonText = "empate real (10 pts)";
     }
 
+    const simulationMessage = `El administrador simulo el partido ${m.local} vs ${m.visitor}. Marcador real final: ${m.localScore}-${m.visitorScore}. Obtuviste ${pred ? `${pts} pts por ${reasonText}` : "0 pts por no tener pronostico"}.`;
+
     notifyDb.notifications.push({
       id: `not_sim_${Date.now()}_${u.id}_${m.id}`,
       userId: u.id,
-      title: "⚽ Simulación: Resultado Oficial",
-      message: `El administrador simuló el partido ${m.local} vs ${m.visitor}. Marcador real final: ${m.localScore}-${m.visitorScore}. Obtuviste ${pred ? `${pts} pts por ${reasonText}` : "0 pts por no tener pronóstico"}.`,
+      title: "Simulacion: Resultado Oficial",
+      message: simulationMessage,
       type: "result",
       date: new Date().toISOString(),
       read: false
     });
+    void sendEventEmail(u, `Resultado simulado: ${m.local} vs ${m.visitor}`, "Simulacion: Resultado Oficial", simulationMessage);
   });
   saveDb(notifyDb);
 
@@ -3645,15 +3800,17 @@ app.post("/api/announcements", (req, res) => {
   const isScheduledInFuture = publishAt && new Date(publishAt).getTime() > Date.now();
   if (!isScheduledInFuture && db.torneo.notificationConfig.announcements) {
     db.users.forEach((u) => {
+      const announcementMessage = `El administrador ha publicado un anuncio: "${title}". Consultalo en la seccion de anuncios.`;
       db.notifications.push({
         id: `not_ann_${Date.now()}_${u.id}`,
         userId: u.id,
-        title: urgent ? "🚨 Comunicado Urgente" : "📢 Nuevo Comunicado",
-        message: `El administrador ha publicado un anuncio: "${title}". Consúltalo en la sección de anuncios.`,
+        title: urgent ? "Comunicado Urgente" : "Nuevo Comunicado",
+        message: announcementMessage,
         type: "announcement",
         date: new Date().toISOString(),
         read: false
       });
+      void sendEventEmail(u, urgent ? `Urgente: ${title}` : `Nuevo comunicado: ${title}`, urgent ? "Comunicado Urgente" : "Nuevo Comunicado", `${title}\n\n${content}`);
     });
     saveDb(db);
   }
@@ -3848,6 +4005,7 @@ setInterval(() => {
             date: new Date().toISOString(),
             read: false
           });
+          void sendEventEmail(u, `Recordatorio: ${m.local} vs ${m.visitor}`, "Recordatorio de Pronostico", windowConfig.message);
           db.sentReminders.push(reminderKey);
           updated = true;
         });
