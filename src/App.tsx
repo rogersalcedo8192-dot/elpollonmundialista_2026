@@ -59,11 +59,11 @@ const createEmojiAvatar = (emoji: string, background: string) => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-const getManagedPopupKey = (torneo?: TorneoConfig | null, userId = "") => {
-  if (!torneo?.popupEnabled) return "";
+const hasManagedPopupContent = (torneo?: TorneoConfig | null) => {
+  if (!torneo?.popupEnabled) return false;
   const hasPopupContent = Boolean(torneo.popupMessage?.trim() || torneo.popupImageUrl || torneo.popupTitle?.trim());
-  if (!hasPopupContent) return "";
-  return `polla_popup_seen_${encodeURIComponent(`${userId}|${torneo.popupTitle || ""}|${torneo.popupMessage}|${torneo.popupImageUrl || ""}|${torneo.popupCtaLabel || ""}`)}`;
+  if (!hasPopupContent) return false;
+  return true;
 };
 
 const AVATARS = [
@@ -3175,24 +3175,15 @@ export default function App() {
 
   const openManagedPopupIfNeeded = (popupTorneo: TorneoConfig | null, userId?: string) => {
     if (!userId) return;
-    const popupKey = getManagedPopupKey(popupTorneo, userId);
-    if (!popupKey) return;
-    if (localStorage.getItem(popupKey)) return;
+    if (!hasManagedPopupContent(popupTorneo)) return;
     setManagedPopupOpen(true);
   };
 
-  const markManagedPopupSeen = () => {
-    const popupKey = getManagedPopupKey(torneo, currentUser?.id);
-    if (popupKey) localStorage.setItem(popupKey, "1");
-  };
-
   const closeManagedPopup = () => {
-    markManagedPopupSeen();
     setManagedPopupOpen(false);
   };
 
   const handleManagedPopupCta = () => {
-    markManagedPopupSeen();
     setActiveTab(torneo?.popupCtaTab || "dashboard");
     setManagedPopupOpen(false);
   };
@@ -3581,14 +3572,6 @@ export default function App() {
                     </span>
                   </div>
                   </button>
-                  <button
-                    onClick={handleLogout}
-                    title={t("logout", "Cerrar Sesión")}
-                    className="hidden sm:flex min-h-10 min-w-10 p-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 rounded-xl transition-colors items-center justify-center"
-                    id="logout_action_btn"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             ) : (
@@ -3640,14 +3623,6 @@ export default function App() {
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="col-span-2 min-h-12 rounded-xl px-3 flex items-center justify-center gap-2 text-xs font-black bg-rose-950/80 text-rose-100 border border-rose-800/70 hover:bg-rose-900 transition-colors"
-            >
-              <LogOut className="w-4 h-4 shrink-0" />
-              {t("logout", "Cerrar Sesion")}
-            </button>
           </div>
         </nav>
       )}
@@ -4254,6 +4229,21 @@ export default function App() {
                       </div>
                     </form>
                   </div>
+
+                  <div className="p-4 bg-rose-50 dark:bg-rose-950/20 rounded-xl border border-rose-100 dark:border-rose-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-black text-rose-900 dark:text-rose-100">Sesion de usuario</h3>
+                      <p className="text-xs text-rose-700 dark:text-rose-200 mt-1">Sal de tu cuenta cuando termines de usar la plataforma.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="min-h-11 px-4 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-black flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      {t("logout", "Cerrar Sesion")}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -4338,6 +4328,9 @@ export default function App() {
                             <Trophy className="w-3.5 h-3.5" />
                             Premio acumulado
                           </span>
+                          <span className="inline-flex w-fit rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-200">
+                            Premios para usuarios pagos
+                          </span>
                           <div className="flex items-end gap-3 flex-wrap">
                             <span className="text-3xl md:text-4xl font-black tracking-tight text-white">
                               {formatCop(publicPrizePool.prizePool)}
@@ -4377,6 +4370,13 @@ export default function App() {
                           </div>
                         </div>
                       </div>
+                      {!hasRealPrizeAccess && currentUser.companyId && (
+                        <div className="px-4 md:px-5 pb-4 md:pb-5 -mt-1">
+                          <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11px] font-semibold text-amber-100">
+                            Este acumulado corresponde a la Polla REAL y solo aplica para usuarios con pago confirmado. Tu modalidad de empresa conserva sus propios premios o beneficios.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -4628,10 +4628,21 @@ export default function App() {
                               <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">Participar en Polla REAL</h3>
                               <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-xl">Participa por premios en efectivo y compite contra otros participantes de la comunidad.</p>
                             </div>
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${hasRealPrizeAccess ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
-                              {hasRealPrizeAccess ? "Polla REAL activa" : "Requiere pago"}
-                            </span>
+                            <div className="flex flex-col items-start sm:items-end gap-2">
+                              <span className="px-2.5 py-1 rounded-full bg-slate-950 text-amber-300 dark:bg-amber-300 dark:text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                                Premios para usuarios pagos
+                              </span>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${hasRealPrizeAccess ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
+                                {hasRealPrizeAccess ? "Polla REAL activa" : "Requiere pago"}
+                              </span>
+                            </div>
                           </div>
+
+                          {!hasRealPrizeAccess && (
+                            <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-200">
+                              Los valores de dinero de esta tarjeta aplican unicamente a usuarios con inscripcion pagada en Polla REAL.
+                            </div>
+                          )}
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                             <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
@@ -4700,6 +4711,9 @@ export default function App() {
                           <Sparkles className="w-4 h-4 text-amber-400" />
                           Bolsa Polla REAL
                         </h3>
+                        <span className="inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-200">
+                          Premios para usuarios pagos
+                        </span>
                         <div className="space-y-2 text-xs">
                           <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
                           <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
@@ -4782,6 +4796,9 @@ export default function App() {
                         <Sparkles className="w-4 h-4 text-amber-400" />
                         Resumen del Premio
                       </h3>
+                      <span className="inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-200">
+                        Premios para usuarios pagos
+                      </span>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
                         <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
@@ -5434,7 +5451,7 @@ export default function App() {
                   ...(canSeeMoneyPrizePolicy ? [{
                     key: "money",
                     title: "Políticas de premios en dinero",
-                    badge: "Bolsa de premios",
+                    badge: "Usuarios pagos",
                     text: torneo?.prizesText,
                     fallback: t("rules_no_prizes", "Por definir por el administrador.")
                   }] : []),
@@ -5497,6 +5514,11 @@ export default function App() {
                                     {policy.badge}
                                   </span>
                                 </div>
+                                {policy.key === "money" && (
+                                  <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+                                    Premios para usuarios pagos: esta politica aplica a participantes con inscripcion confirmada en Polla REAL.
+                                  </div>
+                                )}
                                 <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
                                   {renderFormattedText(policy.text, policy.fallback)}
                                 </div>
@@ -7171,7 +7193,7 @@ export default function App() {
         </div>
       )}
 
-      {managedPopupOpen && getManagedPopupKey(torneo, currentUser?.id) && (
+      {managedPopupOpen && hasManagedPopupContent(torneo) && (
         <div
           className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-6"
           onMouseDown={closeManagedPopup}
