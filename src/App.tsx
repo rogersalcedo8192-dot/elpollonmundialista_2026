@@ -1587,6 +1587,7 @@ export default function App() {
 
   const formatUsd = (value: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
+  const formatEntryFeeLabel = (value?: number) => `20.000 pesos (${value || 5} USD)`;
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
@@ -3547,14 +3548,19 @@ export default function App() {
                       setActiveTab("account");
                       setMobileMenuOpen(false);
                     }}
-                    className="h-10 max-w-[170px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 sm:pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors overflow-hidden"
+                    className="h-12 max-w-[178px] sm:max-w-none rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 pl-1.5 pr-2 sm:pr-2 md:pr-3 flex items-center gap-1.5 sm:gap-2 transition-colors overflow-hidden"
                     title="Cuenta y preferencias"
                   >
-                    <img
-                      src={currentUser.avatar}
-                      alt={currentUser.name}
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-emerald-500 object-cover shrink-0"
-                    />
+                    <div className="relative w-[72px] sm:w-[86px] h-10 shrink-0 flex items-start justify-center">
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-emerald-500 object-cover shrink-0"
+                      />
+                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 max-w-[72px] sm:max-w-[86px] px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[8px] sm:text-[9px] font-black leading-none truncate shadow-sm">
+                        {currentUser.name}
+                      </span>
+                    </div>
                     <div className="block text-left min-w-0 sm:min-w-[150px] md:min-w-[180px]">
                       <span className="hidden sm:block text-xs font-semibold leading-tight max-w-44 truncate">{currentUser.name}</span>
                       <span className="block mt-0.5 sm:mt-1 truncate text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase leading-tight max-w-[120px] sm:max-w-44">
@@ -4718,7 +4724,7 @@ export default function App() {
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                           <span className="text-[10px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-black">Inscripción oficial</span>
-                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatUsd(publicPrizePool?.entryFeeUsd || 5)}</h3>
+                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatEntryFeeLabel(publicPrizePool?.entryFeeUsd)}</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pago único para entrar a la Polla Mundialista 2026.</p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${appMode === "FREE" || currentUser.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
