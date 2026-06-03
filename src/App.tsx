@@ -1726,93 +1726,93 @@ export default function App() {
   const privacyNoticeSections = [
     {
       title: "Responsable del tratamiento",
-      body: "El Pollon Mundialista, operado por M&P Enterprise Marketing y Publicidad SAS, es responsable del tratamiento de los datos personales recolectados en esta plataforma. Canales de contacto: admin@elpollonmundialista.com y WhatsApp +57 313 578 1020."
+      body: "El Pollón Mundialista, operado por M&P Enterprise Marketing y Publicidad SAS, es responsable del tratamiento de los datos personales recolectados en esta plataforma. Canales de contacto: admin@elpollonmundialista.com y WhatsApp +57 313 578 1020."
     },
     {
       title: "Datos que podemos recolectar",
-      body: "Podemos tratar datos de registro y cuenta como nombre, correo electronico, pais, avatar, empresa asociada, estado de pago, predicciones, puntajes, ranking, historial de participacion, comunicaciones enviadas por la plataforma, datos necesarios para soporte y datos requeridos para gestionar pagos, premios o verificaciones administrativas."
+      body: "Podemos tratar datos de registro y cuenta como nombre, correo electrónico, país, avatar, empresa asociada, estado de pago, predicciones, puntajes, ranking, historial de participación, comunicaciones enviadas por la plataforma, datos necesarios para soporte y datos requeridos para gestionar pagos, premios o verificaciones administrativas."
     },
     {
       title: "Finalidades",
-      body: "Usamos tus datos para crear y administrar tu cuenta, permitir tu participacion en El Pollon Mundialista, calcular resultados y rankings, gestionar inscripciones, pagos, premios, recordatorios, recuperacion de acceso, notificaciones, comunicaciones del administrador, soporte al usuario, seguridad de la plataforma, auditoria de predicciones y cumplimiento de obligaciones legales o contractuales."
+      body: "Usamos tus datos para crear y administrar tu cuenta, permitir tu participación en El Pollón Mundialista, calcular resultados y rankings, gestionar inscripciones, pagos, premios, recordatorios, recuperación de acceso, notificaciones, comunicaciones del administrador, soporte al usuario, seguridad de la plataforma, auditoría de predicciones y cumplimiento de obligaciones legales o contractuales."
     },
     {
       title: "Comunicaciones",
-      body: "Podremos enviarte correos, mensajes o notificaciones relacionados con tu cuenta, recuperacion de contrasena, actividad del torneo, cambios en ranking, resultados, recordatorios de pronosticos, comunicados importantes, pagos, premios y soporte. Puedes administrar algunas preferencias de notificacion desde tu perfil cuando la plataforma lo permita."
+      body: "Podremos enviarte correos, mensajes o notificaciones relacionados con tu cuenta, recuperación de contraseña, actividad del torneo, cambios en ranking, resultados, recordatorios de pronósticos, comunicados importantes, pagos, premios y soporte. Puedes administrar algunas preferencias de notificación desde tu perfil cuando la plataforma lo permita."
     },
     {
-      title: "Pagos, premios y verificacion",
-      body: "Cuando participes en modalidades con pago o premios, podremos tratar la informacion necesaria para validar tu inscripcion, confirmar transacciones, prevenir fraude, verificar identidad, contactar ganadores y coordinar la entrega de premios. No solicitaremos datos bancarios sensibles dentro de formularios publicos no seguros."
+      title: "Pagos, premios y verificación",
+      body: "Cuando participes en modalidades con pago o premios, podremos tratar la información necesaria para validar tu inscripción, confirmar transacciones, prevenir fraude, verificar identidad, contactar ganadores y coordinar la entrega de premios. No solicitaremos datos bancarios sensibles dentro de formularios públicos no seguros."
     },
     {
       title: "Encargados y terceros",
-      body: "Podemos apoyarnos en proveedores tecnologicos para alojamiento, base de datos, almacenamiento de archivos, correo transaccional, analitica operativa y pasarelas de pago. Estos terceros solo deben tratar la informacion necesaria para prestar sus servicios. Tambien podremos compartir datos cuando sea requerido por autoridad competente o por obligaciones legales."
+      body: "Podemos apoyarnos en proveedores tecnológicos para alojamiento, base de datos, almacenamiento de archivos, correo transaccional, analítica operativa y pasarelas de pago. Estos terceros solo deben tratar la información necesaria para prestar sus servicios. También podremos compartir datos cuando sea requerido por autoridad competente o por obligaciones legales."
     },
     {
-      title: "Conservacion",
-      body: "Conservaremos los datos mientras exista una cuenta activa, mientras sean necesarios para operar el torneo, resolver solicitudes, auditar resultados, atender reclamaciones, cumplir obligaciones legales o conservar soportes administrativos. Cuando proceda, podras solicitar supresion o actualizacion de tus datos."
+      title: "Conservación",
+      body: "Conservaremos los datos mientras exista una cuenta activa, mientras sean necesarios para operar el torneo, resolver solicitudes, auditar resultados, atender reclamaciones, cumplir obligaciones legales o conservar soportes administrativos. Cuando proceda, podrás solicitar supresión o actualización de tus datos."
     },
     {
       title: "Tus derechos",
-      body: "Como titular puedes conocer, actualizar, rectificar, solicitar prueba de autorizacion, ser informado sobre el uso de tus datos, presentar reclamos, revocar la autorizacion y solicitar la supresion de datos cuando no exista una obligacion legal o contractual que impida hacerlo."
+      body: "Como titular puedes conocer, actualizar, rectificar, solicitar prueba de autorización, ser informado sobre el uso de tus datos, presentar reclamos, revocar la autorización y solicitar la supresión de datos cuando no exista una obligación legal o contractual que impida hacerlo."
     },
     {
-      title: "Autorizacion",
-      body: "Al registrarte aceptas de manera previa, expresa e informada esta politica de tratamiento de datos personales y autorizas la recoleccion, almacenamiento, uso, circulacion, actualizacion y supresion de tus datos para las finalidades descritas, conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y demas normas colombianas aplicables."
+      title: "Autorización",
+      body: "Al registrarte aceptas de manera previa, expresa e informada esta política de tratamiento de datos personales y autorizas la recolección, almacenamiento, uso, circulación, actualización y supresión de tus datos para las finalidades descritas, conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas colombianas aplicables."
     },
     {
       title: "Contacto y vigencia",
-      body: "Para consultas, solicitudes o reclamos sobre datos personales escribe a admin@elpollonmundialista.com o al WhatsApp +57 313 578 1020. Esta politica rige desde junio de 2026 y cualquier actualizacion relevante sera publicada en la plataforma."
+      body: "Para consultas, solicitudes o reclamos sobre datos personales escribe a admin@elpollonmundialista.com o al WhatsApp +57 313 578 1020. Esta política rige desde junio de 2026 y cualquier actualización relevante será publicada en la plataforma."
     }
   ];
   const faqItems = [
     {
-      question: "Que es www.elpollonmundialista.com?",
+      question: "¿Qué es www.elpollonmundialista.com?",
       answer: "Es una plataforma social para pronosticar los partidos del Mundial 2026, sumar puntos por tus aciertos y competir en rankings con amigos, familia, empresas o comunidades."
     },
     {
-      question: "Como puedo participar?",
-      answer: "Puedes registrarte en la plataforma, crear tu usuario y participar en la modalidad disponible. Tambien puedes ingresar por invitacion de una empresa cuando exista una polla empresarial activa."
+      question: "¿Cómo puedo participar?",
+      answer: "Puedes registrarte en la plataforma, crear tu usuario y participar en la modalidad disponible. También puedes ingresar por invitación de una empresa cuando exista una polla empresarial activa."
     },
     {
-      question: "Cuanto cuesta participar en la Polla REAL?",
-      answer: "La participacion individual en la Polla REAL tiene un valor de 20.000 pesos colombianos. Ese pago habilita la participacion por premios monetarios, sujeto a las reglas publicadas en la plataforma."
+      question: "¿Cuánto cuesta participar en la Polla REAL?",
+      answer: "La participación individual en la Polla REAL tiene un valor de 20.000 pesos colombianos. Ese pago habilita la participación por premios monetarios, sujeto a las reglas publicadas en la plataforma."
     },
     {
-      question: "Los pagos son seguros?",
-      answer: "Si. Los pagos se procesan mediante Wompi Pagos Seguros. El Pollon Mundialista no almacena datos sensibles de tarjetas en la plataforma."
+      question: "¿Los pagos son seguros?",
+      answer: "Sí. Los pagos se procesan mediante Wompi Pagos Seguros. El Pollón Mundialista no almacena datos sensibles de tarjetas en la plataforma."
     },
     {
-      question: "Puedo participar gratis por empresa?",
-      answer: "Si. Las empresas pueden crear o gestionar grupos internos de participacion. Esa modalidad puede permitir jugar gratis dentro del ranking empresarial, segun las condiciones definidas para cada empresa."
+      question: "¿Puedo participar gratis por empresa?",
+      answer: "Sí. Las empresas pueden crear o gestionar grupos internos de participación. Esa modalidad puede permitir jugar gratis dentro del ranking empresarial, según las condiciones definidas para cada empresa."
     },
     {
-      question: "Tengo una empresa, como participo?",
-      answer: "Escribe a admin@elpollonmundialista.com con el nombre de la empresa, nombre y correo del usuario administrador, telefono de contacto y cantidad aproximada de participantes. El equipo revisara la solicitud y te indicara los pasos para activar tu grupo."
+      question: "¿Tengo una empresa, cómo participo?",
+      answer: "Escribe a admin@elpollonmundialista.com con el nombre de la empresa, nombre y correo del usuario administrador, teléfono de contacto y cantidad aproximada de participantes. El equipo revisará la solicitud y te indicará los pasos para activar tu grupo."
     },
     {
-      question: "Como se ganan puntos?",
-      answer: "Sumas puntos por registrar pronosticos, acertar el resultado del partido y acertar marcadores exactos. Tambien pueden existir puntos por favoritos del torneo, clasificados, finalistas, subcampeon y campeon, segun las reglas vigentes."
+      question: "¿Cómo se ganan puntos?",
+      answer: "Sumas puntos por registrar pronósticos, acertar el resultado del partido y acertar marcadores exactos. También pueden existir puntos por favoritos del torneo, clasificados, finalistas, subcampeón y campeón, según las reglas vigentes."
     },
     {
-      question: "Hasta cuando puedo enviar un pronostico?",
-      answer: "Cada pronostico se cierra automaticamente 5 minutos antes del inicio del partido. Despues del cierre no se puede crear ni modificar ese marcador."
+      question: "¿Hasta cuándo puedo enviar un pronóstico?",
+      answer: "Cada pronóstico se cierra automáticamente 5 minutos antes del inicio del partido. Después del cierre no se puede crear ni modificar ese marcador."
     },
     {
-      question: "Como se paga el premio?",
-      answer: "Los premios se pagan al ganador validado despues de revisar el ranking final, la identidad del participante, la documentacion requerida y los datos bancarios. El pago se realiza por el medio definido por la administracion."
+      question: "¿Cómo se paga el premio?",
+      answer: "Los premios se pagan al ganador validado después de revisar el ranking final, la identidad del participante, la documentación requerida y los datos bancarios. El pago se realiza por el medio definido por la administración."
     },
     {
-      question: "Como reclamo mi premio?",
-      answer: "Debes enviar tu certificado de ganador al correo admin@elpollonmundialista.com, junto con fotos de tu cedula o pasaporte y certificacion bancaria. En el asunto escribe: QUIERO MI PREMIO. En el cuerpo del correo escribe: Senor Admin de El Pollon Mundialista soy el ganador de uno de los premios, adjunto mis documentos para que me envie mi premio."
+      question: "¿Cómo reclamo mi premio?",
+      answer: "Debes enviar tu certificado de ganador al correo admin@elpollonmundialista.com, junto con fotos de tu cédula o pasaporte y certificación bancaria. En el asunto escribe: QUIERO MI PREMIO. En el cuerpo del correo escribe: Señor Admin de El Pollón Mundialista soy el ganador de uno de los premios, adjunto mis documentos para que me envíe mi premio."
     },
     {
-      question: "Que pasa si hay empate en el ranking?",
-      answer: "La plataforma usa los criterios de desempate definidos en las reglas, como puntos, aciertos exactos y aciertos de resultado. Si persiste una situacion especial, la administracion revisara el caso segun las reglas publicadas."
+      question: "¿Qué pasa si hay empate en el ranking?",
+      answer: "La plataforma usa los criterios de desempate definidos en las reglas, como puntos, aciertos exactos y aciertos de resultado. Si persiste una situación especial, la administración revisará el caso según las reglas publicadas."
     },
     {
-      question: "A quien contacto si tengo problemas con mi cuenta, pago o premio?",
-      answer: "Puedes escribir a admin@elpollonmundialista.com. Incluye tu nombre, correo registrado, descripcion del problema y, si aplica, soporte de pago o captura del error."
+      question: "¿A quién contacto si tengo problemas con mi cuenta, pago o premio?",
+      answer: "Puedes escribir a admin@elpollonmundialista.com. Incluye tu nombre, correo registrado, descripción del problema y, si aplica, soporte de pago o captura del error."
     }
   ];
 
@@ -2201,7 +2201,7 @@ export default function App() {
       return;
     }
     if (!authPrivacyAccepted) {
-      showToast("Debes aceptar el aviso de privacidad y la politica de tratamiento de datos.", "error");
+      showToast("Debes aceptar el aviso de privacidad y la política de tratamiento de datos.", "error");
       return;
     }
     try {
@@ -2335,7 +2335,7 @@ export default function App() {
   // Forecast submissions
   const handleSavePrediction = async (matchId: number) => {
     if (!canSubmitPredictions) {
-      showToast("Debes pagar la inscripcion antes de registrar pronosticos.", "error");
+      showToast("Debes pagar la inscripción antes de registrar pronósticos.", "error");
       setActiveTab("participate");
       return;
     }
@@ -2369,7 +2369,7 @@ export default function App() {
 
   const handleClearPrediction = async (matchId: number) => {
     if (!canSubmitPredictions) {
-      showToast("Debes pagar la inscripcion antes de modificar pronosticos.", "error");
+      showToast("Debes pagar la inscripción antes de modificar pronósticos.", "error");
       setActiveTab("participate");
       return;
     }
@@ -2406,7 +2406,7 @@ export default function App() {
   }) => {
     if (!currentUser) return;
     if (!canSubmitPredictions) {
-      showToast("Debes pagar la inscripcion antes de guardar favoritos.", "error");
+      showToast("Debes pagar la inscripción antes de guardar favoritos.", "error");
       setActiveTab("participate");
       return;
     }
@@ -2503,7 +2503,7 @@ export default function App() {
 
   // ADMIN ACTION: RESET TOURNAMENT TO REAL INITIAL PRE-TOURNAMENT STATE
   const handleResetTournament = async () => {
-    if (!window.confirm("Estas seguro de que deseas REINICIAR LA POLLA? Esto borrara predicciones, resultados, puntajes y pondra en cero los saldos del premio acumulado. No elimina usuarios ni empresas, pero los jugadores quedaran con pago pendiente. Esta accion es irreversible.")) {
+    if (!window.confirm("¿Estás seguro de que deseas REINICIAR LA POLLA? Esto borrará predicciones, resultados, puntajes y pondrá en cero los saldos del premio acumulado. No elimina usuarios ni empresas, pero los jugadores quedarán con pago pendiente. Esta acción es irreversible.")) {
       return;
     }
     try {
@@ -2811,7 +2811,7 @@ export default function App() {
   };
 
   const handleDeleteAsset = async (assetId: string) => {
-    if (!confirm("Â¿Desea eliminar este archivo de la biblioteca?")) return;
+    if (!confirm("¿Desea eliminar este archivo de la biblioteca?")) return;
     try {
       const res = await fetch(`/api/admin/assets/${assetId}`, {
         method: "DELETE",
@@ -2902,7 +2902,7 @@ export default function App() {
   const imageAssets = uploadedAssets.filter((asset) => asset.type === "image");
 
   const handleDeleteBanner = async (bannerId: string) => {
-    if (!confirm("Desea eliminar este banner publicitario?")) return;
+    if (!confirm("¿Desea eliminar este banner publicitario?")) return;
     try {
       const res = await fetch(`/api/admin/banners/${bannerId}`, {
         method: "DELETE",
@@ -3818,7 +3818,7 @@ export default function App() {
                     >
                       Aviso de Privacidad
                     </button>
-                    <span> y la politica de tratamiento de datos.</span>
+                    <span> y la política de tratamiento de datos.</span>
                   </span>
                 </div>
               )}
@@ -4757,7 +4757,7 @@ export default function App() {
 
                       {appMode === "FREE" || currentUser.paymentStatus === "paid" ? (
                         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 font-semibold">
-                          {appMode === "FREE" ? "La plataforma esta en modo gratuito. Ya puedes registrar pronosticos." : "Tu inscripción ya está confirmada. Ya puedes registrar pronósticos y competir por premios."}
+                          {appMode === "FREE" ? "La plataforma está en modo gratuito. Ya puedes registrar pronósticos." : "Tu inscripción ya está confirmada. Ya puedes registrar pronósticos y competir por premios."}
                         </div>
                       ) : (
                         <button
@@ -4817,7 +4817,7 @@ export default function App() {
 
                   {!canSubmitPredictions && (
                     <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200 text-xs font-semibold flex items-center justify-between gap-3 flex-wrap">
-                      <span>Para guardar, actualizar o limpiar pronosticos debes confirmar tu pago de inscripcion.</span>
+                      <span>Para guardar, actualizar o limpiar pronósticos debes confirmar tu pago de inscripción.</span>
                       <button
                         onClick={() => setActiveTab("participate")}
                         className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black"
@@ -5391,10 +5391,10 @@ export default function App() {
                               Este certificado reconoce tu posicion final en la tabla oficial de la Polla Mundialista 2026, calculada con los resultados registrados y las reglas de puntuacion vigentes.
                             </p>
                             <p>
-                              En poco tiempo nuestro equipo de soporte se contactara contigo por el correo registrado en tu cuenta para solicitar la informacion necesaria de identidad y cuenta bancaria para gestionar la entrega del premio.
+                              En poco tiempo nuestro equipo de soporte se contactará contigo por el correo registrado en tu cuenta para solicitar la información necesaria de identidad y cuenta bancaria para gestionar la entrega del premio.
                             </p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                              La entrega del premio esta sujeta a verificacion de identidad, confirmacion de datos bancarios y validacion final del ranking.
+                              La entrega del premio está sujeta a verificación de identidad, confirmación de datos bancarios y validación final del ranking.
                             </p>
                           </div>
 
@@ -7122,7 +7122,7 @@ export default function App() {
                 </span>
                 <div>
                   <h3 className="text-base font-black text-slate-950 dark:text-white">Aviso de Privacidad</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">El Pollon Mundialista - M&P Enterprise Marketing y Publicidad SAS</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">El Pollón Mundialista - M&P Enterprise Marketing y Publicidad SAS</p>
                 </div>
               </div>
               <button
@@ -7252,31 +7252,31 @@ export default function App() {
                   <Trophy className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 id="about-pollon-title" className="text-base font-black text-slate-950 dark:text-white">Que es El Pollon Mundialista?</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Un juego social de pronosticos del Mundial 2026</p>
+                  <h3 id="about-pollon-title" className="text-base font-black text-slate-950 dark:text-white">¿Qué es El Pollón Mundialista?</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Un juego social de pronósticos del Mundial 2026</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setAboutPollonOpen(false)}
                 className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
-                aria-label="Cerrar informacion sobre El Pollon Mundialista"
+                aria-label="Cerrar información sobre El Pollón Mundialista"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-3 overflow-y-auto">
               <p>
-                El Pollon Mundialista es la version mundialista de ese juego social que se arma entre amigos, familia, oficina o comunidad para intentar adivinar o predecir los resultados de los partidos.
+                El Pollón Mundialista es la versión mundialista de ese juego social que se arma entre amigos, familia, oficina o comunidad para intentar adivinar o predecir los resultados de los partidos.
               </p>
               <p>
-                En Colombia muchos le dicen polla; en Mexico se conoce como quiniela; en Argentina suele llamarse prode; en Espana tambien se habla de porra; en Bolivia se le dice vaquita; y en otros paises cambia el nombre, pero la emocion es la misma: elegir marcadores, seguir cada gol y ver como se mueve la tabla.
+                En Colombia muchos le dicen polla; en México se conoce como quiniela; en Argentina suele llamarse prode; en España también se habla de porra; en Bolivia se le dice vaquita; y en otros países cambia el nombre, pero la emoción es la misma: elegir marcadores, seguir cada gol y ver cómo se mueve la tabla.
               </p>
               <p>
-                Para el Mundial 2026, El Pollon Mundialista convierte esa tradicion en una experiencia digital: registras tus pronosticos antes de cada partido, sumas puntos por participar, acertar resultados o clavar marcadores exactos, y compites en un ranking en vivo.
+                Para el Mundial 2026, El Pollón Mundialista convierte esa tradición en una experiencia digital: registras tus pronósticos antes de cada partido, sumas puntos por participar, acertar resultados o clavar marcadores exactos, y compites en un ranking en vivo.
               </p>
               <p className="font-bold text-slate-900 dark:text-slate-100">
-                No se trata solo de futbol: se trata de conversar, celebrar, sufrir cada minuto y demostrar quien tiene mejor intuicion mundialista.
+                No se trata solo de fútbol: se trata de conversar, celebrar, sufrir cada minuto y demostrar quién tiene mejor intuición mundialista.
               </p>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
@@ -7312,7 +7312,7 @@ export default function App() {
                 </span>
                 <div>
                   <h3 id="faq-title" className="text-base font-black text-slate-950 dark:text-white">Preguntas frecuentes</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Participacion, pagos, empresas, premios y soporte</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Participación, pagos, empresas, premios y soporte</p>
                 </div>
               </div>
               <button
@@ -7362,7 +7362,7 @@ export default function App() {
               onClick={() => setAboutPollonOpen(true)}
               className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
             >
-              Que es el pollon mundialista?
+              ¿Qué es El Pollón Mundialista?
             </button>
             <button
               type="button"
@@ -7373,7 +7373,7 @@ export default function App() {
             </button>
           </div>
           <p className="text-slate-400 text-[11px]">
-            Dudas? Contactanos a traves de{" "}
+            ¿Dudas? Contáctanos a través de{" "}
             <a href="mailto:admin@elpollonmundialista.com" className="font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">
               admin@elpollonmundialista.com
             </a>
