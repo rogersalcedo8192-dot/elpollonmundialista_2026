@@ -69,6 +69,7 @@ export interface CompanyInvitation {
   id: string;
   companyId: string;
   token: string;
+  url?: string;
   createdBy: string;
   usedBy?: string;
   status: "active" | "used" | "revoked";

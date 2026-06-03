@@ -1619,6 +1619,7 @@ export default function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [inviteToken, setInviteToken] = useState("");
   const [companyPrizePolicy, setCompanyPrizePolicy] = useState("");
+  const [companyInvitationSummary, setCompanyInvitationSummary] = useState({ companyId: "", playersCount: 0, availableSlots: 0, maxPlayers: 50 });
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1973,6 +1974,12 @@ export default function App() {
       const data = await res.json();
       setCompanyInvitations(data.invitations || []);
       setCompanyPrizePolicy(data.company?.prizesText || "");
+      setCompanyInvitationSummary({
+        companyId,
+        playersCount: Number(data.playersCount) || 0,
+        availableSlots: Number(data.availableSlots) || 0,
+        maxPlayers: Number(data.company?.maxPlayers) || 50
+      });
     } catch (err) {
       console.error(err);
     }
@@ -2619,8 +2626,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo crear la invitacion.");
-      await copyTextToClipboard(data.url);
-      showToast("Invitacion creada y enlace copiado.", "success");
+      await copyTextToClipboard(data.url, `Enlace copiado. Compartelo con tus jugadores; quedan ${data.availableSlots || 0} cupos disponibles.`);
       fetchCompanies();
       fetchCompanyDetails(selectedCompanyId);
       fetchCompanyRanking(selectedCompanyId);
@@ -3127,6 +3133,15 @@ export default function App() {
     currentUser?.paymentStatus === "paid" &&
     (currentUser.paymentProvider || currentUser.paymentReference || currentUser.paymentTransactionId || currentUser.stripeCheckoutSessionId || currentUser.stripePaymentIntentId)
   );
+  const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
+  const hasFreshCompanyInviteSummary = companyInvitationSummary.companyId === selectedCompanyId;
+  const companyInviteSlots = {
+    playersCount: hasFreshCompanyInviteSummary ? companyInvitationSummary.playersCount : selectedCompany?.playersCount ?? 0,
+    availableSlots: hasFreshCompanyInviteSummary ? companyInvitationSummary.availableSlots : selectedCompany?.availableSlots ?? selectedCompany?.maxPlayers ?? 0,
+    maxPlayers: hasFreshCompanyInviteSummary ? companyInvitationSummary.maxPlayers : selectedCompany?.maxPlayers ?? 50
+  };
+  const getCompanyInvitationUrl = (invitation: CompanyInvitation) =>
+    invitation.url || `${window.location.origin}/?invite=${encodeURIComponent(invitation.token)}`;
   const getWinnerPrize = (position: number) => {
     if (position === 1) return publicPrizePool?.payouts.first || 0;
     if (position === 2) return publicPrizePool?.payouts.second || 0;
@@ -5881,12 +5896,36 @@ export default function App() {
                       <div className="p-4 rounded-xl border bg-white flex items-center justify-between gap-3 flex-wrap">
                         <div>
                           <h3 className="text-sm font-black">Invitaciones</h3>
-                          <p className="text-xs text-slate-500">Genera un enlace para registrar jugadores de la empresa seleccionada.</p>
+                          <p className="text-xs text-slate-500">
+                            Genera un enlace reusable para registrar jugadores de la empresa seleccionada. El mismo link sirve hasta llenar los cupos disponibles.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase">
+                            <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              {companyInviteSlots.playersCount}/{companyInviteSlots.maxPlayers} registrados
+                            </span>
+                            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                              {companyInviteSlots.availableSlots} cupos disponibles
+                            </span>
+                          </div>
                         </div>
-                        <button type="button" onClick={handleCreateCompanyInvitation} disabled={!selectedCompanyId} className="min-h-11 px-4 rounded-lg bg-slate-900 text-white font-black text-xs disabled:bg-slate-300">
-                          Generar invitacion
+                        <button
+                          type="button"
+                          onClick={handleCreateCompanyInvitation}
+                          disabled={!selectedCompanyId || companyInviteSlots.availableSlots <= 0}
+                          className="min-h-11 px-4 rounded-lg bg-slate-900 text-white font-black text-xs disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        >
+                          Generar enlace reusable
                         </button>
                       </div>
+
+                      {selectedCompanyId && (
+                        <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50 text-xs text-emerald-900">
+                          <h3 className="font-black">Como usar el enlace</h3>
+                          <p className="mt-1 leading-relaxed">
+                            Copia el enlace y envialo por WhatsApp, correo o chat interno. Cada jugador debe abrirlo, crear su cuenta y quedara asociado automaticamente a esta empresa. El enlace deja de aceptar registros cuando la empresa llega a {companyInviteSlots.maxPlayers} jugadores.
+                          </p>
+                        </div>
+                      )}
 
                       {selectedCompanyId && (
                         <div className="p-4 rounded-xl border bg-white space-y-3">
@@ -5916,9 +5955,19 @@ export default function App() {
                           <h3 className="text-xs font-black uppercase text-slate-500 mb-3">Invitaciones recientes</h3>
                           <div className="space-y-2 max-h-56 overflow-y-auto">
                             {companyInvitations.length === 0 ? <p className="text-xs text-slate-400">Sin invitaciones.</p> : companyInvitations.map((inv) => (
-                              <div key={inv.id} className="p-2 rounded-lg bg-slate-50 text-xs flex justify-between gap-2">
-                                <span className="font-mono truncate">{inv.token}</span>
-                                <span className="font-black uppercase">{inv.status}</span>
+                              <div key={inv.id} className="p-3 rounded-lg bg-slate-50 text-xs space-y-2">
+                                <div className="flex justify-between gap-2">
+                                  <span className="font-mono truncate" title={getCompanyInvitationUrl(inv)}>{getCompanyInvitationUrl(inv)}</span>
+                                  <span className={`font-black uppercase ${inv.status === "active" ? "text-emerald-700" : "text-slate-500"}`}>{inv.status}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => copyTextToClipboard(getCompanyInvitationUrl(inv), "Enlace de invitacion copiado. Compartelo con los jugadores de la empresa.")}
+                                  className="min-h-9 w-full rounded-lg bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 font-black flex items-center justify-center gap-2"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                  Copiar enlace
+                                </button>
                               </div>
                             ))}
                           </div>

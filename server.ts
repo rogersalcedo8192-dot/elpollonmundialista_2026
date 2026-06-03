@@ -2454,7 +2454,7 @@ app.post("/api/auth/register", (req, res) => {
   let companyId: string | undefined;
   let invitation: CompanyInvitation | undefined;
   if (inviteToken) {
-    invitation = (db.companyInvitations || []).find((item) => item.token === String(inviteToken) && item.status === "active");
+    invitation = (db.companyInvitations || []).find((item) => item.token === String(inviteToken) && item.status !== "revoked");
     if (!invitation) return res.status(400).json({ error: "Invitacion invalida o expirada." });
     if (!assertCompanyCapacity(db, invitation.companyId, res)) return;
     companyId = invitation.companyId;
@@ -2481,11 +2481,6 @@ app.post("/api/auth/register", (req, res) => {
   };
 
   db.users.push(newUser);
-  if (invitation) {
-    invitation.status = "used";
-    invitation.usedBy = newUser.id;
-    invitation.usedAt = new Date().toISOString();
-  }
   saveDb(db);
   recalculateScoresAndRankings();
 
@@ -2722,7 +2717,12 @@ app.post("/api/companies/:id/invitations", (req, res) => {
   const user = getAuthenticatedUser(req);
   const db = loadDb();
   if (!canManageCompany(user, req.params.id)) return res.status(403).json({ error: "No autorizado para invitar en esta empresa." });
+  const company = (db.companies || []).find((item) => item.id === req.params.id);
+  if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
+  if (company.status === "suspended") return res.status(400).json({ error: "La empresa esta suspendida. Activa la empresa antes de generar invitaciones." });
   if (!assertCompanyCapacity(db, req.params.id, res)) return;
+  const playersCount = getCompanyPlayers(db, company.id).length;
+  const availableSlots = Math.max(company.maxPlayers - playersCount, 0);
   const token = `${req.params.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const invitation: CompanyInvitation = {
     id: `inv-${Date.now()}`,
@@ -2736,7 +2736,14 @@ app.post("/api/companies/:id/invitations", (req, res) => {
   db.companyInvitations.push(invitation);
   saveDb(db);
   const origin = getRequestOrigin(req);
-  res.json({ message: "Invitacion creada.", invitation, url: `${origin}/?invite=${encodeURIComponent(token)}` });
+  res.json({
+    message: `Enlace de invitacion creado. Puedes compartirlo con hasta ${availableSlots} usuarios disponibles de ${company.maxPlayers} cupos de la empresa.`,
+    invitation,
+    url: `${origin}/?invite=${encodeURIComponent(token)}`,
+    playersCount,
+    availableSlots,
+    maxPlayers: company.maxPlayers
+  });
 });
 
 app.get("/api/companies/:id/invitations", (req, res) => {
@@ -2746,11 +2753,16 @@ app.get("/api/companies/:id/invitations", (req, res) => {
   const company = (db.companies || []).find((item) => item.id === req.params.id);
   if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
   const playersCount = getCompanyPlayers(db, company.id).length;
+  const origin = getRequestOrigin(req);
   res.json({
     company,
     playersCount,
     availableSlots: Math.max(company.maxPlayers - playersCount, 0),
-    invitations: (db.companyInvitations || []).filter((item) => item.companyId === company.id),
+    invitations: (db.companyInvitations || []).filter((item) => item.companyId === company.id).map((item) => ({
+      ...item,
+      status: item.status === "used" ? "active" : item.status,
+      url: `${origin}/?invite=${encodeURIComponent(item.token)}`
+    })),
     players: db.users.filter((dbUser) => dbUser.companyId === company.id)
   });
 });
