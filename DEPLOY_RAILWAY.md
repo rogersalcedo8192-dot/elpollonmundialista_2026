@@ -130,14 +130,20 @@ Notas:
 - Si un partido llega como finalizado con marcador, se recalcula el ranking automaticamente.
 - Si agregas `externalSource` y `externalSourceId` al modelo `Match`, ejecuta de nuevo `npm run db:push` en Railway para actualizar Postgres.
 
-## Pagos con Stripe
+## Pagos
 
-La seccion `Participar en Polla` crea una sesion de Stripe Checkout por 25 USD.
+La seccion `Participar en Polla` cobra una inscripcion de 20.000 COP. La bolsa de premios se calcula en pesos colombianos sobre los pagos confirmados.
 
 Configura estas variables en Railway:
 
 ```env
-STRIPE_SECRET_KEY=sk_live_...
+PAYMENT_PROVIDER=wompi
+WOMPI_ENV=production
+WOMPI_PUBLIC_KEY=pub_prod_...
+WOMPI_PRIVATE_KEY=prv_prod_...
+WOMPI_INTEGRITY_SECRET=...
+WOMPI_CURRENCY=COP
+WOMPI_AMOUNT_IN_CENTS=2000000
 PUBLIC_APP_URL=https://tu-dominio.up.railway.app
 ```
 

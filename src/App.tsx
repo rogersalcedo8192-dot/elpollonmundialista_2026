@@ -1585,9 +1585,9 @@ export default function App() {
     return ui("participation");
   };
 
-  const formatUsd = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
-  const formatEntryFeeLabel = (value?: number) => `20.000 pesos (${value || 5} USD)`;
+  const formatCop = (value: number) =>
+    `$${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(value || 0)}`;
+  const formatEntryFeeLabel = (value?: number) => `${formatCop(value || 20000)} pesos`;
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
@@ -4340,7 +4340,7 @@ export default function App() {
                           </span>
                           <div className="flex items-end gap-3 flex-wrap">
                             <span className="text-3xl md:text-4xl font-black tracking-tight text-white">
-                              {formatUsd(publicPrizePool.prizePool)}
+                              {formatCop(publicPrizePool.prizePool)}
                             </span>
                             <span className="mb-1 text-[11px] font-semibold text-slate-300">
                               {Math.round(publicPrizePool.prizePoolRate * 1000) / 10}% de la bolsa de participantes pagos
@@ -4351,10 +4351,10 @@ export default function App() {
                               {publicPrizePool.paidParticipants} pagos confirmados
                             </span>
                             <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">
-                              Inscripcion {formatUsd(publicPrizePool.entryFeeUsd)}
+                              Inscripcion {formatCop(publicPrizePool.entryFeeCop)}
                             </span>
                             <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">
-                              Recaudo bruto {formatUsd(publicPrizePool.grossPool)}
+                              Recaudo bruto {formatCop(publicPrizePool.grossPool)}
                             </span>
                           </div>
                         </div>
@@ -4362,17 +4362,17 @@ export default function App() {
                         <div className="grid grid-cols-3 gap-2 min-w-full lg:min-w-[330px]">
                           <div className="rounded-lg bg-white/10 border border-white/10 p-3">
                             <span className="block text-[9px] uppercase font-black text-amber-300">1er puesto</span>
-                            <span className="block text-lg font-black mt-1">{formatUsd(publicPrizePool.payouts.first)}</span>
+                            <span className="block text-lg font-black mt-1">{formatCop(publicPrizePool.payouts.first)}</span>
                             <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.first * 100)}%</span>
                           </div>
                           <div className="rounded-lg bg-white/10 border border-white/10 p-3">
                             <span className="block text-[9px] uppercase font-black text-slate-300">2do puesto</span>
-                            <span className="block text-lg font-black mt-1">{formatUsd(publicPrizePool.payouts.second)}</span>
+                            <span className="block text-lg font-black mt-1">{formatCop(publicPrizePool.payouts.second)}</span>
                             <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.second * 100)}%</span>
                           </div>
                           <div className="rounded-lg bg-white/10 border border-white/10 p-3">
                             <span className="block text-[9px] uppercase font-black text-slate-300">3er puesto</span>
-                            <span className="block text-lg font-black mt-1">{formatUsd(publicPrizePool.payouts.third)}</span>
+                            <span className="block text-lg font-black mt-1">{formatCop(publicPrizePool.payouts.third)}</span>
                             <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.third * 100)}%</span>
                           </div>
                         </div>
@@ -4636,17 +4636,17 @@ export default function App() {
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                             <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
                               <span className="block text-[10px] text-amber-700 dark:text-amber-300 uppercase font-bold">1er puesto</span>
-                              <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatUsd(publicPrizePool?.payouts.first || 0)}</span>
+                              <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatCop(publicPrizePool?.payouts.first || 0)}</span>
                               <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">80% del premio</span>
                             </div>
                             <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
                               <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">2do puesto</span>
-                              <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatUsd(publicPrizePool?.payouts.second || 0)}</span>
+                              <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatCop(publicPrizePool?.payouts.second || 0)}</span>
                               <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">15% del premio</span>
                             </div>
                             <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
                               <span className="block text-[10px] text-orange-700 dark:text-orange-300 uppercase font-bold">3er puesto</span>
-                              <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatUsd(publicPrizePool?.payouts.third || 0)}</span>
+                              <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatCop(publicPrizePool?.payouts.third || 0)}</span>
                               <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">5% del premio</span>
                             </div>
                           </div>
@@ -4701,18 +4701,18 @@ export default function App() {
                           Bolsa Polla REAL
                         </h3>
                         <div className="space-y-2 text-xs">
-                          <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatUsd(publicPrizePool?.grossPool || 0)}</b></div>
-                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatUsd(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
-                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatUsd(publicPrizePool?.bankCommission || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
                           <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
-                          <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatUsd(publicPrizePool?.prizePool || 0)}</b></div>
-                          {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatUsd(publicPrizePool?.prizeSeed || 0)}</b></div>}
+                          <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
+                          {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatCop(publicPrizePool?.prizeSeed || 0)}</b></div>}
                         </div>
                         <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
                           <h4 className="font-black text-amber-300">Distribución de Premios</h4>
-                          <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.first || 0)}</b></div>
-                          <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatUsd(publicPrizePool?.payouts.second || 0)}</b></div>
-                          <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.third || 0)}</b></div>
+                          <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatCop(publicPrizePool?.payouts.first || 0)}</b></div>
+                          <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
+                          <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
                         </div>
                         <p className="text-[11px] text-slate-400 leading-relaxed">Esta bolsa aplica solo para participantes inscritos en Polla REAL.</p>
                       </div>
@@ -4724,7 +4724,7 @@ export default function App() {
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                           <span className="text-[10px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-black">Inscripción oficial</span>
-                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatEntryFeeLabel(publicPrizePool?.entryFeeUsd)}</h3>
+                          <h3 className="text-2xl font-black text-slate-950 dark:text-white mt-1">{formatEntryFeeLabel(publicPrizePool?.entryFeeCop)}</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pago único para entrar a la Polla Mundialista 2026.</p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${appMode === "FREE" || currentUser.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>
@@ -4745,17 +4745,17 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                           <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
                             <span className="block text-[10px] text-amber-700 dark:text-amber-300 uppercase font-bold">1er puesto</span>
-                            <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatUsd(publicPrizePool?.payouts.first || 0)}</span>
+                            <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatCop(publicPrizePool?.payouts.first || 0)}</span>
                             <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">80% del premio</span>
                           </div>
                           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
                             <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">2do puesto</span>
-                            <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatUsd(publicPrizePool?.payouts.second || 0)}</span>
+                            <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatCop(publicPrizePool?.payouts.second || 0)}</span>
                             <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">15% del premio</span>
                           </div>
                           <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
                             <span className="block text-[10px] text-orange-700 dark:text-orange-300 uppercase font-bold">3er puesto</span>
-                            <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatUsd(publicPrizePool?.payouts.third || 0)}</span>
+                            <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatCop(publicPrizePool?.payouts.third || 0)}</span>
                             <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">5% del premio</span>
                           </div>
                         </div>
@@ -4783,18 +4783,18 @@ export default function App() {
                         Resumen del Premio
                       </h3>
                       <div className="space-y-2 text-xs">
-                        <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatUsd(publicPrizePool?.grossPool || 0)}</b></div>
-                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatUsd(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
-                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatUsd(publicPrizePool?.bankCommission || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
                         <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
-                        <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatUsd(publicPrizePool?.prizePool || 0)}</b></div>
-                        {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatUsd(publicPrizePool?.prizeSeed || 0)}</b></div>}
+                        <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
+                        {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatCop(publicPrizePool?.prizeSeed || 0)}</b></div>}
                       </div>
                       <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
                         <h4 className="font-black text-amber-300">Distribución de Premios</h4>
-                        <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.first || 0)}</b></div>
-                        <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatUsd(publicPrizePool?.payouts.second || 0)}</b></div>
-                        <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatUsd(publicPrizePool?.payouts.third || 0)}</b></div>
+                        <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatCop(publicPrizePool?.payouts.first || 0)}</b></div>
+                        <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
+                        <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. Los valores se actualizan segun pagos confirmados.</p>
                     </div>
@@ -5381,7 +5381,7 @@ export default function App() {
                             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                               <span className="block text-[10px] uppercase font-black text-slate-400">Premio asignado</span>
                               <span className="block text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
-                                {formatUsd(getWinnerPrize(winnerCertificate.position))}
+                                {formatCop(getWinnerPrize(winnerCertificate.position))}
                               </span>
                             </div>
                             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -5700,7 +5700,7 @@ export default function App() {
                               Bolsa de premios estimada
                             </h3>
                             <p className="text-[11px] text-slate-400 mt-1">
-                              Cuota fija {formatUsd(stats.prizePool.entryFeeUsd)} por participante. Administracion {(stats.prizePool.ownerProfitRate * 100).toFixed(1)}%, pasarela {(stats.prizePool.bankCommissionRate * 100).toFixed(1)}% y el restante {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}% va a premios.
+                              Cuota fija {formatCop(stats.prizePool.entryFeeCop)} por participante. Administracion {(stats.prizePool.ownerProfitRate * 100).toFixed(1)}%, pasarela {(stats.prizePool.bankCommissionRate * 100).toFixed(1)}% y el restante {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}% va a premios.
                             </p>
                           </div>
                           <div className="text-right">
@@ -5712,38 +5712,38 @@ export default function App() {
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                             <span className="text-[9px] text-slate-400 uppercase font-bold block">Bruto</span>
-                            <span className="text-sm font-black">{formatUsd(stats.prizePool.grossPool)}</span>
+                            <span className="text-sm font-black">{formatCop(stats.prizePool.grossPool)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                             <span className="text-[9px] text-slate-400 uppercase font-bold block">Banco</span>
-                            <span className="text-sm font-black text-rose-300">-{formatUsd(stats.prizePool.bankCommission)}</span>
+                            <span className="text-sm font-black text-rose-300">-{formatCop(stats.prizePool.bankCommission)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                             <span className="text-[9px] text-slate-400 uppercase font-bold block">Admin 10%</span>
-                            <span className="text-sm font-black">{formatUsd(stats.prizePool.ownerGrossProfit)}</span>
+                            <span className="text-sm font-black">{formatCop(stats.prizePool.ownerGrossProfit)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                             <span className="text-[9px] text-emerald-300 uppercase font-bold block">Premios {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}%</span>
-                            <span className="text-sm font-black text-emerald-300">{formatUsd(stats.prizePool.prizePool)}</span>
+                            <span className="text-sm font-black text-emerald-300">{formatCop(stats.prizePool.prizePool)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                             <span className="text-[9px] text-amber-300 uppercase font-bold block">Tu neto</span>
-                            <span className="text-sm font-black text-amber-300">{formatUsd(stats.prizePool.ownerProfit)}</span>
+                            <span className="text-sm font-black text-amber-300">{formatCop(stats.prizePool.ownerProfit)}</span>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                           <div className="p-3 rounded-lg bg-amber-400 text-slate-950">
                             <span className="text-[10px] uppercase font-black block">1er puesto · 80%</span>
-                            <span className="text-xl font-black">{formatUsd(stats.prizePool.payouts.first)}</span>
+                            <span className="text-xl font-black">{formatCop(stats.prizePool.payouts.first)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-slate-200 text-slate-950">
                             <span className="text-[10px] uppercase font-black block">2do puesto · 15%</span>
-                            <span className="text-xl font-black">{formatUsd(stats.prizePool.payouts.second)}</span>
+                            <span className="text-xl font-black">{formatCop(stats.prizePool.payouts.second)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-orange-300 text-slate-950">
                             <span className="text-[10px] uppercase font-black block">3er puesto · 5%</span>
-                            <span className="text-xl font-black">{formatUsd(stats.prizePool.payouts.third)}</span>
+                            <span className="text-xl font-black">{formatCop(stats.prizePool.payouts.third)}</span>
                           </div>
                         </div>
                       </div>
@@ -7390,3 +7390,4 @@ export default function App() {
     </div>
   );
 }
+

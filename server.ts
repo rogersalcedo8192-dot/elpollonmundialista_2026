@@ -242,11 +242,11 @@ const FOOTBALL_DATA_SOURCE = "football-data.org";
 const APP_MODE = (process.env.APP_MODE || "PAID").toUpperCase() === "FREE" ? "FREE" : "PAID";
 const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "stripe").toLowerCase() === "wompi" ? "wompi" : "stripe";
 const DEFAULT_COMPANY_MAX_PLAYERS = 50;
-const ENTRY_FEE_USD = 5;
-const ENTRY_FEE_CENTS = ENTRY_FEE_USD * 100;
+const ENTRY_FEE_COP = 20000;
+const ENTRY_FEE_COP_CENTS = ENTRY_FEE_COP * 100;
 const WOMPI_CURRENCY = (process.env.WOMPI_CURRENCY || "COP").toUpperCase();
-const WOMPI_AMOUNT_IN_CENTS = Number(process.env.WOMPI_AMOUNT_IN_CENTS || "0");
-const PRIZE_SEED_USD = Number(process.env.PRIZE_SEED_USD || "0");
+const WOMPI_AMOUNT_IN_CENTS = Number(process.env.WOMPI_AMOUNT_IN_CENTS || String(ENTRY_FEE_COP_CENTS));
+const PRIZE_SEED_COP = Number(process.env.PRIZE_SEED_COP || "0");
 const BANK_COMMISSION_RATE = 0.035;
 const OWNER_PROFIT_RATE = 0.1;
 const PRIZE_POOL_RATE = 1 - BANK_COMMISSION_RATE - OWNER_PROFIT_RATE;
@@ -420,14 +420,14 @@ function generateTemporaryPassword() {
 }
 
 function calculatePrizePool(paidParticipants: number) {
-  const grossPool = paidParticipants * ENTRY_FEE_USD;
+  const grossPool = paidParticipants * ENTRY_FEE_COP;
   const bankCommission = grossPool * BANK_COMMISSION_RATE;
   const ownerGrossProfit = grossPool * OWNER_PROFIT_RATE;
-  const prizeSeed = Number.isFinite(PRIZE_SEED_USD) ? Math.max(PRIZE_SEED_USD, 0) : 0;
+  const prizeSeed = Number.isFinite(PRIZE_SEED_COP) ? Math.max(PRIZE_SEED_COP, 0) : 0;
   const prizePool = grossPool - bankCommission - ownerGrossProfit + prizeSeed;
 
   return {
-    entryFeeUsd: ENTRY_FEE_USD,
+    entryFeeCop: ENTRY_FEE_COP,
     paidParticipants,
     grossPool: roundMoney(grossPool),
     bankCommissionRate: BANK_COMMISSION_RATE,
@@ -2285,6 +2285,7 @@ app.use((req, res, next) => {
   if (proto !== "https" || host === "elpollonmundialista.com") {
     return res.redirect(301, `https://www.elpollonmundialista.com${req.originalUrl}`);
   }
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   return next();
 });
 app.use(express.json({ limit: "100mb" }));
@@ -2815,8 +2816,8 @@ app.post("/api/payments/create-checkout-session", async (req, res) => {
     params.set("success_url", `${origin}/?payment=success&provider=stripe&session_id={CHECKOUT_SESSION_ID}`);
     params.set("cancel_url", `${origin}/?payment=cancelled`);
     params.set("line_items[0][quantity]", "1");
-    params.set("line_items[0][price_data][currency]", "usd");
-    params.set("line_items[0][price_data][unit_amount]", String(ENTRY_FEE_CENTS));
+    params.set("line_items[0][price_data][currency]", "cop");
+    params.set("line_items[0][price_data][unit_amount]", String(ENTRY_FEE_COP));
     params.set("line_items[0][price_data][product_data][name]", "Inscripcion Polla Mundialista 2026");
     params.set("line_items[0][price_data][product_data][description]", "Participacion oficial en la Polla Mundialista 2026");
     params.set("metadata[userId]", user.id);
@@ -4002,7 +4003,7 @@ app.get("/api/prize-pool", (req, res) => {
   const prizePool = calculatePrizePool(paidParticipants);
 
   res.json({
-    entryFeeUsd: prizePool.entryFeeUsd,
+    entryFeeCop: prizePool.entryFeeCop,
     paidParticipants: prizePool.paidParticipants,
     grossPool: prizePool.grossPool,
     bankCommissionRate: prizePool.bankCommissionRate,

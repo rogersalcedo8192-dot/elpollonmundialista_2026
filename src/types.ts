@@ -172,7 +172,7 @@ export interface AppNotification {
 }
 
 export interface PublicPrizePool {
-  entryFeeUsd: number;
+  entryFeeCop: number;
   paidParticipants: number;
   grossPool: number;
   bankCommissionRate: number;
