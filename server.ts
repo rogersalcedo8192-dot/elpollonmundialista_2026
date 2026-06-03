@@ -2026,6 +2026,26 @@ function saveDb(schema: DatabaseSchema) {
 // Recalculates all scores and rankings
 function recalculateScoresAndRankings() {
   const db = loadDb();
+  const nowMs = Date.now();
+  const isScoreableFinishedMatch = (match: Match) => match.status === "finished" && new Date(match.date).getTime() <= nowMs;
+  const hasScoreableFinishedMatches = db.matches.some(isScoreableFinishedMatch);
+  const outcomes = db.tournamentOutcomes;
+  const hasTournamentOutcomeResults = Boolean(
+    outcomes &&
+    (
+      Object.keys(outcomes.groupWinners || {}).length > 0 ||
+      outcomes.octavosTeams?.length ||
+      outcomes.cuartosTeams?.length ||
+      outcomes.semifinalTeams?.length ||
+      outcomes.finalists?.length ||
+      outcomes.subchampion ||
+      outcomes.champion
+    )
+  );
+  const canSendRankingChangeNotifications = Boolean(
+    db.torneo.notificationConfig.rankingChanges &&
+    (hasScoreableFinishedMatches || hasTournamentOutcomeResults)
+  );
   
   // 1. Loop through users and reset calculations
   const userStats = db.users.map((u) => {
@@ -2042,7 +2062,7 @@ function recalculateScoresAndRankings() {
     
     sortedPredictions.forEach((p) => {
       const m = db.matches.find((match) => match.id === p.matchId);
-      if (m && m.status === "finished") {
+      if (m && isScoreableFinishedMatch(m)) {
         totalPredicted++;
         const realLocal = m.localScore!;
         const realVisitor = m.visitorScore!;
@@ -2077,6 +2097,9 @@ function recalculateScoresAndRankings() {
         
         totalPoints += pts;
         history.push(totalPoints);
+      } else {
+        p.pointsEarned = null;
+        p.reason = null;
       }
     });
 
@@ -2088,8 +2111,6 @@ function recalculateScoresAndRankings() {
     let championPoints = 0;
 
     const ut = db.tournamentPredictions?.find((tp) => tp.userId === u.id);
-    const outcomes = db.tournamentOutcomes;
-
     if (ut && outcomes) {
       // 1. Group Winners (A to L) -> 100 points each
       const groups = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
@@ -2203,7 +2224,7 @@ function recalculateScoresAndRankings() {
     }
 
     // Trigger ranking change notification
-    if (shift !== "equal" && ru.userId.indexOf("player") === -1 && ru.userId !== "user-admin") {
+    if (canSendRankingChangeNotifications && shift !== "equal" && ru.userId.indexOf("player") === -1 && ru.userId !== "user-admin") {
       // Create notification for active regular user
       const diffWord = shift === "up" ? "subido" : "bajado";
       const rankMessage = `Has ${diffWord} posiciones. Ahora ocupas el puesto #${newPos} en la clasificacion general de la Polla.`;
@@ -2239,6 +2260,10 @@ function recalculateScoresAndRankings() {
       totalBonusPoints: ru.totalBonusPoints
     };
   });
+
+  if (!canSendRankingChangeNotifications) {
+    db.notifications = db.notifications.filter((notification) => notification.type !== "ranking");
+  }
 
   db.rankings = updatedRankings;
   saveDb(db);
@@ -3994,11 +4019,13 @@ app.get("/api/admin/stats", (req, res) => {
   const db = loadDb();
   const totalUsers = db.users.filter((u) => u.role !== "admin").length;
   const totalMatchesCount = db.matches.length;
+  const nowMs = Date.now();
+  const isActuallyFinishedMatch = (match: Match) => match.status === "finished" && new Date(match.date).getTime() <= nowMs;
   
   // Predictions: total vs pending
   const totalPredictionsCount = db.predictions.length;
-  const pendingMatches = db.matches.filter((m) => m.status === "pending").length;
-  const finishedMatches = db.matches.filter((m) => m.status === "finished").length;
+  const finishedMatches = db.matches.filter(isActuallyFinishedMatch).length;
+  const pendingMatches = totalMatchesCount - finishedMatches;
   
   // Points distribution: count amount of exact (25/35), outcome (15), participation (5)
   let pts25or35Count = 0;
