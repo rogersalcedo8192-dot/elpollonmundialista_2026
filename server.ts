@@ -3845,9 +3845,17 @@ app.get("/api/announcements", (req, res) => {
   res.json(visible);
 });
 
+app.get("/api/admin/announcements", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+
+  const db = loadDb();
+  res.json(db.announcements.filter((ann) => !isLegacySeedAnnouncement(ann)));
+});
+
 app.post("/api/announcements", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const { title, content, urgent, publishAt } = req.body;
   if (!title || !content) return res.status(400).json({ error: "El título y el mensaje son requeridos." });
@@ -3889,7 +3897,7 @@ app.post("/api/announcements", (req, res) => {
 
 app.delete("/api/announcements/:id", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const { id } = req.params;
   const db = loadDb();

@@ -1805,6 +1805,7 @@ export default function App() {
         fetchAdminUsers();
         fetchAdminAssets();
         fetchAdminBanners();
+        fetchAdminAnnouncements();
       }
       if (currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin") {
         fetchCompanies();
@@ -1905,6 +1906,15 @@ export default function App() {
     try {
       const res = await fetch("/api/admin/banners", { headers: getHeaders() });
       if (res.ok) setAdminBanners(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchAdminAnnouncements = async () => {
+    try {
+      const res = await fetch("/api/admin/announcements", { headers: getHeaders() });
+      if (res.ok) setAnnouncements(await res.json());
     } catch (err) {
       console.error(err);
     }
@@ -2651,7 +2661,7 @@ export default function App() {
 
       showToast(data.message, "success");
       setAnnouncementForm({ title: "", content: "", urgent: false, publishAt: "" });
-      fetchGlobalData();
+      fetchAdminAnnouncements();
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -2665,7 +2675,7 @@ export default function App() {
       if (!res.ok) throw new Error(data.error);
 
       showToast(data.message, "success");
-      fetchGlobalData();
+      fetchAdminAnnouncements();
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -6322,6 +6332,7 @@ export default function App() {
                         <input
                           type="datetime-local"
                           className="w-full bg-white border rounded p-1.5"
+                          value={announcementForm.publishAt}
                           onChange={(e) => setAnnouncementForm({ ...announcementForm, publishAt: e.target.value })}
                         />
                       </div>
@@ -6351,15 +6362,24 @@ export default function App() {
                   {/* Admin visible bulletins loop */}
                   <div className="space-y-2 mt-4 text-xs">
                     <h3 className="font-bold uppercase text-slate-500 text-[10px]">Lista de Boletines Publicados</h3>
-                    {announcements.map((ann) => (
+                    {announcements.map((ann) => {
+                      const scheduledAt = ann.publishAt ? new Date(ann.publishAt) : null;
+                      const isScheduled = Boolean(scheduledAt && scheduledAt.getTime() > nowMs);
+                      return (
                       <div key={ann.id} className="p-3 bg-white border rounded-xl flex items-start justify-between gap-3">
                         <div>
                           <h4 className="font-bold text-slate-900 flex items-center gap-2">
                             {ann.urgent && <span className="bg-rose-600 text-white text-[9px] px-1 rounded uppercase">Urgente</span>}
+                            <span className={`text-[9px] px-1 rounded uppercase ${isScheduled ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                              {isScheduled ? "Programado" : "Visible"}
+                            </span>
                             {ann.title}
                           </h4>
                           <p className="text-slate-600 mt-1 leading-relaxed">{ann.content}</p>
                           <span className="block text-[9px] text-slate-400 font-mono mt-1">Registrado el: {new Date(ann.date).toLocaleString()}</span>
+                          {scheduledAt && (
+                            <span className="block text-[9px] text-amber-700 font-mono mt-1">Publicacion: {scheduledAt.toLocaleString()}</span>
+                          )}
                         </div>
                         <button
                           onClick={() => handleDeleteAnnouncement(ann.id)}
@@ -6369,7 +6389,8 @@ export default function App() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               )}
