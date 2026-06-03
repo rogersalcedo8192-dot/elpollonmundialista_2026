@@ -2274,8 +2274,15 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 ensureAssetsDir();
+app.set("trust proxy", true);
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV === "production" && req.hostname === "elpollonmundialista.com") {
+  if (process.env.NODE_ENV !== "production") {
+    return next();
+  }
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto || req.protocol;
+  const host = req.hostname.toLowerCase();
+  if (proto !== "https" || host === "elpollonmundialista.com") {
     return res.redirect(301, `https://www.elpollonmundialista.com${req.originalUrl}`);
   }
   return next();

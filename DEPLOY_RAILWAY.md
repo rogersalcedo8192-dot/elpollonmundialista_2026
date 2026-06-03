@@ -16,6 +16,31 @@ NODE_ENV=production
 
 Railway configura `PORT` automaticamente.
 
+## Dominio y HTTPS
+
+Para que el navegador no muestre "No seguro", configura los dos dominios en Railway y espera a que ambos certificados aparezcan como activos:
+
+```text
+www.elpollonmundialista.com
+elpollonmundialista.com
+```
+
+En el DNS del dominio, el `www` debe apuntar al dominio publico de Railway:
+
+```text
+Tipo: CNAME
+Nombre: www
+Valor: xbwyqlcd.up.railway.app
+```
+
+El dominio raiz `elpollonmundialista.com` no puede usar CNAME en todos los proveedores. En Hostinger, usa el registro que Railway indique para el dominio raiz, normalmente `ALIAS`/`ANAME` si esta disponible, o los registros A que Railway muestre en la pantalla de dominio personalizado. No dejes el dominio raiz solo con parking DNS.
+
+Despues de cambiar DNS, en Railway abre el servicio web, entra a `Settings` -> `Networking` -> `Custom Domain`, y verifica que el estado de SSL/TLS este activo para `www` y para el dominio raiz. La app fuerza redireccion a:
+
+```text
+https://www.elpollonmundialista.com
+```
+
 ## Primer despliegue
 
 Railway ejecutara:
