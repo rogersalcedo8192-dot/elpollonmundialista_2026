@@ -3504,6 +3504,10 @@ export default function App() {
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
               ...(canManageUsers ? [{ key: "admin-companies", label: "Empresas", icon: Tv }] : []),
+              ...(isSuperAdminUser ? [{ key: "admin-matches", label: "Partidos Admin", icon: Calendar }] : []),
+              ...(isSuperAdminUser ? [{ key: "admin-announcements", label: "Comunicados", icon: Megaphone }] : []),
+              ...(isSuperAdminUser ? [{ key: "admin-assets", label: "Biblioteca", icon: ImageIcon }] : []),
+              ...(isSuperAdminUser ? [{ key: "admin-banners", label: "Pauta", icon: ExternalLink }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-config", label: "Configuración", icon: Settings }] : [])
             ].map((item) => {
               const Icon = item.icon;
@@ -3527,6 +3531,14 @@ export default function App() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="col-span-2 min-h-12 rounded-xl px-3 flex items-center justify-center gap-2 text-xs font-black bg-rose-950/80 text-rose-100 border border-rose-800/70 hover:bg-rose-900 transition-colors"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              {t("logout", "Cerrar Sesion")}
+            </button>
           </div>
         </nav>
       )}
