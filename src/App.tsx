@@ -1592,6 +1592,8 @@ export default function App() {
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
   const [rulesFlyerPreviewLang, setRulesFlyerPreviewLang] = useState<"es" | "en">("es");
   const [managedPopupOpen, setManagedPopupOpen] = useState(false);
+  const [aboutPollonOpen, setAboutPollonOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
   const [torneo, setTorneo] = useState<TorneoConfig | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [knockoutFixtures, setKnockoutFixtures] = useState<KnockoutFixture[]>([]);
@@ -1761,6 +1763,56 @@ export default function App() {
     {
       title: "Contacto y vigencia",
       body: "Para consultas, solicitudes o reclamos sobre datos personales escribe a admin@elpollonmundialista.com o al WhatsApp +57 313 578 1020. Esta politica rige desde junio de 2026 y cualquier actualizacion relevante sera publicada en la plataforma."
+    }
+  ];
+  const faqItems = [
+    {
+      question: "Que es www.elpollonmundialista.com?",
+      answer: "Es una plataforma social para pronosticar los partidos del Mundial 2026, sumar puntos por tus aciertos y competir en rankings con amigos, familia, empresas o comunidades."
+    },
+    {
+      question: "Como puedo participar?",
+      answer: "Puedes registrarte en la plataforma, crear tu usuario y participar en la modalidad disponible. Tambien puedes ingresar por invitacion de una empresa cuando exista una polla empresarial activa."
+    },
+    {
+      question: "Cuanto cuesta participar en la Polla REAL?",
+      answer: "La participacion individual en la Polla REAL tiene un valor de 20.000 pesos colombianos. Ese pago habilita la participacion por premios monetarios, sujeto a las reglas publicadas en la plataforma."
+    },
+    {
+      question: "Los pagos son seguros?",
+      answer: "Si. Los pagos se procesan mediante Wompi Pagos Seguros. El Pollon Mundialista no almacena datos sensibles de tarjetas en la plataforma."
+    },
+    {
+      question: "Puedo participar gratis por empresa?",
+      answer: "Si. Las empresas pueden crear o gestionar grupos internos de participacion. Esa modalidad puede permitir jugar gratis dentro del ranking empresarial, segun las condiciones definidas para cada empresa."
+    },
+    {
+      question: "Tengo una empresa, como participo?",
+      answer: "Escribe a admin@elpollonmundialista.com con el nombre de la empresa, nombre y correo del usuario administrador, telefono de contacto y cantidad aproximada de participantes. El equipo revisara la solicitud y te indicara los pasos para activar tu grupo."
+    },
+    {
+      question: "Como se ganan puntos?",
+      answer: "Sumas puntos por registrar pronosticos, acertar el resultado del partido y acertar marcadores exactos. Tambien pueden existir puntos por favoritos del torneo, clasificados, finalistas, subcampeon y campeon, segun las reglas vigentes."
+    },
+    {
+      question: "Hasta cuando puedo enviar un pronostico?",
+      answer: "Cada pronostico se cierra automaticamente 5 minutos antes del inicio del partido. Despues del cierre no se puede crear ni modificar ese marcador."
+    },
+    {
+      question: "Como se paga el premio?",
+      answer: "Los premios se pagan al ganador validado despues de revisar el ranking final, la identidad del participante, la documentacion requerida y los datos bancarios. El pago se realiza por el medio definido por la administracion."
+    },
+    {
+      question: "Como reclamo mi premio?",
+      answer: "Debes enviar tu certificado de ganador al correo admin@elpollonmundialista.com, junto con fotos de tu cedula o pasaporte y certificacion bancaria. En el asunto escribe: QUIERO MI PREMIO. En el cuerpo del correo escribe: Senor Admin de El Pollon Mundialista soy el ganador de uno de los premios, adjunto mis documentos para que me envie mi premio."
+    },
+    {
+      question: "Que pasa si hay empate en el ranking?",
+      answer: "La plataforma usa los criterios de desempate definidos en las reglas, como puntos, aciertos exactos y aciertos de resultado. Si persiste una situacion especial, la administracion revisara el caso segun las reglas publicadas."
+    },
+    {
+      question: "A quien contacto si tengo problemas con mi cuenta, pago o premio?",
+      answer: "Puedes escribir a admin@elpollonmundialista.com. Incluye tu nombre, correo registrado, descripcion del problema y, si aplica, soporte de pago o captura del error."
     }
   ];
 
@@ -7181,6 +7233,120 @@ export default function App() {
         </div>
       )}
 
+      {aboutPollonOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-6"
+          onMouseDown={() => setAboutPollonOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-lg max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="about-pollon-title"
+          >
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+              <div className="flex items-start gap-3">
+                <span className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                  <Trophy className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 id="about-pollon-title" className="text-base font-black text-slate-950 dark:text-white">Que es El Pollon Mundialista?</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Un juego social de pronosticos del Mundial 2026</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAboutPollonOpen(false)}
+                className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
+                aria-label="Cerrar informacion sobre El Pollon Mundialista"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-3 overflow-y-auto">
+              <p>
+                El Pollon Mundialista es la version mundialista de ese juego social que se arma entre amigos, familia, oficina o comunidad para intentar adivinar o predecir los resultados de los partidos.
+              </p>
+              <p>
+                En Colombia muchos le dicen polla; en Mexico se conoce como quiniela; en Argentina suele llamarse prode; en Espana tambien se habla de porra; en Bolivia se le dice vaquita; y en otros paises cambia el nombre, pero la emocion es la misma: elegir marcadores, seguir cada gol y ver como se mueve la tabla.
+              </p>
+              <p>
+                Para el Mundial 2026, El Pollon Mundialista convierte esa tradicion en una experiencia digital: registras tus pronosticos antes de cada partido, sumas puntos por participar, acertar resultados o clavar marcadores exactos, y compites en un ranking en vivo.
+              </p>
+              <p className="font-bold text-slate-900 dark:text-slate-100">
+                No se trata solo de futbol: se trata de conversar, celebrar, sufrir cada minuto y demostrar quien tiene mejor intuicion mundialista.
+              </p>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setAboutPollonOpen(false)}
+                className="min-h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {faqOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-6"
+          onMouseDown={() => setFaqOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-2xl max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="faq-title"
+          >
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+              <div className="flex items-start gap-3">
+                <span className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                  <Info className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 id="faq-title" className="text-base font-black text-slate-950 dark:text-white">Preguntas frecuentes</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Participacion, pagos, empresas, premios y soporte</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFaqOpen(false)}
+                className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
+                aria-label="Cerrar preguntas frecuentes"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-3 overflow-y-auto">
+              {faqItems.map((item, index) => (
+                <section key={item.question} className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 p-3">
+                  <h4 className="text-xs font-black text-slate-950 dark:text-slate-100">
+                    {index + 1}. {item.question}
+                  </h4>
+                  <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{item.answer}</p>
+                </section>
+              ))}
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setFaqOpen(false)}
+                className="min-h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Football-inspired high contrast informational footer line */}
       <footer className="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 shrink-0 text-xs">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
@@ -7190,6 +7356,22 @@ export default function App() {
           <p className="text-slate-500 text-[11px]">
             Diseñada para gestionar pronósticos con cierre automático de postulaciones 5 minutos antes de cada partido.
           </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setAboutPollonOpen(true)}
+              className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+            >
+              Que es el pollon mundialista?
+            </button>
+            <button
+              type="button"
+              onClick={() => setFaqOpen(true)}
+              className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+            >
+              Preguntas frecuentes
+            </button>
+          </div>
           <p className="text-slate-400 text-[11px]">
             Dudas? Contactanos a traves de{" "}
             <a href="mailto:admin@elpollonmundialista.com" className="font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">
