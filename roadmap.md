@@ -51,6 +51,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
   - Usuarios de empresa que tambien pagan la Polla REAL pueden ver ambas politicas.
   - Admin empresa ve la politica de su empresa y, si participa pagando, tambien la politica de la bolsa en dinero.
 - Tarjetas de pronosticos mejoradas: toque para expandir, controles +/-, y marcador 1X2 resaltado.
+- Textos publicos del footer, FAQ y modal informativo corregidos en espanol con tildes y signos de apertura de pregunta.
 
 ## Fase 1 - Estabilizacion Inmediata
 
@@ -151,6 +152,7 @@ Objetivo: que participar sea rapido, claro y usable desde celular.
 - Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
 - Mejorar mensajes cuando el usuario no ha pagado.
+- COMPLETADO: pulido inicial de textos publicos del footer, preguntas frecuentes y modal "Que es El Pollon Mundialista" con tildes y signos `¿...?`.
 - Pulir textos finales de reglas y premios una vez queden definidas las premiaciones reales y empresariales.
 
 Criterio de cierre:
@@ -263,6 +265,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-03: corregidos textos publicos en espanol del footer, FAQ y modal informativo: tildes, signos de apertura `¿...?`, preguntas de confirmacion administrativas y verificacion con `npm run build`.
 - 2026-06-02: actualizado header mobile con etiqueta de usuario, posicion y `Puntaje: X`; agregado filtro fase/fecha por logica futbolera; separadas politicas de premios en dinero y premios de empresa segun rol, empresa y pago.
 - 2026-06-01: agregado primer bloque multitenant incremental con empresas, invitaciones, administradores de empresa, ranking empresarial, migracion Prisma y modo `APP_MODE=FREE|PAID`.
 - 2026-06-01: agregado `PAYMENT_PROVIDER` para migrar de Stripe a Wompi sin eliminar Stripe; Wompi queda como proveedor principal configurable.
