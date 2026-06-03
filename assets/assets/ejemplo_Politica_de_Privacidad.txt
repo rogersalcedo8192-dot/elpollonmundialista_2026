@@ -1,0 +1,44 @@
+Politica de privacidad
+Quiénes somos
+www.pollamundialista.com es un sitio web que existe desde el año 2006. pollamundialista es un entretenimiento que te permite predecir resultados en torneos de futbol, cuantos más aciertos tengas, más puntaje obtendrás, y estarás en lo alto de ranking. Generalmente publicamos información de los torneos locales, ligas europeas, eliminatorias al mundial y copa américa y eurocopa. Demuéstrale a tus amigos, compañeros de trabajo y familiares cuanto sabes de futbol, Regístrate, es gratis. En la mayoría de países de Latinoamérica  este tipo de entretinimientos tiene diversas denominaciones. El prode en argentina, también llamada porra en España, vaquita en Bolivia, Polla en Colombia y Venezuela, La Chancha en Perú, JackPot en USA, scommese en Italia, Stoixima” in Greek, Делайте ваши ставки en Rusia, Anna panoksesi en Finlandia, zet uw geld en Holandes, Stoixima”, or “Στοίχημα” además de entretenido, podría traerte beneficios por tus aciertos.
+
+Normatividad
+Respecto de la recolección, almacenamiento, uso, circulación, rectificación, supresión y todas aquellas actividades que constituyan  tratamiento de datos personales, www.pollamundialista.com dará cumplimiento a lo dispuesto en la normatividad actual , y en especial a lo a la leyes de protección de datos  y demás normas, las cuales definen los requisitos a que se deben cumplir en el uso y tratamiento adecuado de datos personales registrados en nuestras bases de datos Con el registro el usuario da su consentimiento para la utilización de la información recopilada, la cual ha sido aportada libremente y la cual podrá tener las siguientes finalidades:
+Realizar ofertas de productos y/o servicios, asociados a juegos de azar y apuestas deportivas.
+Enviar información con fines de mercadeo de nuestros productos y/o servicios, o de terceros relacionados con los sectores de crédito,  financiero y comercio electrónico.
+Realizar encuestas de satisfacción y o percepción.
+Atender solicitudes oficiales que involucren consulta de bases de datos o solicitud de información.
+Normatividad Jurisdiccional
+A la fecha los países que están declarados como adecuados, son: Alemania, Austria, Bélgica, Bulgaria, Chipre, Costa Rica, Croacia, Dinamarca, Eslovaquia, Eslovenia, Estonia, España, Estados Unidos, Finlandia, Francia, Grecia, Hungría, Irlanda, Islandia, Italia, Letonia, Lituania, Luxemburgo, Malta, México, Noruega, Países Bajos, Perú, Polonia, Portugal, reino Unido, República Checa, República de Corea, Rumania, Serbia, Suecia, y los países que hayan sido declarados con nivel adecuado de protección por la Comisión Europea.
+
+Comentarios
+Cuando los visitantes dejan comentarios en el sitio recopilamos los datos mostrados en el formulario de comentarios, y también la dirección IP del visitante y la cadena del agente de usuario del navegador para ayudar a la detección de spam. Se puede proporcionar una cadena anónima creada a partir de su dirección de correo electrónico (también denominada hash) al servicio gravatar para ver si la está utilizando. La política de privacidad del servicio Gravatar está disponible aquí: https://automattic.com/privacy/. Después de la aprobación de tu comentario, su imagen de perfil será visible para el público en el contexto de tu comentario.
+
+Medios
+Si subes imágenes al sitio web, debes evitar cargar imágenes con datos de ubicación incrustados (EXIF GPS). Los visitantes del sitio web pueden descargar y extraer los datos de la ubicación de las imágenes en el sitio Web.
+
+Con quién compartimos tus datos
+Si solicitas un restablecimiento de contraseña, tu dirección IP será incluida en el correo electrónico de restablecimiento.
+
+Cuánto tiempo conservamos tus datos
+Si dejas un comentario, el comentario y sus metadatos se conservan indefinidamente. Esto es para que podamos reconocer y aprobar automáticamente cualquier comentario de seguimiento en lugar de mantenerlos en una cola de moderación. Para los usuarios que se registren en nuestro sitio web, se almacenarán todos sus datos de información personal que proporcionen. Cualquier usuario puede ver, editar o eliminar su información personal cuando lo desee (a excepción del nombre de usuario que no se puede editar). Los administradores de sitios web, también pueden ver y editar dicha información.
+
+Qué derechos tienes sobre tus datos
+Si tienes una cuenta en este sitio, o has dejado comentarios, puedes solicitar la exportación de un archivo con tus datos personales recopilados, incluyendo cualquier otro dato que nos haya proporcionado. También puedes solicitar la eliminación de cualquier dato personal que guardemos sobre ti. Esto no incluye los datos que estamos obligados a consevar para fines administrativos, legales o de seguridad.
+
+Dónde enviamos tus datos
+Puede que los comentarios de los visitantes sean validados por un servicio automático de detección de spam.
+
+Vigencia
+La presente política de datos personales entra en vigencia a partir del 1 de marzo de 2022. Cualquier cambio será publicado a través de la respectiva pestaña de nuestra página web www.pollamundialista.com, y enviada a través de correo electrónico a los usuarios registrados de la plataforma.
+
+Graph API Explorer
+Integración:
+Podemos integrarnos con el Explorador de API Graph de Facebook para mejorar la experiencia del usuario y la autenticación.
+Acceso a datos:
+Al utilizar el Explorador de API Graph, nos autoriza a acceder y recopilar cierta información de su cuenta de Facebook, según los permisos que nos proporcione.
+Acceso limitado:
+Solo accedemos a la información necesaria para el funcionamiento del Explorador de API Graph y no la almacenamos ni utilizamos para ningún otro fin sin su consentimiento explícito.
+
+CONTACTO
+Si requiere contactarnos, escríbanos un email a hola@pollamundialista.com  en nuestra cuenta de WhatsApp +57 3212220010 o a través de nuestras redes social

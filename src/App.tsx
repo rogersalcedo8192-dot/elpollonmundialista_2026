@@ -1721,7 +1721,48 @@ export default function App() {
   const isRegisterPasswordValid = passwordChecks.every((check) => check.valid);
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authEmail);
   const isRegisterSubmitDisabled = !isEmailValid || !isRegisterPasswordValid || authName.trim().length < 3 || !authPrivacyAccepted;
-  const privacyNoticeText = "Autorizo de manera previa, expresa e informada a M&P Enterprise Marketing y Publicidad SAS para recolectar, almacenar, usar, circular, actualizar y suprimir mis datos personales con la finalidad de gestionar mi registro, participacion, comunicaciones, soporte, pagos, premios y obligaciones asociadas a la Polla Mundialista 2026, conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y demas normas colombianas aplicables. Reconozco que puedo conocer, actualizar, rectificar y solicitar la supresion de mis datos o revocar esta autorizacion cuando proceda.";
+  const privacyNoticeSections = [
+    {
+      title: "Responsable del tratamiento",
+      body: "El Pollon Mundialista, operado por M&P Enterprise Marketing y Publicidad SAS, es responsable del tratamiento de los datos personales recolectados en esta plataforma. Canales de contacto: admin@elpollonmundialista.com y WhatsApp +57 313 578 1020."
+    },
+    {
+      title: "Datos que podemos recolectar",
+      body: "Podemos tratar datos de registro y cuenta como nombre, correo electronico, pais, avatar, empresa asociada, estado de pago, predicciones, puntajes, ranking, historial de participacion, comunicaciones enviadas por la plataforma, datos necesarios para soporte y datos requeridos para gestionar pagos, premios o verificaciones administrativas."
+    },
+    {
+      title: "Finalidades",
+      body: "Usamos tus datos para crear y administrar tu cuenta, permitir tu participacion en El Pollon Mundialista, calcular resultados y rankings, gestionar inscripciones, pagos, premios, recordatorios, recuperacion de acceso, notificaciones, comunicaciones del administrador, soporte al usuario, seguridad de la plataforma, auditoria de predicciones y cumplimiento de obligaciones legales o contractuales."
+    },
+    {
+      title: "Comunicaciones",
+      body: "Podremos enviarte correos, mensajes o notificaciones relacionados con tu cuenta, recuperacion de contrasena, actividad del torneo, cambios en ranking, resultados, recordatorios de pronosticos, comunicados importantes, pagos, premios y soporte. Puedes administrar algunas preferencias de notificacion desde tu perfil cuando la plataforma lo permita."
+    },
+    {
+      title: "Pagos, premios y verificacion",
+      body: "Cuando participes en modalidades con pago o premios, podremos tratar la informacion necesaria para validar tu inscripcion, confirmar transacciones, prevenir fraude, verificar identidad, contactar ganadores y coordinar la entrega de premios. No solicitaremos datos bancarios sensibles dentro de formularios publicos no seguros."
+    },
+    {
+      title: "Encargados y terceros",
+      body: "Podemos apoyarnos en proveedores tecnologicos para alojamiento, base de datos, almacenamiento de archivos, correo transaccional, analitica operativa y pasarelas de pago. Estos terceros solo deben tratar la informacion necesaria para prestar sus servicios. Tambien podremos compartir datos cuando sea requerido por autoridad competente o por obligaciones legales."
+    },
+    {
+      title: "Conservacion",
+      body: "Conservaremos los datos mientras exista una cuenta activa, mientras sean necesarios para operar el torneo, resolver solicitudes, auditar resultados, atender reclamaciones, cumplir obligaciones legales o conservar soportes administrativos. Cuando proceda, podras solicitar supresion o actualizacion de tus datos."
+    },
+    {
+      title: "Tus derechos",
+      body: "Como titular puedes conocer, actualizar, rectificar, solicitar prueba de autorizacion, ser informado sobre el uso de tus datos, presentar reclamos, revocar la autorizacion y solicitar la supresion de datos cuando no exista una obligacion legal o contractual que impida hacerlo."
+    },
+    {
+      title: "Autorizacion",
+      body: "Al registrarte aceptas de manera previa, expresa e informada esta politica de tratamiento de datos personales y autorizas la recoleccion, almacenamiento, uso, circulacion, actualizacion y supresion de tus datos para las finalidades descritas, conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y demas normas colombianas aplicables."
+    },
+    {
+      title: "Contacto y vigencia",
+      body: "Para consultas, solicitudes o reclamos sobre datos personales escribe a admin@elpollonmundialista.com o al WhatsApp +57 313 578 1020. Esta politica rige desde junio de 2026 y cualquier actualizacion relevante sera publicada en la plataforma."
+    }
+  ];
 
   const fetchGlobalData = async () => {
     setIsGlobalLoading(true);
@@ -7029,7 +7070,7 @@ export default function App() {
                 </span>
                 <div>
                   <h3 className="text-base font-black text-slate-950 dark:text-white">Aviso de Privacidad</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">M&P Enterprise Marketing y Publicidad SAS</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">El Pollon Mundialista - M&P Enterprise Marketing y Publicidad SAS</p>
                 </div>
               </div>
               <button
@@ -7041,8 +7082,13 @@ export default function App() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed max-h-[55vh] overflow-y-auto">
-              <p>{privacyNoticeText}</p>
+            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed max-h-[55vh] overflow-y-auto space-y-4">
+              {privacyNoticeSections.map((section) => (
+                <section key={section.title} className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-slate-900 dark:text-slate-100">{section.title}</h4>
+                  <p>{section.body}</p>
+                </section>
+              ))}
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row gap-2 sm:justify-end">
               <button
