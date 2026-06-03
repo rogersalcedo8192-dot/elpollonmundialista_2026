@@ -44,12 +44,18 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Cambio incremental de Stripe a Wompi: se conserva Stripe, pero el proveedor activo se controla con `PAYMENT_PROVIDER=wompi|stripe`.
 - Popup administrable desde configuracion global y reinicio de polla con saldos de premio acumulado en cero.
 - Popup administrable con imagen seleccionable desde biblioteca de assets.
+- Popup administrable ahora se muestra de nuevo al ingresar mientras el admin lo mantenga activo; ya no queda limitado a una sola visualizacion por usuario.
 - Empresas muestran premios como texto informativo desde su propio Libro de Premiaciones.
 - Reglas y Premiaciones separa politicas de premios en dinero y politicas de premios de empresa:
   - Usuarios FREE invitados por superadmin pueden ver las politicas de premios en dinero.
   - Usuarios invitados de empresa ven las politicas de premios de su empresa.
   - Usuarios de empresa que tambien pagan la Polla REAL pueden ver ambas politicas.
   - Admin empresa ve la politica de su empresa y, si participa pagando, tambien la politica de la bolsa en dinero.
+- Inicio predeterminado de usuarios autenticados en Reglas y Premiaciones, con avisos visibles de "Premios para usuarios pagos" cuando aparecen valores de dinero.
+- Perfil de usuario reorganizado como menu de configuracion: datos de perfil, avatar/imagen, idioma, tema, sonido, cambio de contrasena, ultima vez de inicio de sesion y cierre de sesion.
+- Cierre de sesion movido a configuracion de usuario, fuera del menu hamburguesa y del boton directo del header.
+- Invitaciones de empresa reutilizables: un enlace sirve para registrar multiples jugadores hasta completar el cupo maximo de la empresa, actualmente limitado a 50.
+- Panel de invitaciones de empresa muestra cupos usados/disponibles, instrucciones para el admin empresa y boton para copiar enlaces recientes.
 - Tarjetas de pronosticos mejoradas: toque para expandir, controles +/-, y marcador 1X2 resaltado.
 - Textos publicos del footer, FAQ y modal informativo corregidos en espanol con tildes y signos de apertura de pregunta.
 
@@ -152,6 +158,9 @@ Objetivo: que participar sea rapido, claro y usable desde celular.
 - Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
 - Mejorar mensajes cuando el usuario no ha pagado.
+- COMPLETADO: destacar con claridad que los premios en dinero aplican a usuarios pagos de Polla REAL, especialmente para usuarios de empresa o modalidad gratuita.
+- COMPLETADO: inicio predeterminado en Reglas y Premiaciones para que cada usuario vea primero la informacion de premios que le corresponde.
+- COMPLETADO: perfil convertido en menu de configuracion con secciones claras para avatar, imagen, idioma, tema, sonido, contrasena, sesion y cierre de sesion.
 - COMPLETADO: pulido inicial de textos publicos del footer, preguntas frecuentes y modal "Que es El Pollon Mundialista" con tildes y signos `¿...?`.
 - Pulir textos finales de reglas y premios una vez queden definidas las premiaciones reales y empresariales.
 
@@ -170,6 +179,7 @@ Objetivo: que el admin pueda operar todo sin tocar archivos.
 - Historial de acciones admin: resultados, usuarios, banners, reglas y reinicios.
 - Confirmacion reforzada para acciones destructivas.
 - Programacion real de comunicados.
+- COMPLETADO: invitaciones de empresa reutilizables hasta el cupo maximo de la empresa, con mensajes emergentes e instrucciones mas claras para admin empresa.
 - Panel de salud del torneo: predicciones faltantes, partidos cerrados y resultados pendientes.
 
 Criterio de cierre:
