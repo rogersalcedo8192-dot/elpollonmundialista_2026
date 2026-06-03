@@ -2249,6 +2249,12 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 ensureAssetsDir();
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === "production" && req.hostname === "elpollonmundialista.com") {
+    return res.redirect(301, `https://www.elpollonmundialista.com${req.originalUrl}`);
+  }
+  return next();
+});
 app.use(express.json({ limit: "100mb" }));
 app.use("/uploads", express.static(ASSETS_DIR));
 
