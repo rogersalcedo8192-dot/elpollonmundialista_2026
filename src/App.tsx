@@ -7190,6 +7190,12 @@ export default function App() {
           <p className="text-slate-500 text-[11px]">
             Diseñada para gestionar pronósticos con cierre automático de postulaciones 5 minutos antes de cada partido.
           </p>
+          <p className="text-slate-400 text-[11px]">
+            Dudas? Contactanos a traves de{" "}
+            <a href="mailto:admin@elpollonmundialista.com" className="font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">
+              admin@elpollonmundialista.com
+            </a>
+          </p>
         </div>
       </footer>
 
