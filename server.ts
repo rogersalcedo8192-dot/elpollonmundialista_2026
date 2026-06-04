@@ -415,6 +415,50 @@ function sendEventEmail(user: User, subject: string, title: string, message: str
   );
 }
 
+function logEventEmailFailure(user: Pick<User, "id" | "email">, subject: string, result: any) {
+  if (result?.ok || result?.skipped) return;
+  const detail = result?.status ? ` status ${result.status}` : "";
+  const error = result?.error ? `: ${result.error}` : "";
+  console.error(`Event email failed${detail} ${subject} -> ${user.email} (${user.id})${error}`);
+}
+
+function queueEventEmail(user: User, subject: string, title: string, message: string, force = false) {
+  void Promise.resolve(sendEventEmail(user, subject, title, message, force))
+    .then((result) => logEventEmailFailure(user, subject, result))
+    .catch((err) => console.error(`Event email crashed ${subject} -> ${user.email} (${user.id}):`, err));
+}
+
+async function sendBulkEventEmails(
+  users: User[],
+  buildPayload: (user: User) => { subject: string; title: string; message: string; force?: boolean }
+) {
+  const summary = { attempted: 0, sent: 0, skipped: 0, failed: 0 };
+
+  for (const user of users) {
+    const payload = buildPayload(user);
+    summary.attempted += 1;
+    const result = await Promise.resolve(
+      sendEventEmail(user, payload.subject, payload.title, payload.message, payload.force)
+    ).catch((err) => ({
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+      to: user.email
+    }));
+
+    if (result?.skipped) summary.skipped += 1;
+    else if (result?.ok) summary.sent += 1;
+    else {
+      summary.failed += 1;
+      logEventEmailFailure(user, payload.subject, result);
+    }
+  }
+
+  console.info(
+    `Bulk event email summary: attempted=${summary.attempted}, sent=${summary.sent}, skipped=${summary.skipped}, failed=${summary.failed}`
+  );
+  return summary;
+}
+
 function generateTemporaryPassword() {
   return `PM-${randomBytes(4).toString("hex").toUpperCase()}`;
 }
@@ -597,7 +641,7 @@ function markUserAsPaid(user: User, session: any, provider: "stripe" | "wompi" =
   user.stripeCheckoutSessionId = session.id || user.stripeCheckoutSessionId;
   user.stripePaymentIntentId = session.payment_intent || user.stripePaymentIntentId;
   if (!wasPaid) {
-    void sendEventEmail(
+    queueEventEmail(
       user,
       "Inscripcion confirmada",
       "Pago confirmado",
@@ -2237,7 +2281,10 @@ function recalculateScoresAndRankings() {
         date: new Date().toISOString(),
         read: false
       });
-      void sendEventEmail(ru, "Cambio en tu ranking", "Cambio en el Ranking", rankMessage);
+      const rankingUser = db.users.find((u) => u.id === ru.userId);
+      if (rankingUser) {
+        queueEventEmail(rankingUser, "Cambio en tu ranking", "Cambio en el Ranking", rankMessage);
+      }
     }
 
     return {
@@ -3523,7 +3570,7 @@ app.post("/api/admin/matches/dedupe", (req, res) => {
   });
 });
 
-app.put("/api/matches/:id", (req, res) => {
+app.put("/api/matches/:id", async (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
@@ -3562,6 +3609,7 @@ app.put("/api/matches/:id", (req, res) => {
     // Add result notification to affected users
     const updatedDb = loadDb();
     if (updatedDb.torneo.notificationConfig.results) {
+      const emailPayloads = new Map<string, { subject: string; title: string; message: string }>();
       updatedDb.users.forEach((u) => {
         const pred = updatedDb.predictions.find((p) => p.userId === u.id && p.matchId === m.id);
         const ptsEarned = pred ? (pred.pointsEarned || 0) : 0;
@@ -3583,9 +3631,14 @@ app.put("/api/matches/:id", (req, res) => {
           date: new Date().toISOString(),
           read: false
         });
-        void sendEventEmail(u, `Resultado: ${m.local} vs ${m.visitor}`, "Resultado del Partido Publicado", resultMessage);
+        emailPayloads.set(u.id, {
+          subject: `Resultado: ${m.local} vs ${m.visitor}`,
+          title: "Resultado del Partido Publicado",
+          message: resultMessage
+        });
       });
       saveDb(updatedDb);
+      await sendBulkEventEmails(updatedDb.users, (u) => emailPayloads.get(u.id)!);
     }
   } else if (wasFinished) {
     // If Admin changed back to pending or in_progress, clear scored calculations!
@@ -3596,7 +3649,7 @@ app.put("/api/matches/:id", (req, res) => {
 });
 
 // Fast score mock simulate for testing
-app.post("/api/matches/:id/simulate", (req, res) => {
+app.post("/api/matches/:id/simulate", async (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
 
@@ -3617,6 +3670,7 @@ app.post("/api/matches/:id/simulate", (req, res) => {
 
   // Seed notification
   const notifyDb = loadDb();
+  const emailPayloads = new Map<string, { subject: string; title: string; message: string }>();
   notifyDb.users.forEach((u) => {
     const pred = notifyDb.predictions.find((p) => p.userId === u.id && p.matchId === m.id);
     const pts = pred ? (pred.pointsEarned || 0) : 0;
@@ -3637,9 +3691,14 @@ app.post("/api/matches/:id/simulate", (req, res) => {
       date: new Date().toISOString(),
       read: false
     });
-    void sendEventEmail(u, `Resultado simulado: ${m.local} vs ${m.visitor}`, "Simulacion: Resultado Oficial", simulationMessage);
+    emailPayloads.set(u.id, {
+      subject: `Resultado simulado: ${m.local} vs ${m.visitor}`,
+      title: "Simulacion: Resultado Oficial",
+      message: simulationMessage
+    });
   });
   saveDb(notifyDb);
+  await sendBulkEventEmails(notifyDb.users, (u) => emailPayloads.get(u.id)!);
 
   res.json({ message: "Simulación de partido aplicada y ranking recalculado.", match: m });
 });
@@ -3904,7 +3963,7 @@ app.get("/api/admin/announcements", (req, res) => {
   res.json(db.announcements.filter((ann) => !isLegacySeedAnnouncement(ann)));
 });
 
-app.post("/api/announcements", (req, res) => {
+app.post("/api/announcements", async (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
@@ -3927,6 +3986,7 @@ app.post("/api/announcements", (req, res) => {
   // Send communication notifications if not scheduled for future or if ready immediately
   const isScheduledInFuture = publishAt && new Date(publishAt).getTime() > Date.now();
   if (!isScheduledInFuture && db.torneo.notificationConfig.announcements) {
+    const emailPayloads = new Map<string, { subject: string; title: string; message: string }>();
     db.users.forEach((u) => {
       const announcementMessage = `El administrador ha publicado un anuncio: "${title}". Consultalo en la seccion de anuncios.`;
       db.notifications.push({
@@ -3938,9 +3998,14 @@ app.post("/api/announcements", (req, res) => {
         date: new Date().toISOString(),
         read: false
       });
-      void sendEventEmail(u, urgent ? `Urgente: ${title}` : `Nuevo comunicado: ${title}`, urgent ? "Comunicado Urgente" : "Nuevo Comunicado", `${title}\n\n${content}`);
+      emailPayloads.set(u.id, {
+        subject: urgent ? `Urgente: ${title}` : `Nuevo comunicado: ${title}`,
+        title: urgent ? "Comunicado Urgente" : "Nuevo Comunicado",
+        message: `${title}\n\n${content}`
+      });
     });
     saveDb(db);
+    await sendBulkEventEmails(db.users, (u) => emailPayloads.get(u.id)!);
   }
 
   res.json({ message: "Anuncio publicado correctamente.", announcement: newAnn });
@@ -4135,7 +4200,7 @@ setInterval(() => {
             date: new Date().toISOString(),
             read: false
           });
-          void sendEventEmail(u, `Recordatorio: ${m.local} vs ${m.visitor}`, "Recordatorio de Pronostico", windowConfig.message);
+          queueEventEmail(u, `Recordatorio: ${m.local} vs ${m.visitor}`, "Recordatorio de Pronostico", windowConfig.message);
           db.sentReminders.push(reminderKey);
           updated = true;
         });

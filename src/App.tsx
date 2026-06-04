@@ -2965,7 +2965,7 @@ export default function App() {
   const renderSponsorBanner = (banner: SponsorBanner) => {
     const content = (
       <div className="group relative overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900 bg-slate-950 shadow-sm">
-        <img src={banner.imageUrl} alt={banner.title} className="w-full h-28 md:h-36 object-cover opacity-95 group-hover:opacity-100 transition-opacity" />
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-44 sm:h-52 md:h-36 object-cover opacity-95 group-hover:opacity-100 transition-opacity" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent p-3 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -7108,7 +7108,7 @@ export default function App() {
                                 <p className="text-[10px] text-emerald-800/70 mt-1">Sube imagenes en Assets y luego seleccionalas aqui.</p>
                               </div>
                               {torneo.popupImageUrl && (
-                                <div className="aspect-video rounded-xl overflow-hidden border bg-white">
+                                <div className="aspect-[4/5] sm:aspect-video rounded-xl overflow-hidden border bg-white">
                                   <img src={torneo.popupImageUrl} alt="Preview popup" className="w-full h-full object-cover" />
                                 </div>
                               )}
@@ -7502,7 +7502,7 @@ export default function App() {
             <div className="overflow-y-auto">
               {torneo.popupImageUrl && (
                 <div className="px-4 sm:px-5 pt-4 sm:pt-5">
-                  <div className="aspect-video rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                  <div className="aspect-[4/5] sm:aspect-video rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
                     <img src={torneo.popupImageUrl} alt={torneo.popupTitle || "Imagen del aviso"} className="w-full h-full object-cover" />
                   </div>
                 </div>

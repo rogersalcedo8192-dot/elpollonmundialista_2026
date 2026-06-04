@@ -25,17 +25,13 @@
       "role": "admin",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120",
-      "points": 45,
+      "points": 0,
       "exactCount": 0,
-      "drawCount": 2,
-      "predictCount": 5,
+      "drawCount": 0,
+      "predictCount": 0,
       "historyPoints": [
         0,
-        15,
-        20,
-        25,
-        30,
-        45
+        0
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -53,17 +49,13 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
-      "points": 65,
-      "exactCount": 1,
-      "drawCount": 1,
-      "predictCount": 5,
+      "points": 0,
+      "exactCount": 0,
+      "drawCount": 0,
+      "predictCount": 0,
       "historyPoints": [
         0,
-        5,
-        40,
-        45,
-        50,
-        65
+        0
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -81,17 +73,13 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
-      "points": 65,
-      "exactCount": 1,
-      "drawCount": 2,
-      "predictCount": 5,
+      "points": 0,
+      "exactCount": 0,
+      "drawCount": 0,
+      "predictCount": 0,
       "historyPoints": [
         0,
-        25,
-        30,
-        45,
-        50,
-        65
+        0
       ],
       "emailSubscribed": false,
       "groupPoints": 0,
@@ -109,17 +97,13 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120",
-      "points": 65,
+      "points": 0,
       "exactCount": 0,
-      "drawCount": 4,
-      "predictCount": 5,
+      "drawCount": 0,
+      "predictCount": 0,
       "historyPoints": [
         0,
-        15,
-        30,
-        35,
-        50,
-        65
+        0
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -137,17 +121,13 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120",
-      "points": 65,
+      "points": 0,
       "exactCount": 0,
-      "drawCount": 4,
-      "predictCount": 5,
+      "drawCount": 0,
+      "predictCount": 0,
       "historyPoints": [
         0,
-        15,
-        30,
-        35,
-        50,
-        65
+        0
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -1311,8 +1291,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.149Z"
     },
     {
@@ -1321,8 +1301,8 @@
       "matchId": 2,
       "localScore": 2,
       "visitorScore": 0,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1331,8 +1311,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1341,8 +1321,8 @@
       "matchId": 4,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1351,8 +1331,8 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1361,8 +1341,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1371,8 +1351,8 @@
       "matchId": 2,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": 35,
-      "reason": "exact",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1381,8 +1361,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1391,8 +1371,8 @@
       "matchId": 4,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1401,8 +1381,8 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1411,8 +1391,8 @@
       "matchId": 1,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": 25,
-      "reason": "exact",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1421,8 +1401,8 @@
       "matchId": 2,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1431,8 +1411,8 @@
       "matchId": 3,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1441,8 +1421,8 @@
       "matchId": 4,
       "localScore": 0,
       "visitorScore": 2,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1451,8 +1431,8 @@
       "matchId": 5,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1461,8 +1441,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1471,8 +1451,8 @@
       "matchId": 2,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1481,8 +1461,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1491,8 +1471,8 @@
       "matchId": 4,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1501,8 +1481,8 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1511,8 +1491,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1521,8 +1501,8 @@
       "matchId": 2,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1531,8 +1511,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": 5,
-      "reason": "participation",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1541,8 +1521,8 @@
       "matchId": 4,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1551,21 +1531,21 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": 15,
-      "reason": "draw",
+      "pointsEarned": null,
+      "reason": null,
       "dateCreated": "2026-05-29T17:46:51.150Z"
     }
   ],
   "rankings": [
     {
-      "userId": "player-2",
-      "userName": "James Rodríguez",
-      "userAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
+      "userId": "user-admin",
+      "userName": "Admin Polla",
+      "userAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 65,
-      "exactCount": 1,
-      "drawCount": 2,
-      "predictCount": 5,
+      "points": 0,
+      "exactCount": 0,
+      "drawCount": 0,
+      "predictCount": 0,
       "position": 1,
       "prevPosition": 1,
       "shift": "equal",
@@ -1581,12 +1561,31 @@
       "userName": "Luis Fernando Díaz",
       "userAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 65,
-      "exactCount": 1,
-      "drawCount": 1,
-      "predictCount": 5,
+      "points": 0,
+      "exactCount": 0,
+      "drawCount": 0,
+      "predictCount": 0,
       "position": 2,
       "prevPosition": 2,
+      "shift": "equal",
+      "groupPoints": 0,
+      "knockoutPoints": 0,
+      "finalistPoints": 0,
+      "subchampionPoints": 0,
+      "championPoints": 0,
+      "totalBonusPoints": 0
+    },
+    {
+      "userId": "player-2",
+      "userName": "James Rodríguez",
+      "userAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
+      "userCountry": "Colombia",
+      "points": 0,
+      "exactCount": 0,
+      "drawCount": 0,
+      "predictCount": 0,
+      "position": 3,
+      "prevPosition": 3,
       "shift": "equal",
       "groupPoints": 0,
       "knockoutPoints": 0,
@@ -1600,12 +1599,12 @@
       "userName": "Linda Caicedo",
       "userAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 65,
+      "points": 0,
       "exactCount": 0,
-      "drawCount": 4,
-      "predictCount": 5,
-      "position": 3,
-      "prevPosition": 3,
+      "drawCount": 0,
+      "predictCount": 0,
+      "position": 4,
+      "prevPosition": 4,
       "shift": "equal",
       "groupPoints": 0,
       "knockoutPoints": 0,
@@ -1619,29 +1618,10 @@
       "userName": "Shakira Ripoll",
       "userAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 65,
+      "points": 0,
       "exactCount": 0,
-      "drawCount": 4,
-      "predictCount": 5,
-      "position": 4,
-      "prevPosition": 4,
-      "shift": "equal",
-      "groupPoints": 0,
-      "knockoutPoints": 0,
-      "finalistPoints": 0,
-      "subchampionPoints": 0,
-      "championPoints": 0,
-      "totalBonusPoints": 0
-    },
-    {
-      "userId": "user-admin",
-      "userName": "Admin Polla",
-      "userAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120",
-      "userCountry": "Colombia",
-      "points": 45,
-      "exactCount": 0,
-      "drawCount": 2,
-      "predictCount": 5,
+      "drawCount": 0,
+      "predictCount": 0,
       "position": 5,
       "prevPosition": 5,
       "shift": "equal",
