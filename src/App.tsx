@@ -1897,6 +1897,9 @@ export default function App() {
         setNotifications(await nRes.json());
       }
 
+      const aRes = await fetch("/api/announcements", { headers: getHeaders() });
+      if (aRes.ok) setAnnouncements(await aRes.json());
+
       const tpRes = await fetch(`/api/tournament-predictions?userId=${currentUser.id}`, { headers: getHeaders() });
       if (tpRes.ok) {
         setTournamentPredictions(await tpRes.json());
@@ -1919,6 +1922,8 @@ export default function App() {
         fetchAdminUsers();
         fetchAdminAssets();
         fetchAdminBanners();
+      }
+      if (currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin") {
         fetchAdminAnnouncements();
       }
       if (currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.role === "company_admin") {
@@ -2798,6 +2803,8 @@ export default function App() {
       showToast(data.message, "success");
       setAnnouncementForm({ title: "", content: "", urgent: false, publishAt: "" });
       fetchAdminAnnouncements();
+      fetchGlobalData();
+      fetchUserSpecificData();
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -2812,6 +2819,8 @@ export default function App() {
 
       showToast(data.message, "success");
       fetchAdminAnnouncements();
+      fetchGlobalData();
+      fetchUserSpecificData();
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -3164,6 +3173,10 @@ export default function App() {
   const isSuperAdminUser = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdminUser = currentUser?.role === "company_admin";
   const canManageUsers = Boolean(isSuperAdminUser || isCompanyAdminUser);
+  const manageableAnnouncements = announcements.filter((ann) => {
+    if (isSuperAdminUser) return true;
+    return Boolean(isCompanyAdminUser && currentUser?.companyId && ann.companyId === currentUser.companyId);
+  });
   const isFreeOrCompanyUser = appMode === "FREE" || Boolean(currentUser?.companyId);
   const hasRealPrizeAccess = Boolean(
     currentUser?.paymentStatus === "paid" &&
@@ -3682,7 +3695,7 @@ export default function App() {
               ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
               ...(canManageUsers ? [{ key: "admin-companies", label: "Empresas", icon: Tv }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-matches", label: "Partidos Admin", icon: Calendar }] : []),
-              ...(isSuperAdminUser ? [{ key: "admin-announcements", label: "Comunicados", icon: Megaphone }] : []),
+              ...(isSuperAdminUser || isCompanyAdminUser ? [{ key: "admin-announcements", label: "Comunicados", icon: Megaphone }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-assets", label: "Biblioteca", icon: ImageIcon }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-banners", label: "Pauta", icon: ExternalLink }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-config", label: "Configuración", icon: Settings }] : [])
@@ -4077,14 +4090,11 @@ export default function App() {
                       </button>}
 
                       <button
-                        disabled={!isSuperAdminUser}
                         onClick={() => { setActiveTab("admin-announcements"); setMobileMenuOpen(false); }}
-                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${!isSuperAdminUser ? "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-75" : activeTab === "admin-announcements" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
-                        title={!isSuperAdminUser ? "Disponible solo para SuperAdmin" : undefined}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-announcements" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Bell className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                        {t("admin_announcement", "Publicar Comunicados")}
-                        {!isSuperAdminUser && <Lock className="ml-auto w-3.5 h-3.5 text-slate-400" />}
+                        {isCompanyAdminUser ? "Comunicados empresa" : t("admin_announcement", "Publicar Comunicados")}
                       </button>
 
                       <button
@@ -4687,6 +4697,7 @@ export default function App() {
                             <div key={a.id} className={`p-3 rounded-lg border ${a.urgent ? "bg-rose-50/70 border-rose-200 text-rose-950 dark:bg-rose-950/20 dark:border-rose-900 dark:text-rose-200" : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300"}`}>
                               <h4 className="font-bold text-xs flex items-center gap-1">
                                 {a.urgent && <span className="bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded uppercase">Urgente</span>}
+                                {a.companyId && <span className="bg-emerald-600 text-white text-[9px] px-1.5 py-0.2 rounded uppercase">Empresa</span>}
                                 {a.title}
                               </h4>
                               <p className="text-[11px] mt-1 whitespace-pre-wrap">{a.content}</p>
@@ -6686,7 +6697,7 @@ export default function App() {
               )}
 
               {/* 8. MÓDULO ADMIN: COMMUNICADOS BROADCAST PUBLISHER */}
-              {activeTab === "admin-announcements" && isSuperAdminUser && (
+              {activeTab === "admin-announcements" && (isSuperAdminUser || isCompanyAdminUser) && (
                 <div className="space-y-6">
                   <div className="border-b border-slate-100 pb-3">
                     <h2 className="text-xl font-bold flex items-center gap-2">
@@ -6694,6 +6705,12 @@ export default function App() {
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">Envía anuncios de premios, recordatorios generales o alertas urgentes visibles para todos</p>
                   </div>
+
+                  {isCompanyAdminUser && (
+                    <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-800">
+                      Estos comunicados solo se notifican dentro de la plataforma a los usuarios de tu empresa. No se envian correos.
+                    </div>
+                  )}
 
                   <form onSubmit={handleSaveAnnouncement} className="p-4 bg-amber-50/40 border border-amber-200 rounded-2xl space-y-4">
                     <h3 className="font-bold text-xs text-slate-800">PUBLICAR COMUNICADO</h3>
@@ -6757,7 +6774,7 @@ export default function App() {
                   {/* Admin visible bulletins loop */}
                   <div className="space-y-2 mt-4 text-xs">
                     <h3 className="font-bold uppercase text-slate-500 text-[10px]">Lista de Boletines Publicados</h3>
-                    {announcements.map((ann) => {
+                    {manageableAnnouncements.map((ann) => {
                       const scheduledAt = ann.publishAt ? new Date(ann.publishAt) : null;
                       const isScheduled = Boolean(scheduledAt && scheduledAt.getTime() > nowMs);
                       return (
@@ -6765,6 +6782,7 @@ export default function App() {
                         <div>
                           <h4 className="font-bold text-slate-900 flex items-center gap-2">
                             {ann.urgent && <span className="bg-rose-600 text-white text-[9px] px-1 rounded uppercase">Urgente</span>}
+                            {ann.companyId && <span className="bg-emerald-600 text-white text-[9px] px-1 rounded uppercase">Empresa</span>}
                             <span className={`text-[9px] px-1 rounded uppercase ${isScheduled ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
                               {isScheduled ? "Programado" : "Visible"}
                             </span>

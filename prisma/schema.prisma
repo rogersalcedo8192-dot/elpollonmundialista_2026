@@ -166,6 +166,8 @@ model Announcement {
   content   String
   date      DateTime
   urgent    Boolean
+  companyId String?
+  authorId  String?
   publishAt DateTime?
 }
 

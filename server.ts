@@ -167,6 +167,8 @@ interface Announcement {
   content: string;
   date: string;
   urgent: boolean;
+  companyId?: string;
+  authorId?: string;
   publishAt?: string; // Optional scheduling date
 }
 
@@ -1257,6 +1259,8 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       content: a.content,
       date: a.date.toISOString(),
       urgent: a.urgent,
+      companyId: a.companyId || undefined,
+      authorId: a.authorId || undefined,
       publishAt: dateToIso(a.publishAt) || undefined
     })),
     notifications: notifications.map((n) => ({
@@ -1518,6 +1522,8 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           content: a.content,
           date: new Date(a.date),
           urgent: a.urgent,
+          companyId: a.companyId || null,
+          authorId: a.authorId || null,
           publishAt: a.publishAt ? new Date(a.publishAt) : null
         }))
       });
@@ -2381,6 +2387,18 @@ function isLegacySeedAnnouncement(announcement: Announcement) {
     announcement.content.includes("104 partidos del torneo completo") ||
     announcement.content.includes("EMPATE REAL")
   );
+}
+
+function canSeeAnnouncement(user: User | null, announcement: Announcement) {
+  if (!announcement.companyId) return true;
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+  return user.companyId === announcement.companyId;
+}
+
+function canManageAnnouncement(user: User | null, announcement: Announcement) {
+  if (isSuperAdmin(user)) return true;
+  return Boolean(user && user.role === "company_admin" && user.companyId && announcement.companyId === user.companyId);
 }
 
 function requirePaidParticipant(user: User, res: express.Response) {
@@ -3944,11 +3962,13 @@ app.get("/api/rankings", (req, res) => {
 
 // API: Announcements / Comunicados
 app.get("/api/announcements", (req, res) => {
+  const user = getAuthenticatedUser(req);
   const db = loadDb();
   const now = new Date();
   // Safe filtering of announcement publication schedules
   const visible = db.announcements.filter((ann) => {
     if (isLegacySeedAnnouncement(ann)) return false;
+    if (!canSeeAnnouncement(user, ann)) return false;
     if (!ann.publishAt) return true;
     return new Date(ann.publishAt).getTime() <= now.getTime();
   });
@@ -3957,35 +3977,54 @@ app.get("/api/announcements", (req, res) => {
 
 app.get("/api/admin/announcements", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  if (!isSuperAdmin(admin) && !isCompanyAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const db = loadDb();
-  res.json(db.announcements.filter((ann) => !isLegacySeedAnnouncement(ann)));
+  res.json(db.announcements.filter((ann) => !isLegacySeedAnnouncement(ann) && canManageAnnouncement(admin, ann)));
 });
 
 app.post("/api/announcements", async (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  if (!isSuperAdmin(admin) && !isCompanyAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const { title, content, urgent, publishAt } = req.body;
   if (!title || !content) return res.status(400).json({ error: "El título y el mensaje son requeridos." });
 
   const db = loadDb();
+  const targetCompanyId = isCompanyAdmin(admin) ? admin.companyId : undefined;
+  if (isCompanyAdmin(admin) && !targetCompanyId) return res.status(400).json({ error: "El administrador no tiene empresa asignada." });
+  const effectivePublishAt = targetCompanyId ? undefined : publishAt;
   const newAnn: Announcement = {
     id: `announce-${Date.now()}`,
     title,
     content,
     date: new Date().toISOString(),
     urgent: !!urgent,
-    publishAt: publishAt || undefined
+    companyId: targetCompanyId,
+    authorId: admin?.id,
+    publishAt: effectivePublishAt || undefined
   };
 
   db.announcements.unshift(newAnn); // Add to beginning
   saveDb(db);
 
   // Send communication notifications if not scheduled for future or if ready immediately
-  const isScheduledInFuture = publishAt && new Date(publishAt).getTime() > Date.now();
-  if (!isScheduledInFuture && db.torneo.notificationConfig.announcements) {
+  const isScheduledInFuture = effectivePublishAt && new Date(effectivePublishAt).getTime() > Date.now();
+  if (!isScheduledInFuture && targetCompanyId) {
+    const companyUsers = db.users.filter((u) => u.companyId === targetCompanyId && u.role !== "company_admin" && !isSuperAdmin(u));
+    companyUsers.forEach((u) => {
+      db.notifications.push({
+        id: `not_company_ann_${Date.now()}_${u.id}`,
+        userId: u.id,
+        title: urgent ? "Comunicado urgente de tu empresa" : "Nuevo comunicado de tu empresa",
+        message: `Tu empresa publico un comunicado: "${title}". Revisalo en el tablero de avisos.`,
+        type: "announcement",
+        date: new Date().toISOString(),
+        read: false
+      });
+    });
+    saveDb(db);
+  } else if (!isScheduledInFuture && db.torneo.notificationConfig.announcements) {
     const emailPayloads = new Map<string, { subject: string; title: string; message: string }>();
     db.users.forEach((u) => {
       const announcementMessage = `El administrador ha publicado un anuncio: "${title}". Consultalo en la seccion de anuncios.`;
@@ -4008,15 +4047,18 @@ app.post("/api/announcements", async (req, res) => {
     await sendBulkEventEmails(db.users, (u) => emailPayloads.get(u.id)!);
   }
 
-  res.json({ message: "Anuncio publicado correctamente.", announcement: newAnn });
+  res.json({ message: targetCompanyId ? "Comunicado de empresa publicado correctamente." : "Anuncio publicado correctamente.", announcement: newAnn });
 });
 
 app.delete("/api/announcements/:id", (req, res) => {
   const admin = getAuthenticatedUser(req);
-  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  if (!isSuperAdmin(admin) && !isCompanyAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const { id } = req.params;
   const db = loadDb();
+  const announcement = db.announcements.find((ann) => ann.id === id);
+  if (!announcement) return res.status(404).json({ error: "Anuncio no encontrado." });
+  if (!canManageAnnouncement(admin, announcement)) return res.status(403).json({ error: "No autorizado para eliminar este comunicado." });
   const len = db.announcements.length;
   db.announcements = db.announcements.filter((ann) => ann.id !== id);
 

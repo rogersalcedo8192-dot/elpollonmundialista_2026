@@ -159,6 +159,8 @@ export interface Announcement {
   content: string;
   date: string;
   urgent: boolean;
+  companyId?: string;
+  authorId?: string;
   publishAt?: string;
 }
 
