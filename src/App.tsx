@@ -2197,7 +2197,15 @@ export default function App() {
         localStorage.setItem("polla_user_session", JSON.stringify(data.user));
         setCurrentUser(data.user);
         showToast(data.message, "success");
-        setActiveTab("participate");
+        setActiveTab("predictions");
+        setPredictionsMode("favorites");
+        const tpRes = await fetch(`/api/tournament-predictions?userId=${data.user.id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.user.id}`
+          }
+        });
+        if (tpRes.ok) setTournamentPredictions(await tpRes.json());
         fetchGlobalData();
       } catch (err: any) {
         showToast(err.message, "error");
@@ -2454,7 +2462,7 @@ export default function App() {
     champion: string;
   }) => {
     if (!currentUser) return;
-    if (!canSubmitPredictions) {
+    if (!canSaveTournamentFavorites) {
       showToast("Debes pagar la inscripción antes de guardar favoritos.", "error");
       setActiveTab("participate");
       return;
@@ -3172,6 +3180,13 @@ export default function App() {
   const certificatesEnabled = finalClosedByMatch || finalClosedByOutcome;
   const isSuperAdminUser = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdminUser = currentUser?.role === "company_admin";
+  const canSaveTournamentFavorites = Boolean(
+    currentUser?.role === "admin" ||
+    currentUser?.role === "superadmin" ||
+    currentUser?.role === "company_admin" ||
+    currentUser?.companyId ||
+    currentUser?.paymentStatus === "paid"
+  );
   const canManageUsers = Boolean(isSuperAdminUser || isCompanyAdminUser);
   const manageableAnnouncements = announcements.filter((ann) => {
     if (isSuperAdminUser) return true;
@@ -5143,6 +5158,7 @@ export default function App() {
                       currentUser={currentUser}
                       tournamentPredictions={tournamentPredictions}
                       tournamentOutcomes={tournamentOutcomes}
+                      canSave={canSaveTournamentFavorites}
                       onSave={handleSaveTournamentPredictions}
                     />
                   ) : predictionsMode === "knockout" ? (

@@ -37,6 +37,7 @@ interface Props {
   currentUser: User;
   tournamentPredictions: TournamentPredictions | null;
   tournamentOutcomes: TournamentOutcomes | null;
+  canSave: boolean;
   onSave: (preds: {
     groupWinners: Record<string, string>;
     octavosTeams: string[];
@@ -53,6 +54,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   currentUser,
   tournamentPredictions,
   tournamentOutcomes,
+  canSave,
   onSave
 }) => {
   const t = (es: string, en: string) => (lang === "es" ? es : en);
@@ -125,6 +127,10 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   };
 
   const handleSave = async () => {
+    if (!canSave) {
+      setMsg({ text: t("Puedes visualizar favoritos, pero necesitas pago confirmado o empresa para guardarlos.", "You can view favorites, but need confirmed payment or company access to save them."), type: "error" });
+      return;
+    }
     if (isLocked) {
       setMsg({ text: t("Las predicciones ya cerraron.", "Predictions have closed."), type: "error" });
       return;
@@ -784,11 +790,11 @@ export const TournamentPredictionsView: React.FC<Props> = ({
           {!isLocked ? (
             <button
               onClick={handleSave}
-              disabled={saving}
-              className="bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2"
+              disabled={saving || !canSave}
+              className="bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               <Trophy className="w-4 h-4" />
-              {saving ? t("Guardando...", "Saving...") : t("Guardar Favoritos", "Save Favorites")}
+              {saving ? t("Guardando...", "Saving...") : canSave ? t("Guardar Favoritos", "Save Favorites") : t("Solo visualizar", "View only")}
             </button>
           ) : (
             <span className="text-xs text-rose-600 font-bold uppercase tracking-wider bg-rose-50 px-3 py-2 border border-rose-200 rounded-xl">

@@ -2358,6 +2358,10 @@ function canSubmitPredictions(user: User) {
   return user.role === "admin" || user.role === "superadmin" || user.role === "company_admin" || Boolean(user.companyId) || user.paymentStatus === "paid";
 }
 
+function canSubmitTournamentFavorites(user: User) {
+  return user.role === "admin" || user.role === "superadmin" || user.role === "company_admin" || Boolean(user.companyId) || user.paymentStatus === "paid";
+}
+
 const COUNTRY_ALIASES: Record<string, string> = {
   CO: "Colombia",
   COL: "Colombia",
@@ -3868,7 +3872,9 @@ app.get("/api/tournament-predictions", (req, res) => {
 app.post("/api/tournament-predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
-  if (requirePaidParticipant(user, res)) return;
+  if (!canSubmitTournamentFavorites(user)) {
+    return res.status(402).json({ error: "Debes tener pago confirmado o pertenecer a una empresa para guardar favoritos del torneo." });
+  }
 
   const now = Date.now();
   if (now > TOURNAMENT_PREDICTIONS_LOCK_TIME) {
