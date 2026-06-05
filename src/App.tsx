@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Trophy,
+  Award,
   Users,
   Calendar,
   BarChart3,
@@ -1597,6 +1598,7 @@ export default function App() {
   const [accountSection, setAccountSection] = useState<"profile" | "avatar" | "preferences" | "security" | "session">("profile");
   const [aboutPollonOpen, setAboutPollonOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [torneo, setTorneo] = useState<TorneoConfig | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [knockoutFixtures, setKnockoutFixtures] = useState<KnockoutFixture[]>([]);
@@ -3704,6 +3706,7 @@ export default function App() {
             {[
               { key: "dashboard", label: "Resumen", icon: BarChart3 },
               { key: "predictions", label: "Mis Pronósticos", icon: Calendar },
+              { key: "favorites", label: "Favoritos", icon: Trophy },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "Clasificación", icon: Trophy },
               { key: "rules-prizes", label: "Premios", icon: Info },
@@ -3722,7 +3725,12 @@ export default function App() {
                   key={item.key}
                   type="button"
                   onClick={() => {
-                    setActiveTab(item.key);
+                    if (item.key === "favorites") {
+                      setActiveTab("predictions");
+                      setPredictionsMode("favorites");
+                    } else {
+                      setActiveTab(item.key);
+                    }
                     setMobileMenuOpen(false);
                   }}
                   className={`min-h-12 rounded-xl px-3 flex items-center gap-2 text-left text-xs font-black transition-colors ${
@@ -4015,6 +4023,16 @@ export default function App() {
                   <span className="hidden md:block text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-2 pb-1 uppercase tracking-wider">{t("menu_user", "Menú Usuario")}</span>
                   
                   <button
+                    type="button"
+                    onClick={() => { setOnboardingOpen(true); setMobileMenuOpen(false); }}
+                    className="flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors text-slate-950 md:text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900"
+                  >
+                    <span className="md:hidden" aria-hidden="true">?</span>
+                    <Info className="hidden md:block w-4 h-4 shrink-0" />
+                    <span>Como jugar</span>
+                  </button>
+
+                  <button
                     onClick={() => { setActiveTab("dashboard"); setMobileMenuOpen(false); }}
                     className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "dashboard" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
@@ -4025,13 +4043,23 @@ export default function App() {
                   </button>
 
                   <button
-                    onClick={() => { setActiveTab("predictions"); setMobileMenuOpen(false); }}
+                    onClick={() => { setActiveTab("predictions"); setPredictionsMode("matches"); setMobileMenuOpen(false); }}
                     className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "predictions" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">🌐</span>
                     <Calendar className="hidden md:block w-4 h-4 shrink-0" />
                     <span className="md:hidden">Mis Pronósticos</span>
                     <span className="hidden md:inline">{t("tab_predictions", "Calendario & Pronósticos")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab("predictions"); setPredictionsMode("favorites"); setMobileMenuOpen(false); }}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "predictions" && predictionsMode === "favorites" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <span className="md:hidden" aria-hidden="true">★</span>
+                    <Trophy className="hidden md:block w-4 h-4 shrink-0" />
+                    <span>Favoritos del Torneo</span>
                   </button>
 
                   <button
@@ -4553,13 +4581,20 @@ export default function App() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-3 gap-2 text-xs">
                       <button
                         type="button"
                         onClick={() => setActiveTab("predictions")}
                         className="min-h-12 rounded-xl bg-emerald-500 text-emerald-950 font-black shadow-sm"
                       >
                         Pronosticar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOnboardingOpen(true)}
+                        className="min-h-12 rounded-xl bg-white/10 border border-white/10 text-white font-black"
+                      >
+                        Como jugar
                       </button>
                       <button
                         type="button"
@@ -7564,6 +7599,99 @@ export default function App() {
                   {torneo.popupCtaLabel}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {onboardingOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-6"
+          onMouseDown={() => setOnboardingOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-2xl max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-title"
+          >
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+              <div className="flex items-start gap-3">
+                <span className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                  <Info className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 id="onboarding-title" className="text-base font-black text-slate-950 dark:text-white">Como se juega El Pollon</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Guia rapida para empezar sin perderse</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOnboardingOpen(false)}
+                className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
+                aria-label="Cerrar guia"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { icon: UserPlus, title: "1. Crea tu cuenta", text: "Registrate con nombre, correo, pais y avatar. Si vienes por una empresa, entra desde el enlace de invitacion." },
+                  { icon: CreditCard, title: "2. Activa tu acceso", text: "Los usuarios pagos participan por premios en dinero. Los invitados de empresa participan en su ranking empresarial." },
+                  { icon: Calendar, title: "3. Pronostica partidos", text: "En Mis Pronosticos escribe el marcador antes del cierre. Cada partido se bloquea 5 minutos antes de empezar." },
+                  { icon: Trophy, title: "4. Elige favoritos", text: "Marca campeon, subcampeon, finalistas, clasificados y ganadores de grupo. Los usuarios free pueden ver, pero no guardar." },
+                  { icon: BarChart3, title: "5. Sigue el ranking", text: "Cada resultado recalcula puntos, posiciones, aciertos exactos y avance dentro de la tabla." },
+                  { icon: Award, title: "6. Revisa premios", text: "Consulta reglas, bolsa acumulada, premiaciones de empresa y condiciones de entrega." }
+                ].map((step) => {
+                  const Icon = step.icon;
+                  return (
+                    <div key={step.title} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
+                      <div className="flex items-start gap-3">
+                        <span className="w-9 h-9 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                          <Icon className="w-4 h-4" />
+                        </span>
+                        <div>
+                          <h4 className="text-xs font-black text-slate-950 dark:text-white">{step.title}</h4>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{step.text}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200">
+                <p className="font-black">Mensaje corto para compartir:</p>
+                <p className="mt-1 leading-relaxed">Entra, registrate, paga o usa tu invitacion de empresa, luego ve a Mis Pronosticos para poner marcadores y favoritos del torneo antes de que cierren.</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 sm:flex sm:justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => { setOnboardingOpen(false); setActiveTab("rules-prizes"); }}
+                className="min-h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-black text-slate-700 dark:text-slate-200"
+              >
+                Ver reglas
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOnboardingOpen(false); setActiveTab("participate"); }}
+                className="min-h-11 px-4 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black text-amber-800"
+              >
+                Pagar / acceso
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOnboardingOpen(false); setActiveTab("predictions"); setPredictionsMode("favorites"); }}
+                className="min-h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black"
+              >
+                Ir a favoritos
+              </button>
             </div>
           </div>
         </div>
