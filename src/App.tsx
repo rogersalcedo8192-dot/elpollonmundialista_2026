@@ -3704,6 +3704,7 @@ export default function App() {
         >
           <div className="px-4 py-3 grid grid-cols-2 gap-2">
             {[
+              { key: "how-to-play", label: "¿Cómo Jugar?", icon: Info },
               { key: "dashboard", label: "Resumen", icon: BarChart3 },
               { key: "predictions", label: "Mis Pronósticos", icon: Calendar },
               { key: "favorites", label: "Favoritos", icon: Trophy },
@@ -3725,7 +3726,9 @@ export default function App() {
                   key={item.key}
                   type="button"
                   onClick={() => {
-                    if (item.key === "favorites") {
+                    if (item.key === "how-to-play") {
+                      setOnboardingOpen(true);
+                    } else if (item.key === "favorites") {
                       setActiveTab("predictions");
                       setPredictionsMode("favorites");
                     } else {
