@@ -326,6 +326,18 @@ function buildEmailLayout(title: string, bodyHtml: string, cta?: { label: string
   </div>`;
 }
 
+function formatEmailMessage(message: string) {
+  return escapeHtml(message)
+    .split(/\n{2,}/)
+    .map((block) => {
+      const formattedBlock = block
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br>");
+      return `<p style="font-size:15px;line-height:1.7;margin:0 0 16px">${formattedBlock}</p>`;
+    })
+    .join("");
+}
+
 async function sendEmail(to: string, subject: string, html: string, text?: string) {
   const normalizedTo = to.trim().toLowerCase();
   if (!isEmailEnabled()) {
@@ -370,8 +382,8 @@ function sendWelcomeEmail(user: User, torneo: TorneoConfig) {
   const message = torneo.welcomeMessage || "Bienvenido a la Polla Mundialista FIFA 2026.";
   const hasPredictionAccess = APP_MODE === "FREE" || Boolean(user.companyId) || user.paymentStatus === "paid";
   const accessMessage = hasPredictionAccess
-    ? "Ya puedes entrar, revisar el calendario y registrar tus pronosticos antes del cierre de cada partido."
-    : "Tu cuenta ya fue creada. Para registrar pronosticos y competir oficialmente debes completar el pago de la inscripcion, salvo que recibas una invitacion de un administrador de empresa.";
+    ? "Ya puedes entrar, revisar el calendario y registrar tus pronósticos antes del cierre de cada partido."
+    : "Tu cuenta ya fue creada. Para registrar pronósticos y competir oficialmente debes completar el pago de la inscripción, salvo que recibas una invitación de un administrador de empresa.";
 
   return sendEmail(
     user.email,
@@ -410,7 +422,7 @@ function sendEventEmail(user: User, subject: string, title: string, message: str
     subject,
     buildEmailLayout(
       title,
-      `<p style="font-size:15px;line-height:1.6;margin:0">${escapeHtml(message)}</p>`,
+      formatEmailMessage(message),
       appLink() ? { label: "Ver en la plataforma", href: appLink() } : undefined
     ),
     message
@@ -447,7 +459,7 @@ async function sendBulkEventEmails(
       to: user.email
     }));
 
-    if (result?.skipped) summary.skipped += 1;
+    if ("skipped" in result && result.skipped) summary.skipped += 1;
     else if (result?.ok) summary.sent += 1;
     else {
       summary.failed += 1;
@@ -647,7 +659,7 @@ function markUserAsPaid(user: User, session: any, provider: "stripe" | "wompi" =
       user,
       "Inscripcion confirmada",
       "Pago confirmado",
-      "Tu inscripcion fue confirmada. Ya puedes registrar pronosticos y competir oficialmente en El Pollon Mundialista.",
+      "Tu inscripción fue confirmada. Ya puedes registrar pronósticos y competir oficialmente en El Pollón Mundialista.",
       true
     );
   }
@@ -2407,7 +2419,7 @@ function canManageAnnouncement(user: User | null, announcement: Announcement) {
 
 function requirePaidParticipant(user: User, res: express.Response) {
   if (canSubmitPredictions(user)) return false;
-  res.status(402).json({ error: "Debes pagar la inscripcion antes de registrar pronosticos." });
+  res.status(402).json({ error: "Debes pagar la inscripción antes de registrar pronósticos." });
   return true;
 }
 
@@ -2557,7 +2569,7 @@ app.post("/api/auth/register", (req, res) => {
   const successDb = loadDb();
   const welcomeAccessMessage = APP_MODE === "FREE" || Boolean(newUser.companyId) || newUser.paymentStatus === "paid"
     ? successDb.torneo.welcomeMessage || "Bienvenido a la Polla Mundialista FIFA 2026."
-    : "Tu cuenta fue creada. Completa el pago de la inscripcion para registrar pronosticos, salvo que ingreses por invitacion de una empresa.";
+    : "Tu cuenta fue creada. Completa el pago de la inscripción para registrar pronósticos, salvo que ingreses por invitación de una empresa.";
   successDb.notifications.push({
     id: `not_welcome_${Date.now()}_${newUser.id}`,
     userId: newUser.id,
@@ -2788,7 +2800,7 @@ app.post("/api/companies/:id/invitations", (req, res) => {
   if (!canManageCompany(user, req.params.id)) return res.status(403).json({ error: "No autorizado para invitar en esta empresa." });
   const company = (db.companies || []).find((item) => item.id === req.params.id);
   if (!company) return res.status(404).json({ error: "Empresa no encontrada." });
-  if (company.status === "suspended") return res.status(400).json({ error: "La empresa esta suspendida. Activa la empresa antes de generar invitaciones." });
+  if (company.status === "suspended") return res.status(400).json({ error: "La empresa está suspendida. Activa la empresa antes de generar invitaciones." });
   if (!assertCompanyCapacity(db, req.params.id, res)) return;
   const playersCount = getCompanyPlayers(db, company.id).length;
   const availableSlots = Math.max(company.maxPlayers - playersCount, 0);
@@ -2806,7 +2818,7 @@ app.post("/api/companies/:id/invitations", (req, res) => {
   saveDb(db);
   const origin = getRequestOrigin(req);
   res.json({
-    message: `Enlace de invitacion creado. Puedes compartirlo con hasta ${availableSlots} usuarios disponibles de ${company.maxPlayers} cupos de la empresa.`,
+    message: `Enlace de invitación creado. Puedes compartirlo con hasta ${availableSlots} usuarios disponibles de ${company.maxPlayers} cupos de la empresa.`,
     invitation,
     url: `${origin}/?invite=${encodeURIComponent(token)}`,
     playersCount,
@@ -2858,8 +2870,8 @@ app.post("/api/payments/create-checkout-session", async (req, res) => {
   const realUpgrade = req.body?.realUpgrade === true;
   const hasPaymentProviderRecord = hasRealPaymentRecord(user);
   if (APP_MODE === "FREE" && !realUpgrade) return res.status(400).json({ error: "La plataforma esta en modo gratuito. No se requiere pago." });
-  if (user.role === "admin" || user.role === "superadmin") return res.status(400).json({ error: "El administrador no necesita pagar inscripcion." });
-  if (user.paymentStatus === "paid" && hasPaymentProviderRecord) return res.status(400).json({ error: "Tu inscripcion ya esta pagada." });
+  if (user.role === "admin" || user.role === "superadmin") return res.status(400).json({ error: "El administrador no necesita pagar inscripción." });
+  if (user.paymentStatus === "paid" && hasPaymentProviderRecord) return res.status(400).json({ error: "Tu inscripción ya está pagada." });
 
   const origin = getRequestOrigin(req);
 
@@ -4023,7 +4035,7 @@ app.post("/api/announcements", async (req, res) => {
         id: `not_company_ann_${Date.now()}_${u.id}`,
         userId: u.id,
         title: urgent ? "Comunicado urgente de tu empresa" : "Nuevo comunicado de tu empresa",
-        message: `Tu empresa publico un comunicado: "${title}". Revisalo en el tablero de avisos.`,
+        message: `Tu empresa publicó un comunicado: "${title}". Revísalo en el tablero de avisos.`,
         type: "announcement",
         date: new Date().toISOString(),
         read: false
@@ -4033,7 +4045,7 @@ app.post("/api/announcements", async (req, res) => {
   } else if (!isScheduledInFuture && db.torneo.notificationConfig.announcements) {
     const emailPayloads = new Map<string, { subject: string; title: string; message: string }>();
     db.users.forEach((u) => {
-      const announcementMessage = `El administrador ha publicado un anuncio: "${title}". Consultalo en la seccion de anuncios.`;
+      const announcementMessage = `El administrador ha publicado un anuncio: "${title}". Consúltalo en la sección de anuncios.`;
       db.notifications.push({
         id: `not_ann_${Date.now()}_${u.id}`,
         userId: u.id,
@@ -4046,7 +4058,7 @@ app.post("/api/announcements", async (req, res) => {
       emailPayloads.set(u.id, {
         subject: urgent ? `Urgente: ${title}` : `Nuevo comunicado: ${title}`,
         title: urgent ? "Comunicado Urgente" : "Nuevo Comunicado",
-        message: `${title}\n\n${content}`
+        message: content
       });
     });
     saveDb(db);

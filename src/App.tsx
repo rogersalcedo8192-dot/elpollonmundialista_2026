@@ -2676,8 +2676,8 @@ export default function App() {
         headers: getHeaders()
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No se pudo crear la invitacion.");
-      await copyTextToClipboard(data.url, `Enlace copiado. Compartelo con tus jugadores; quedan ${data.availableSlots || 0} cupos disponibles.`);
+      if (!res.ok) throw new Error(data.error || "No se pudo crear la invitación.");
+      await copyTextToClipboard(data.url, `Enlace copiado. Compártelo con tus jugadores; quedan ${data.availableSlots || 0} cupos disponibles.`);
       fetchCompanies();
       fetchCompanyDetails(selectedCompanyId);
       fetchCompanyRanking(selectedCompanyId);
@@ -4032,7 +4032,7 @@ export default function App() {
                   >
                     <span className="md:hidden" aria-hidden="true">?</span>
                     <Info className="hidden md:block w-4 h-4 shrink-0" />
-                    <span>Como jugar</span>
+                    <span>Cómo jugar</span>
                   </button>
 
                   <button
@@ -4597,7 +4597,7 @@ export default function App() {
                         onClick={() => setOnboardingOpen(true)}
                         className="min-h-12 rounded-xl bg-white/10 border border-white/10 text-white font-black"
                       >
-                        Como jugar
+                        Cómo jugar
                       </button>
                       <button
                         type="button"
@@ -6210,9 +6210,9 @@ export default function App() {
 
                       {selectedCompanyId && (
                         <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50 text-xs text-emerald-900">
-                          <h3 className="font-black">Como usar el enlace</h3>
+                          <h3 className="font-black">Cómo usar el enlace</h3>
                           <p className="mt-1 leading-relaxed">
-                            Copia el enlace y envialo por WhatsApp, correo o chat interno. Cada jugador debe abrirlo, crear su cuenta y quedara asociado automaticamente a esta empresa. El enlace deja de aceptar registros cuando la empresa llega a {companyInviteSlots.maxPlayers} jugadores.
+                            Copia el enlace y envíalo por WhatsApp, correo o chat interno. Cada jugador debe abrirlo, crear su cuenta y quedará asociado automáticamente a esta empresa. El enlace deja de aceptar registros cuando la empresa llega a {companyInviteSlots.maxPlayers} jugadores.
                           </p>
                         </div>
                       )}
@@ -6252,7 +6252,7 @@ export default function App() {
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => copyTextToClipboard(getCompanyInvitationUrl(inv), "Enlace de invitacion copiado. Compartelo con los jugadores de la empresa.")}
+                                  onClick={() => copyTextToClipboard(getCompanyInvitationUrl(inv), "Enlace de invitación copiado. Compártelo con los jugadores de la empresa.")}
                                   className="min-h-9 w-full rounded-lg bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 font-black flex items-center justify-center gap-2"
                                 >
                                   <Copy className="w-3.5 h-3.5" />
@@ -6762,7 +6762,7 @@ export default function App() {
 
                   {isCompanyAdminUser && (
                     <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-800">
-                      Estos comunicados solo se notifican dentro de la plataforma a los usuarios de tu empresa. No se envian correos.
+                      Estos comunicados solo se notifican dentro de la plataforma a los usuarios de tu empresa. No se envían correos.
                     </div>
                   )}
 
@@ -6887,7 +6887,7 @@ export default function App() {
                   </div>
 
                   <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-xs text-slate-600 dark:text-slate-400">
-                    Los archivos se guardan fisicamente en <strong>assets/assets</strong> y quedan registrados en la base actual <strong>db_store.json</strong>. La URL publica sirve para referenciarlos desde reglas, comunicados o futuras secciones.
+                    Los archivos se guardan físicamente en <strong>assets/assets</strong> y quedan registrados en la base actual <strong>db_store.json</strong>. La URL pública sirve para referenciarlos desde reglas, comunicados o futuras secciones.
                   </div>
 
                   {uploadedAssets.length === 0 ? (
@@ -7152,7 +7152,7 @@ export default function App() {
                             <input type="text" className="w-full bg-white border rounded p-2" placeholder="Texto del boton" value={torneo.popupCtaLabel || ""} onChange={(e) => setTorneo({ ...torneo, popupCtaLabel: e.target.value })} />
                             <select className="w-full bg-white border rounded p-2" value={torneo.popupCtaTab || "rules-prizes"} onChange={(e) => setTorneo({ ...torneo, popupCtaTab: e.target.value })}>
                               <option value="dashboard">Resumen</option>
-                              <option value="predictions">Mis Pronosticos</option>
+                              <option value="predictions">Mis Pronósticos</option>
                               <option value="participate">Partidos</option>
                               <option value="ranking">Clasificacion</option>
                               <option value="rules-prizes">Premios</option>
@@ -7438,7 +7438,7 @@ export default function App() {
                 </span>
                 <div>
                   <h3 className="text-base font-black text-slate-950 dark:text-white">{authT("auth_choose_avatar")}</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Elige como quieres aparecer en el ranking.</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Elige cómo quieres aparecer en el ranking.</p>
                 </div>
               </div>
               <button
@@ -7626,8 +7626,8 @@ export default function App() {
                   <Info className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 id="onboarding-title" className="text-base font-black text-slate-950 dark:text-white">Como se juega El Pollon</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Guia rapida para empezar sin perderse</p>
+                  <h3 id="onboarding-title" className="text-base font-black text-slate-950 dark:text-white">Cómo se juega El Pollón</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Guía rápida para empezar sin perderse</p>
                 </div>
               </div>
               <button
@@ -7643,10 +7643,10 @@ export default function App() {
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
-                  { icon: UserPlus, title: "1. Crea tu cuenta", text: "Registrate con nombre, correo, pais y avatar. Si vienes por una empresa, entra desde el enlace de invitacion." },
+                  { icon: UserPlus, title: "1. Crea tu cuenta", text: "Regístrate con nombre, correo, país y avatar. Si vienes por una empresa, entra desde el enlace de invitación." },
                   { icon: CreditCard, title: "2. Activa tu acceso", text: "Los usuarios pagos participan por premios en dinero. Los invitados de empresa participan en su ranking empresarial." },
-                  { icon: Calendar, title: "3. Pronostica partidos", text: "En Mis Pronosticos escribe el marcador antes del cierre. Cada partido se bloquea 5 minutos antes de empezar." },
-                  { icon: Trophy, title: "4. Elige favoritos", text: "Marca campeon, subcampeon, finalistas, clasificados y ganadores de grupo. Los usuarios free pueden ver, pero no guardar." },
+                  { icon: Calendar, title: "3. Pronostica partidos", text: "En Mis Pronósticos escribe el marcador antes del cierre. Cada partido se bloquea 5 minutos antes de empezar." },
+                  { icon: Trophy, title: "4. Elige favoritos", text: "Marca campeón, subcampeón, finalistas, clasificados y ganadores de grupo. Los usuarios free pueden ver, pero no guardar." },
                   { icon: BarChart3, title: "5. Sigue el ranking", text: "Cada resultado recalcula puntos, posiciones, aciertos exactos y avance dentro de la tabla." },
                   { icon: Award, title: "6. Revisa premios", text: "Consulta reglas, bolsa acumulada, premiaciones de empresa y condiciones de entrega." }
                 ].map((step) => {
@@ -7669,7 +7669,7 @@ export default function App() {
 
               <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200">
                 <p className="font-black">Mensaje corto para compartir:</p>
-                <p className="mt-1 leading-relaxed">Entra, registrate, paga o usa tu invitacion de empresa, luego ve a Mis Pronosticos para poner marcadores y favoritos del torneo antes de que cierren.</p>
+                <p className="mt-1 leading-relaxed">Entra, regístrate, paga o usa tu invitación de empresa, luego ve a Mis Pronósticos para poner marcadores y favoritos del torneo antes de que cierren.</p>
               </div>
             </div>
 

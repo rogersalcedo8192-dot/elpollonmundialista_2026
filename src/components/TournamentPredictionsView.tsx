@@ -277,10 +277,10 @@ export const TournamentPredictionsView: React.FC<Props> = ({
       </div>
 
       {/* Internal navigation section headers */}
-      <div className="flex gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-px">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-px">
         <button
           onClick={() => setSubTab("groups")}
-          className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px ${
+          className={`w-full px-3 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px ${
             subTab === "groups"
               ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 font-black"
               : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
@@ -290,7 +290,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
         </button>
         <button
           onClick={() => setSubTab("knockouts")}
-          className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px ${
+          className={`w-full px-3 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px ${
             subTab === "knockouts"
               ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 font-black"
               : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
@@ -300,13 +300,13 @@ export const TournamentPredictionsView: React.FC<Props> = ({
         </button>
         <button
           onClick={() => setSubTab("podium")}
-          className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px ${
+          className={`w-full px-3 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px ${
             subTab === "podium"
               ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 font-black"
               : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
           }`}
         >
-          {t("3. Gran Final & Campeón", "3. Grand Final & Champion")}
+          {t("3. Finalistas y Campeón", "3. Finalists & Champion")}
         </button>
       </div>
 

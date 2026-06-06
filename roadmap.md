@@ -23,6 +23,8 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Panel admin para usuarios, partidos, resultados, comunicados, assets, banners y configuracion.
 - Banners dinamicos con rotacion y enlace.
 - Notificaciones internas para recordatorios, resultados, ranking y comunicados.
+- Comunicados por correo con negrillas y saltos de línea.
+- Navegación responsive de favoritos con acceso visible a finalistas y campeón para todos los roles.
 - Integracion de pagos configurable: Wompi Web Checkout como proveedor principal y Stripe Checkout como respaldo (`PAYMENT_PROVIDER`).
 - Calculo de bolsa de premios:
   - Inscripcion: USD 5.
