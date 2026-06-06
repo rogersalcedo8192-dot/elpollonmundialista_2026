@@ -3056,12 +3056,30 @@ export default function App() {
     if (match.status !== "pending") return true;
     const matchTime = new Date(match.date).getTime();
     const lockTime = matchTime - 5 * 60 * 1000;
-    return Date.now() >= lockTime;
+    return nowMs >= lockTime;
+  };
+
+  const getMatchClosingCountdown = (match: Match) => {
+    if (match.status === "finished") return "Evento finalizado";
+    if (match.status === "in_progress") return "Evento en curso";
+
+    const lockTime = new Date(match.date).getTime() - 5 * 60 * 1000;
+    const remainingMs = Math.max(lockTime - nowMs, 0);
+    if (remainingMs === 0) return "Cerrado";
+
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const time = [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+
+    return days > 0 ? `${days}d ${time}` : time;
   };
 
   const getMatchTimeRemainingLabel = (match: Match) => {
     const matchTime = new Date(match.date).getTime();
-    const diff = matchTime - Date.now();
+    const diff = matchTime - nowMs;
     if (diff < 0) {
       return match.status === "finished" ? ui("finished") : ui("live_locked");
     }
@@ -5359,7 +5377,7 @@ export default function App() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") setExpandedMatchId(isExpanded ? null : m.id);
                             }}
-                            className={`p-4 transition-colors cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/30 flex flex-col md:flex-row items-center justify-between gap-4 ${isExpanded ? "bg-emerald-50/40 dark:bg-emerald-950/10 ring-1 ring-emerald-200 dark:ring-emerald-900" : ""} ${hasEnded ? "bg-slate-50/20 dark:bg-slate-850/10" : ""}`}
+                            className={`p-4 transition-colors cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/30 flex flex-col md:flex-row md:flex-wrap items-center justify-between gap-4 ${isExpanded ? "bg-emerald-50/40 dark:bg-emerald-950/10 ring-1 ring-emerald-200 dark:ring-emerald-900" : ""} ${hasEnded ? "bg-slate-50/20 dark:bg-slate-850/10" : ""}`}
                           >
                             
                             {/* Match Header stage & details */}
@@ -5536,6 +5554,19 @@ export default function App() {
                                   )}
                                 </div>
                               )}
+                            </div>
+
+                            <div
+                              className={`basis-full w-full pt-3 border-t flex items-center justify-center gap-2 text-xs ${
+                                isLocked
+                                  ? "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400"
+                                  : "border-emerald-100 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300"
+                              }`}
+                              aria-live="off"
+                            >
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              <span className="font-semibold">El evento cierra en:</span>
+                              <span className="font-mono font-black tabular-nums">{getMatchClosingCountdown(m)}</span>
                             </div>
 
                           </div>

@@ -17,6 +17,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Calendario de fase de grupos sincronizado con API externa.
 - Fixture de eliminacion directa separado de los partidos reales de API.
 - Pronosticos por marcador con guardar, actualizar y limpiar.
+- Cuenta regresiva dinámica por evento hasta el cierre de pronósticos.
 - Bloqueo backend/frontend para impedir pronosticos de usuarios sin pago confirmado.
 - Pronosticos especiales de torneo: lideres de grupo, clasificados por fase, finalistas, subcampeon y campeon.
 - Ranking en tiempo real con exportacion CSV.
