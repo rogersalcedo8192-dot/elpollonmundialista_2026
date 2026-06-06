@@ -3265,6 +3265,22 @@ export default function App() {
     if (user.paymentStatus === "paid") return "USUARIO PAGO";
     return "USUARIO FREE";
   };
+  const getAdminUserType = (user: User) => {
+    if (user.role === "superadmin") return { label: "SUPERADMIN", tone: "bg-violet-100 text-violet-800" };
+    if (user.role === "admin") return { label: "ADMINISTRADOR", tone: "bg-indigo-100 text-indigo-800" };
+    if (user.role === "company_admin") return { label: "ADMIN EMPRESA", tone: "bg-sky-100 text-sky-800" };
+    if (user.companyId) return { label: "INVITADO EMPRESA", tone: "bg-cyan-100 text-cyan-800" };
+    if (user.paymentStatus === "paid") return { label: "USUARIO PAGO", tone: "bg-emerald-100 text-emerald-800" };
+    return { label: "USUARIO FREE", tone: "bg-slate-100 text-slate-700" };
+  };
+  const getAdminUserRoleLabel = (user: User) => {
+    if (user.role === "superadmin") return "Superadmin";
+    if (user.role === "admin") return "Administrador";
+    if (user.role === "company_admin") return "Admin empresa";
+    return "Usuario estándar";
+  };
+  const getUserCompanyName = (user: User) =>
+    companies.find((company) => company.id === user.companyId)?.name || (user.companyId ? "Empresa asignada" : "Sin empresa");
   const formatHeaderPoints = (value?: number) => new Intl.NumberFormat("es-CO").format(value || 0);
 
   const unreadNotifications = notifications.filter((n) => !n.read);
@@ -6400,8 +6416,10 @@ export default function App() {
                             value={editingUser.role || "standard"}
                             onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
                           >
-                            <option value="standard">Usuario Estándar</option>
-                            <option value="admin">Administrador 🛠️</option>
+                            <option value="standard">Usuario estándar</option>
+                            {isSuperAdminUser && <option value="company_admin">Admin empresa</option>}
+                            {isSuperAdminUser && <option value="admin">Administrador</option>}
+                            {isSuperAdminUser && <option value="superadmin">Superadmin</option>}
                           </select>
                         </div>
 
@@ -6436,9 +6454,90 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Users audit table layout */}
-                  <div className="bg-white border rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-xs border-collapse">
+                  {/* Mobile user cards */}
+                  <div className="md:hidden space-y-3">
+                    {adminUsers
+                      .filter((u) =>
+                        u.name.toLowerCase().includes(searchUser.toLowerCase()) ||
+                        u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
+                        normalizeCountryName(u.country).toLowerCase().includes(searchUser.toLowerCase()) ||
+                        getCountryShortCode(u.country).toLowerCase().includes(searchUser.toLowerCase())
+                      )
+                      .map((u) => {
+                        const userType = getAdminUserType(u);
+                        return (
+                          <article key={u.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+                            <div className="flex items-start gap-3">
+                              <img src={u.avatar} alt={u.name} className="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-black text-sm text-slate-950 truncate">{u.name}</h3>
+                                <p className="text-[11px] text-slate-500 break-all mt-0.5">{u.email}</p>
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                  <span className={`px-2 py-1 rounded-full text-[9px] font-black ${userType.tone}`}>
+                                    {userType.label}
+                                  </span>
+                                  <span className={`px-2 py-1 rounded-full text-[9px] font-black ${
+                                    u.status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                                  }`}>
+                                    {u.status === "active" ? "ACTIVA" : "SUSPENDIDA"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-[11px]">
+                              <div>
+                                <dt className="font-bold uppercase text-[9px] text-slate-400">Rol</dt>
+                                <dd className="font-bold text-slate-800 mt-0.5">{getAdminUserRoleLabel(u)}</dd>
+                              </div>
+                              <div>
+                                <dt className="font-bold uppercase text-[9px] text-slate-400">País</dt>
+                                <dd className="font-bold text-slate-800 mt-0.5">{getCountryFlag(u.country)} {normalizeCountryName(u.country)}</dd>
+                              </div>
+                              <div>
+                                <dt className="font-bold uppercase text-[9px] text-slate-400">Empresa</dt>
+                                <dd className="font-bold text-slate-800 mt-0.5">{getUserCompanyName(u)}</dd>
+                              </div>
+                              <div>
+                                <dt className="font-bold uppercase text-[9px] text-slate-400">Puntos</dt>
+                                <dd className="font-black text-slate-950 mt-0.5">{u.points}</dd>
+                              </div>
+                            </dl>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => handleLoadUserPredictions(u)}
+                                className="min-h-11 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black"
+                              >
+                                Predicciones ({u.predictCount})
+                              </button>
+                              <button
+                                onClick={() => setEditingUser(u)}
+                                className="min-h-11 px-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 text-[10px] font-black flex items-center justify-center gap-1.5"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" /> Editar
+                              </button>
+                              <button
+                                onClick={() => handleResetUserPassword(u)}
+                                className="min-h-11 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 text-[10px] font-black"
+                              >
+                                Resetear clave
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAdminUser(u.id)}
+                                className="min-h-11 px-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 text-[10px] font-black flex items-center justify-center gap-1.5"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                  </div>
+
+                  {/* Desktop users audit table */}
+                  <div className="hidden md:block bg-white border rounded-xl overflow-x-auto">
+                    <table className="w-full min-w-[1050px] text-left text-xs border-collapse">
                       <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
                         <tr>
                           <th className="py-2.5 px-3">Participante</th>
@@ -6446,6 +6545,7 @@ export default function App() {
                           <th className="py-2.5 px-3">Email</th>
                           <th className="py-2.5 px-3 text-center">Estatus Cuenta</th>
                           <th className="py-2.5 px-3 text-center">Rol</th>
+                          <th className="py-2.5 px-3 text-center">Tipo de usuario</th>
                           <th className="py-2.5 px-3 text-center">Pts</th>
                           <th className="py-2.5 px-3 text-center">Acciones y Reset</th>
                         </tr>
@@ -6458,7 +6558,9 @@ export default function App() {
                             normalizeCountryName(u.country).toLowerCase().includes(searchUser.toLowerCase()) ||
                             getCountryShortCode(u.country).toLowerCase().includes(searchUser.toLowerCase())
                           )
-                          .map((u) => (
+                          .map((u) => {
+                            const userType = getAdminUserType(u);
+                            return (
                             <tr key={u.id} className="hover:bg-slate-50/50">
                               <td className="py-2.5 px-3">
                                 <div className="flex items-center gap-2">
@@ -6480,7 +6582,12 @@ export default function App() {
                                   {u.status === "active" ? "Activa" : "Suspendida"}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-center font-mono font-bold capitalize text-slate-700">{u.role}</td>
+                              <td className="py-2.5 px-3 text-center font-bold text-slate-700">{getAdminUserRoleLabel(u)}</td>
+                              <td className="py-2.5 px-3 text-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-[9px] font-black whitespace-nowrap ${userType.tone}`}>
+                                  {userType.label}
+                                </span>
+                              </td>
                               <td className="py-2.5 px-3 text-center font-black text-slate-950">{u.points}</td>
                               <td className="py-2.5 px-3">
                                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
@@ -6515,7 +6622,8 @@ export default function App() {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>

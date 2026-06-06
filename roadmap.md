@@ -22,6 +22,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Pronosticos especiales de torneo: lideres de grupo, clasificados por fase, finalistas, subcampeon y campeon.
 - Ranking en tiempo real con exportacion CSV.
 - Panel admin para usuarios, partidos, resultados, comunicados, assets, banners y configuracion.
+- Gestión de usuarios responsive con tarjetas móviles y clasificación por tipo de acceso y rol.
 - Banners dinamicos con rotacion y enlace.
 - Notificaciones internas para recordatorios, resultados, ranking y comunicados.
 - Comunicados por correo con negrillas y saltos de línea.
