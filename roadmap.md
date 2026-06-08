@@ -48,14 +48,14 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Cambio incremental de Stripe a Wompi: se conserva Stripe, pero el proveedor activo se controla con `PAYMENT_PROVIDER=wompi|stripe`.
 - Popup administrable desde configuracion global y reinicio de polla con saldos de premio acumulado en cero.
 - Popup administrable con imagen seleccionable desde biblioteca de assets.
-- Popup administrable ahora se muestra de nuevo al ingresar mientras el admin lo mantenga activo; ya no queda limitado a una sola visualizacion por usuario.
+- Popup administrable se muestra en la visita publica inicial antes de login/registro y se oculta en la experiencia autenticada.
 - Empresas muestran premios como texto informativo desde su propio Libro de Premiaciones.
 - Reglas y Premiaciones separa politicas de premios en dinero y politicas de premios de empresa:
   - Usuarios FREE invitados por superadmin pueden ver las politicas de premios en dinero.
   - Usuarios invitados de empresa ven las politicas de premios de su empresa.
   - Usuarios de empresa que tambien pagan la Polla REAL pueden ver ambas politicas.
   - Admin empresa ve la politica de su empresa y, si participa pagando, tambien la politica de la bolsa en dinero.
-- Inicio predeterminado de usuarios autenticados en Reglas y Premiaciones, con avisos visibles de "Premios para usuarios pagos" cuando aparecen valores de dinero.
+- Inicio predeterminado de usuarios autenticados en Mis Pronosticos para que el flujo de participacion y pago sea evidente.
 - Perfil de usuario reorganizado como menu de configuracion: datos de perfil, avatar/imagen, idioma, tema, sonido, cambio de contrasena, ultima vez de inicio de sesion y cierre de sesion.
 - Cierre de sesion movido a configuracion de usuario, fuera del menu hamburguesa y del boton directo del header.
 - Invitaciones de empresa reutilizables: un enlace sirve para registrar multiples jugadores hasta completar el cupo maximo de la empresa, actualmente limitado a 50.

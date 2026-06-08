@@ -1590,10 +1590,11 @@ export default function App() {
     `$${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(value || 0)}`;
   const formatEntryFeeLabel = (value?: number) => `${formatCop(value || 20000)} pesos`;
 
-  const [activeTab, setActiveTab] = useState<string>("rules-prizes");
+  const [activeTab, setActiveTab] = useState<string>("predictions");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
   const [rulesFlyerPreviewLang, setRulesFlyerPreviewLang] = useState<"es" | "en">("es");
   const [managedPopupOpen, setManagedPopupOpen] = useState(false);
+  const [publicManagedPopupShown, setPublicManagedPopupShown] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [accountSection, setAccountSection] = useState<"profile" | "avatar" | "preferences" | "security" | "session">("profile");
   const [aboutPollonOpen, setAboutPollonOpen] = useState(false);
@@ -2134,14 +2135,20 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    openManagedPopupIfNeeded(torneo, currentUser?.id);
+    if (currentUser) {
+      setManagedPopupOpen(false);
+      return;
+    }
+    if (publicManagedPopupShown) return;
+    openPublicManagedPopupIfNeeded(torneo);
   }, [
     torneo?.popupEnabled,
     torneo?.popupTitle,
     torneo?.popupMessage,
     torneo?.popupImageUrl,
     torneo?.popupCtaLabel,
-    currentUser?.id
+    currentUser?.id,
+    publicManagedPopupShown
   ]);
 
   useEffect(() => {
@@ -2235,7 +2242,7 @@ export default function App() {
       localStorage.setItem("polla_user_session", JSON.stringify(data.user));
       setCurrentUser(data.user);
       recordUserLogin(data.user);
-      setActiveTab("rules-prizes");
+      setActiveTab("predictions");
       showToast(`¡Bienvenido de nuevo, ${data.user.name}!`, "success");
       setAuthPassword("");
     } catch (err: any) {
@@ -2280,8 +2287,7 @@ export default function App() {
       localStorage.setItem("polla_user_session", JSON.stringify(data.user));
       setCurrentUser(data.user);
       recordUserLogin(data.user);
-      setActiveTab("rules-prizes");
-      openManagedPopupIfNeeded(torneo, data.user.id);
+      setActiveTab("predictions");
       showToast(`¡Tu cuenta ha sido creada y registrada! Bienvenido, ${data.user.name}.`, "success");
       setAuthPassword("");
       setAuthConfirmPassword("");
@@ -3288,9 +3294,9 @@ export default function App() {
   const sidebarBanners = sponsorBanners.filter((banner) => banner.placement === "sidebar");
   const rulesBanners = sponsorBanners.filter((banner) => banner.placement === "rules");
 
-  const openManagedPopupIfNeeded = (popupTorneo: TorneoConfig | null, userId?: string) => {
-    if (!userId) return;
+  const openPublicManagedPopupIfNeeded = (popupTorneo: TorneoConfig | null) => {
     if (!hasManagedPopupContent(popupTorneo)) return;
+    setPublicManagedPopupShown(true);
     setManagedPopupOpen(true);
   };
 
@@ -3299,8 +3305,16 @@ export default function App() {
   };
 
   const handleManagedPopupCta = () => {
+    if (!currentUser) {
+      setManagedPopupOpen(false);
+      return;
+    }
     setActiveTab(torneo?.popupCtaTab || "dashboard");
     setManagedPopupOpen(false);
+  };
+
+  const handlePublicRegisterClick = () => {
+    setAuthMode("register");
   };
 
   useEffect(() => {
@@ -3974,7 +3988,7 @@ export default function App() {
                 {authMode === "login" ? (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {authT("auth_no_account")}{" "}
-                    <button type="button" onClick={() => setAuthMode("register")} className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer">
+                    <button type="button" onClick={handlePublicRegisterClick} className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer">
                       {authT("auth_btn_register_now")}
                     </button>
                   </p>
