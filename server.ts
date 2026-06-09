@@ -70,7 +70,7 @@ interface Company {
   prizesText?: string;
   adminId?: string;
   maxPlayers: number;
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "pending_activation";
   createdAt: string;
 }
 
@@ -244,6 +244,7 @@ const FOOTBALL_DATA_SOURCE = "football-data.org";
 const APP_MODE = (process.env.APP_MODE || "PAID").toUpperCase() === "FREE" ? "FREE" : "PAID";
 const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "stripe").toLowerCase() === "wompi" ? "wompi" : "stripe";
 const DEFAULT_COMPANY_MAX_PLAYERS = 50;
+const GROUP_POOL_ACTIVATION_DELAY_MS = 5 * 60 * 1000;
 const ENTRY_FEE_COP = 20000;
 const ENTRY_FEE_COP_CENTS = ENTRY_FEE_COP * 100;
 const WOMPI_CURRENCY = (process.env.WOMPI_CURRENCY || "COP").toUpperCase();
@@ -532,6 +533,29 @@ function makeSlug(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+function getSelfManagedCompany(db: DatabaseSchema, user: User) {
+  return (db.companies || []).find((company) => company.adminId === user.id || company.id === user.companyId);
+}
+
+function activateSelfManagedCompanyIfReady(db: DatabaseSchema, user: User) {
+  const company = getSelfManagedCompany(db, user);
+  if (!company || company.status !== "pending_activation") {
+    return { company, activated: false, remainingMs: 0 };
+  }
+
+  const elapsedMs = Date.now() - new Date(company.createdAt).getTime();
+  const remainingMs = Math.max(GROUP_POOL_ACTIVATION_DELAY_MS - elapsedMs, 0);
+  if (remainingMs > 0) return { company, activated: false, remainingMs };
+
+  company.status = "active";
+  user.role = "company_admin";
+  user.companyId = company.id;
+  user.paymentStatus = "paid";
+  user.paidAt = user.paidAt || new Date().toISOString();
+  saveDb(db);
+  return { company, activated: true, remainingMs: 0 };
 }
 
 function getCompanyPlayers(db: DatabaseSchema, companyId: string) {
@@ -2680,6 +2704,93 @@ app.post("/api/auth/recover-password", async (req, res) => {
   saveDb(db);
 
   res.json({ message: "Te enviamos una clave temporal a tu correo y registramos una alerta en tu panel." });
+});
+
+app.get("/api/group-pools/status", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const db = loadDb();
+  const dbUser = db.users.find((item) => item.id === user.id);
+  if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
+
+  const result = activateSelfManagedCompanyIfReady(db, dbUser);
+  const company = result.company;
+  const { password: _, ...cleanUser } = dbUser;
+
+  if (!company) {
+    return res.json({ status: "none", user: cleanUser });
+  }
+
+  res.json({
+    status: company.status === "pending_activation" ? "pending" : company.status,
+    company,
+    remainingSeconds: Math.ceil(result.remainingMs / 1000),
+    user: cleanUser
+  });
+});
+
+app.post("/api/group-pools", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (isSuperAdmin(user)) return res.status(400).json({ error: "Los administradores globales ya pueden crear y gestionar grupos." });
+
+  const db = loadDb();
+  const dbUser = db.users.find((item) => item.id === user.id);
+  if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
+
+  const existingResult = activateSelfManagedCompanyIfReady(db, dbUser);
+  if (existingResult.company) {
+    const { password: _, ...cleanUser } = dbUser;
+    return res.status(existingResult.company.status === "pending_activation" ? 202 : 409).json({
+      status: existingResult.company.status === "pending_activation" ? "pending" : existingResult.company.status,
+      company: existingResult.company,
+      remainingSeconds: Math.ceil(existingResult.remainingMs / 1000),
+      user: cleanUser,
+      message: existingResult.company.status === "pending_activation"
+        ? "Tu solicitud ya está en proceso de configuración."
+        : "Tu usuario ya tiene una polla grupal asignada."
+    });
+  }
+
+  if (dbUser.companyId || dbUser.role === "company_admin") {
+    return res.status(409).json({ error: "Tu usuario ya pertenece o administra una polla grupal." });
+  }
+
+  const name = String(req.body?.name || "").trim();
+  if (name.length < 3 || name.length > 80) {
+    return res.status(400).json({ error: "El nombre del grupo debe tener entre 3 y 80 caracteres." });
+  }
+
+  const baseSlug = makeSlug(name);
+  if (!baseSlug) return res.status(400).json({ error: "El nombre del grupo no permite crear un identificador válido." });
+  let companySlug = baseSlug;
+  let suffix = 2;
+  while ((db.companies || []).some((company) => company.slug === companySlug)) {
+    companySlug = `${baseSlug.slice(0, 54)}-${suffix}`;
+    suffix += 1;
+  }
+
+  const company: Company = {
+    id: `company-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    slug: companySlug,
+    adminId: dbUser.id,
+    maxPlayers: DEFAULT_COMPANY_MAX_PLAYERS,
+    status: "pending_activation",
+    createdAt: new Date().toISOString()
+  };
+  db.companies = db.companies || [];
+  db.companies.push(company);
+  saveDb(db);
+
+  const { password: _, ...cleanUser } = dbUser;
+  res.status(202).json({
+    status: "pending",
+    company,
+    remainingSeconds: Math.ceil(GROUP_POOL_ACTIVATION_DELAY_MS / 1000),
+    user: cleanUser,
+    message: "Se recibió tu solicitud. Estamos configurando tu polla grupal."
+  });
 });
 
 app.get("/api/companies", (req, res) => {

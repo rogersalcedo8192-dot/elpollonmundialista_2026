@@ -60,6 +60,8 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Cierre de sesion movido a configuracion de usuario, fuera del menu hamburguesa y del boton directo del header.
 - Invitaciones de empresa reutilizables: un enlace sirve para registrar multiples jugadores hasta completar el cupo maximo de la empresa, actualmente limitado a 50.
 - Panel de invitaciones de empresa muestra cupos usados/disponibles, instrucciones para el admin empresa y boton para copiar enlaces recientes.
+- Creacion autogestionada de Polla Grupal para familias, empresas, amigos y comunidades, sin aprobacion manual del superadmin.
+- Las solicitudes de Polla Grupal se activan automaticamente despues de 5 minutos; el solicitante pasa a `company_admin` y recibe acceso gratuito al panel Administrador Grupal.
 - Tarjetas de pronosticos mejoradas: toque para expandir, controles +/-, y marcador 1X2 resaltado.
 - Textos publicos del footer, FAQ y modal informativo corregidos en espanol con tildes y signos de apertura de pregunta.
 

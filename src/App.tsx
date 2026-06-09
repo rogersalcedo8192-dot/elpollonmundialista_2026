@@ -1625,6 +1625,14 @@ export default function App() {
   const [inviteToken, setInviteToken] = useState("");
   const [companyPrizePolicy, setCompanyPrizePolicy] = useState("");
   const [companyInvitationSummary, setCompanyInvitationSummary] = useState({ companyId: "", playersCount: 0, availableSlots: 0, maxPlayers: 50 });
+  const [groupPoolName, setGroupPoolName] = useState("");
+  const [groupPoolBusy, setGroupPoolBusy] = useState(false);
+  const [groupPoolModalOpen, setGroupPoolModalOpen] = useState(false);
+  const [groupPoolStatus, setGroupPoolStatus] = useState<{
+    status: "none" | "pending" | "active" | "suspended";
+    company?: Company;
+    remainingSeconds?: number;
+  }>({ status: "none" });
 
   // Tournament Favorites states
   const [predictionsMode, setPredictionsMode] = useState<"matches" | "knockout" | "favorites">("matches");
@@ -1812,7 +1820,7 @@ export default function App() {
     },
     {
       question: "¿Tengo una empresa, cómo participo?",
-      answer: "Escribe a admin@elpollonmundialista.com con el nombre de la empresa, nombre y correo del usuario administrador, teléfono de contacto y cantidad aproximada de participantes. El equipo revisará la solicitud y te indicará los pasos para activar tu grupo."
+      answer: "Regístrate, entra a Crear Polla Grupal y solicita tu grupo para familia, empresa, amigos o comunidad. La activación es automática y después podrás compartir un enlace de invitación con tus participantes."
     },
     {
       question: "¿Cómo se ganan puntos?",
@@ -2021,6 +2029,41 @@ export default function App() {
     }
   };
 
+  const fetchGroupPoolStatus = async () => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "superadmin") return;
+    try {
+      const res = await fetch("/api/group-pools/status", { headers: getHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const previousStatus = groupPoolStatus.status;
+      setGroupPoolStatus({
+        status: data.status || "none",
+        company: data.company,
+        remainingSeconds: data.remainingSeconds
+      });
+
+      if (data.user && (
+        data.user.role !== currentUser.role ||
+        data.user.companyId !== currentUser.companyId ||
+        data.user.paymentStatus !== currentUser.paymentStatus
+      )) {
+        localStorage.setItem("polla_user_session", JSON.stringify(data.user));
+        setCurrentUser(data.user);
+      }
+
+      if (data.status === "active" && data.company) {
+        setSelectedCompanyId(data.company.id);
+        if (previousStatus === "pending") {
+          showToast("Tu Polla Grupal ya está activa. Ya puedes administrarla e invitar participantes.", "success");
+          setGroupPoolModalOpen(false);
+          setActiveTab("admin-companies");
+        }
+      }
+    } catch (err) {
+      console.error("Error consulting group pool status:", err);
+    }
+  };
+
   const fetchAdminAssets = async () => {
     try {
       const res = await fetch("/api/admin/assets", { headers: getHeaders() });
@@ -2133,6 +2176,19 @@ export default function App() {
       setUserMenuOpen(false);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setGroupPoolStatus({ status: "none" });
+      return;
+    }
+    if (currentUser.role === "admin" || currentUser.role === "superadmin") return;
+
+    fetchGroupPoolStatus();
+    if (groupPoolStatus.status !== "pending") return;
+    const timer = window.setInterval(fetchGroupPoolStatus, 15000);
+    return () => window.clearInterval(timer);
+  }, [currentUser?.id, currentUser?.role, currentUser?.companyId, groupPoolStatus.status]);
 
   useEffect(() => {
     if (currentUser) {
@@ -2635,6 +2691,37 @@ export default function App() {
     if (pass === null) return;
     setEditingUser({ ...user, password: pass });
     showToast(`Preparado para resetear contraseña. Da clic en guardar cambios.`, "info");
+  };
+
+  const handleCreateGroupPool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (groupPoolName.trim().length < 3) {
+      showToast("Escribe un nombre de al menos 3 caracteres para tu grupo.", "error");
+      return;
+    }
+
+    setGroupPoolBusy(true);
+    try {
+      const res = await fetch("/api/group-pools", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ name: groupPoolName.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok && res.status !== 202) throw new Error(data.error || data.message || "No se pudo crear la solicitud.");
+
+      setGroupPoolStatus({
+        status: data.status || "pending",
+        company: data.company,
+        remainingSeconds: data.remainingSeconds
+      });
+      setGroupPoolName(data.company?.name || groupPoolName.trim());
+      setGroupPoolModalOpen(true);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setGroupPoolBusy(false);
+    }
   };
 
   const handleSaveCompany = async (e: React.FormEvent) => {
@@ -3206,6 +3293,7 @@ export default function App() {
   const certificatesEnabled = finalClosedByMatch || finalClosedByOutcome;
   const isSuperAdminUser = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdminUser = currentUser?.role === "company_admin";
+  const canCreateGroupPool = Boolean(currentUser?.role === "standard" && !currentUser.companyId);
   const canSaveTournamentFavorites = Boolean(
     currentUser?.role === "admin" ||
     currentUser?.role === "superadmin" ||
@@ -3755,12 +3843,13 @@ export default function App() {
               { key: "how-to-play", label: "¿Cómo Jugar?", icon: Info },
               { key: "dashboard", label: "Resumen", icon: BarChart3 },
               { key: "predictions", label: "Mis Pronósticos", icon: Calendar },
+              ...(canCreateGroupPool ? [{ key: "group-pool", label: "Crear Polla Grupal", icon: Users }] : []),
               { key: "favorites", label: "Favoritos", icon: Trophy },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "Clasificación", icon: Trophy },
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
-              ...(canManageUsers ? [{ key: "admin-companies", label: "Empresas", icon: Tv }] : []),
+              ...(canManageUsers ? [{ key: "admin-companies", label: isCompanyAdminUser ? "Administrador Grupal" : "Empresas", icon: Tv }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-matches", label: "Partidos Admin", icon: Calendar }] : []),
               ...(isSuperAdminUser || isCompanyAdminUser ? [{ key: "admin-announcements", label: "Comunicados", icon: Megaphone }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-assets", label: "Biblioteca", icon: ImageIcon }] : []),
@@ -4103,6 +4192,17 @@ export default function App() {
                     <span className="hidden md:inline">{t("tab_predictions", "Calendario & Pronósticos")}</span>
                   </button>
 
+                  {canCreateGroupPool && (
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab("group-pool"); setMobileMenuOpen(false); }}
+                      className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "group-pool" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                    >
+                      <Users className="w-4 h-4 shrink-0" />
+                      <span>Crear Polla Grupal</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => { setActiveTab("predictions"); setPredictionsMode("favorites"); setMobileMenuOpen(false); }}
@@ -4172,7 +4272,7 @@ export default function App() {
                         className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeTab === "admin-companies" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                       >
                         <Tv className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                        Empresas e invitaciones
+                        {isCompanyAdminUser ? "Administrador Grupal" : "Empresas e invitaciones"}
                       </button>
 
                       {isSuperAdminUser && <button
@@ -6191,12 +6291,80 @@ export default function App() {
               )}
 
               {/* 6. MÓDULO ADMIN: MANAGE USER ACCOUNTS */}
+              {activeTab === "group-pool" && canCreateGroupPool && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                    <h2 className="text-xl font-bold text-slate-950 dark:text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-600" />
+                      Crear Polla Grupal
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      Organiza un grupo privado para tu familia, empresa, amigos o comunidad.
+                    </p>
+                  </div>
+
+                  {groupPoolStatus.status === "pending" ? (
+                    <div className="border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 p-5 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-5 h-5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="text-sm font-black text-amber-950 dark:text-amber-100">Configuración en proceso</h3>
+                          <p className="mt-1 text-sm text-amber-900 dark:text-amber-200">
+                            {groupPoolStatus.company?.name || "Tu Polla Grupal"} estará disponible aproximadamente en{" "}
+                            {Math.max(1, Math.ceil((groupPoolStatus.remainingSeconds || 0) / 60))} minutos.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={fetchGroupPoolStatus}
+                            className="mt-4 min-h-11 px-4 rounded-lg bg-slate-900 text-white text-sm font-black inline-flex items-center gap-2"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            Revisar estado
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleCreateGroupPool} className="max-w-xl space-y-4">
+                      <div>
+                        <label htmlFor="group_pool_name" className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">
+                          Nombre de la Polla Grupal
+                        </label>
+                        <input
+                          id="group_pool_name"
+                          type="text"
+                          value={groupPoolName}
+                          onChange={(event) => setGroupPoolName(event.target.value)}
+                          minLength={3}
+                          maxLength={80}
+                          required
+                          placeholder="Ej. Familia Salcedo o Empresa Mundialista"
+                          className="w-full min-h-12 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                        <p>Hasta 50 participantes.</p>
+                        <p>Acceso gratuito dentro del grupo y ranking independiente.</p>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={groupPoolBusy}
+                        className="min-h-12 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white text-sm font-black inline-flex items-center gap-2"
+                      >
+                        {groupPoolBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        Crear Polla Grupal
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+
               {activeTab === "admin-companies" && canManageUsers && (
                 <div className="space-y-5">
                   <div className="border-b pb-3 flex items-center justify-between gap-3 flex-wrap">
                     <div>
                       <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Tv className="text-amber-500 w-5 h-5" /> Empresas e Invitaciones
+                        <Tv className="text-amber-500 w-5 h-5" /> {isCompanyAdminUser ? "Administrador Grupal" : "Empresas e Invitaciones"}
                       </h2>
                       <p className="text-xs text-slate-500 mt-1">Maximo 50 jugadores por empresa. El ranking empresarial es una vista independiente del ranking global.</p>
                     </div>
@@ -7686,6 +7854,48 @@ export default function App() {
                 className="min-h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black"
               >
                 Aceptar aviso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {groupPoolModalOpen && groupPoolStatus.status === "pending" && (
+        <div
+          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-6"
+          role="presentation"
+          onMouseDown={() => setGroupPoolModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl sm:rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="group-pool-request-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start gap-3">
+              <span className="w-11 h-11 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                <Check className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 id="group-pool-request-title" className="text-base font-black text-slate-950 dark:text-white">
+                  SE HA RECIBIDO TU SOLICITUD
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Polla Grupal: {groupPoolStatus.company?.name}
+                </p>
+              </div>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              Estamos configurando el acceso gratuito de tu grupo. Revisa nuevamente en 5 minutos el panel de administrador grupal.
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setGroupPoolModalOpen(false)}
+                className="min-h-12 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black"
+              >
+                Entendido
               </button>
             </div>
           </div>

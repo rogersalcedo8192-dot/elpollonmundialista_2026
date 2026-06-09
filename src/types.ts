@@ -61,7 +61,7 @@ export interface Company {
   prizesText?: string;
   adminId?: string;
   maxPlayers: number;
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "pending_activation";
   createdAt: string;
 }
 
