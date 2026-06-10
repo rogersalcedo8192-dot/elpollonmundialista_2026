@@ -31,14 +31,15 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Integracion de pagos configurable: Wompi Web Checkout como proveedor principal y Stripe Checkout como respaldo (`PAYMENT_PROVIDER`).
 - Calculo de bolsa de premios:
   - Inscripcion: USD 5.
-  - 10% para administracion.
-  - 3.5% para comision bancaria/pasarela.
-  - 86.5% restante para premios.
+  - 0% para administracion.
+  - 0% para comision bancaria/pasarela.
+  - 100% de lo recaudado por usuarios pagos para premios.
   - 80% del premio para primer puesto.
   - 15% para segundo puesto.
   - 5% para tercer puesto.
 - Dashboard de usuario con premio acumulado visible.
 - Dashboard admin con desglose de participantes pagos, premio y ganancia estimada.
+- En los paneles de premios, comision bancaria y administracion permanecen visibles, tachadas y con valor $0.
 - Navegacion mobile integrada en el header con menu desplegable compacto.
 - Header mobile compacto con avatar, etiqueta de usuario, posicion en ranking y puntaje visible sin desbordar la tarjeta.
 - Resumen mobile above the fold con puntos, posicion, CTA de pronosticos/ranking y proximo partido.
@@ -289,6 +290,6 @@ Criterio de cierre:
 - 2026-06-01: agregado popup administrable, reinicio de polla con pagos/premios en cero y premios empresariales informativos por Libro de Premiaciones.
 - 2026-06-01: popup ahora permite imagen desde assets y las tarjetas de partidos tienen controles tactiles +/-, expansion por toque e indicador 1X2.
 - 2026-06-01: actualizado tras integrar menu mobile en header, resumen mobile above the fold, filtros mobile de partidos corregidos, busqueda sin tildes, boton limpiar filtros, mejoras tactiles en pronosticos y skeleton loaders basicos.
-- 2026-06-01: actualizado esquema de premios: entrada USD 5, administracion 10%, pasarela 3.5%, premios con el restante 86.5% distribuido 80/15/5.
+- 2026-06-10: actualizado esquema de premios: 100% de lo recaudado por usuarios pagos se destina a premios, sin descuento bancario ni de administracion; ambas filas permanecen visibles, tachadas y en $0.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.

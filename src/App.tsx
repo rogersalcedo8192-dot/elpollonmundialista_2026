@@ -1811,6 +1811,10 @@ export default function App() {
       answer: "La participación individual en la Polla REAL tiene un valor de 20.000 pesos colombianos. Ese pago habilita la participación por premios monetarios, sujeto a las reglas publicadas en la plataforma."
     },
     {
+      question: "¿Cómo se calcula la bolsa de premios de la Polla REAL?",
+      answer: "El 100% del valor recaudado por las inscripciones confirmadas de usuarios pagos se destina a la bolsa de premios. Actualmente no se descuenta comisión bancaria ni comisión de administración de la polla. La bolsa se distribuye 80% para el primer puesto, 15% para el segundo y 5% para el tercero."
+    },
+    {
       question: "¿Los pagos son seguros?",
       answer: "Sí. Los pagos se procesan mediante Wompi Pagos Seguros. El Pollón Mundialista no almacena datos sensibles de tarjetas en la plataforma."
     },
@@ -5168,10 +5172,10 @@ export default function App() {
                         </span>
                         <div className="space-y-2 text-xs">
                           <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
-                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
-                          <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>👨‍💼 Administración Polla</span><b>{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>🏦 Comisión bancaria</span><b>{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
                           <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
-                          <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
+                          <div className="flex justify-between"><span>💰 Premio acumulado (100%)</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
                           {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatCop(publicPrizePool?.prizeSeed || 0)}</b></div>}
                         </div>
                         <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
@@ -5180,7 +5184,7 @@ export default function App() {
                           <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
                           <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
                         </div>
-                        <p className="text-[11px] text-slate-400 leading-relaxed">Esta bolsa aplica solo para participantes inscritos en Polla REAL.</p>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">El 100% de lo recaudado por usuarios pagos se destina a premios. Esta bolsa aplica solo para participantes inscritos en Polla REAL.</p>
                       </div>
                     </div>
                   )}
@@ -5253,10 +5257,10 @@ export default function App() {
                       </span>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
-                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>👨‍💼 Administración (-10%)</span><b>-{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
-                        <div className="flex justify-between border-b border-white/10 pb-2 text-rose-200"><span>🏦 Comisión Wompi (-3.5%)</span><b>-{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>👨‍💼 Administración Polla</span><b>{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>🏦 Comisión bancaria</span><b>{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
                         <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
-                        <div className="flex justify-between"><span>💰 Premio Acumulado Neto</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
+                        <div className="flex justify-between"><span>💰 Premio acumulado (100%)</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
                         {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatCop(publicPrizePool?.prizeSeed || 0)}</b></div>}
                       </div>
                       <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
@@ -5265,7 +5269,7 @@ export default function App() {
                         <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
                         <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa crece con cada usuario pagado. Los valores se actualizan segun pagos confirmados.</p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa recibe el 100% de cada inscripción pagada y se actualiza con los pagos confirmados.</p>
                     </div>
                   </div>}
                 </div>
@@ -6188,7 +6192,7 @@ export default function App() {
                               Bolsa de premios estimada
                             </h3>
                             <p className="text-[11px] text-slate-400 mt-1">
-                              Cuota fija {formatCop(stats.prizePool.entryFeeCop)} por participante. Administracion {(stats.prizePool.ownerProfitRate * 100).toFixed(1)}%, pasarela {(stats.prizePool.bankCommissionRate * 100).toFixed(1)}% y el restante {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}% va a premios.
+                              Cuota fija {formatCop(stats.prizePool.entryFeeCop)} por participante. El 100% de lo recaudado se destina a premios; administración y comisión bancaria están en $0.
                             </p>
                           </div>
                           <div className="text-right">
@@ -6203,19 +6207,19 @@ export default function App() {
                             <span className="text-sm font-black">{formatCop(stats.prizePool.grossPool)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Banco</span>
-                            <span className="text-sm font-black text-rose-300">-{formatCop(stats.prizePool.bankCommission)}</span>
+                            <span className="text-[9px] text-slate-500 uppercase font-bold block line-through">Comisión bancaria</span>
+                            <span className="text-sm font-black text-slate-500 line-through">{formatCop(stats.prizePool.bankCommission)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Admin 10%</span>
-                            <span className="text-sm font-black">{formatCop(stats.prizePool.ownerGrossProfit)}</span>
+                            <span className="text-[9px] text-slate-500 uppercase font-bold block line-through">Administración Polla</span>
+                            <span className="text-sm font-black text-slate-500 line-through">{formatCop(stats.prizePool.ownerGrossProfit)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                             <span className="text-[9px] text-emerald-300 uppercase font-bold block">Premios {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}%</span>
                             <span className="text-sm font-black text-emerald-300">{formatCop(stats.prizePool.prizePool)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                            <span className="text-[9px] text-amber-300 uppercase font-bold block">Tu neto</span>
+                            <span className="text-[9px] text-amber-300 uppercase font-bold block">Ganancia administración</span>
                             <span className="text-sm font-black text-amber-300">{formatCop(stats.prizePool.ownerProfit)}</span>
                           </div>
                         </div>
