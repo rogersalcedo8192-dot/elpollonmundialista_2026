@@ -4322,13 +4322,27 @@ app.get("/api/admin/stats", (req, res) => {
   });
 });
 
-// Background scheduler running every 30 seconds
-// Sends alert notifications to users without registered prediction at 24 hours and 30 minutes before kick-off.
-setInterval(() => {
+let reminderSchedulerRunning = false;
+
+async function runReminderScheduler() {
+  if (reminderSchedulerRunning) {
+    console.warn("Reminder scheduler skipped because the previous run is still active.");
+    return;
+  }
+
+  reminderSchedulerRunning = true;
   try {
     const db = loadDb();
     const now = Date.now();
     let updated = false;
+    const pendingEmails: Array<{
+      user: User;
+      matchId: number;
+      reminderKey: string;
+      subject: string;
+      title: string;
+      message: string;
+    }> = [];
 
     db.matches.forEach((m) => {
       const matchTime = new Date(m.date).getTime();
@@ -4362,18 +4376,28 @@ setInterval(() => {
           const hasPrediction = db.predictions.some((p) => p.userId === u.id && p.matchId === m.id);
           if (hasPrediction) return;
 
-          db.notifications.push({
-            id: `not_remind_${windowConfig.keySuffix}_${Date.now()}_${u.id}_${m.id}`,
-            userId: u.id,
+          const notificationId = `not_remind_${windowConfig.keySuffix}_${u.id}_${m.id}`;
+          if (!db.notifications.some((notification) => notification.id === notificationId)) {
+            db.notifications.push({
+              id: notificationId,
+              userId: u.id,
+              title: "Recordatorio de Pronostico",
+              message: windowConfig.message,
+              type: "reminder",
+              date: new Date().toISOString(),
+              read: false
+            });
+            updated = true;
+          }
+
+          pendingEmails.push({
+            user: u,
+            matchId: m.id,
+            reminderKey,
+            subject: `Recordatorio: ${m.local} vs ${m.visitor}`,
             title: "Recordatorio de Pronostico",
-            message: windowConfig.message,
-            type: "reminder",
-            date: new Date().toISOString(),
-            read: false
+            message: windowConfig.message
           });
-          queueEventEmail(u, `Recordatorio: ${m.local} vs ${m.visitor}`, "Recordatorio de Pronostico", windowConfig.message);
-          db.sentReminders.push(reminderKey);
-          updated = true;
         });
       });
     });
@@ -4381,9 +4405,69 @@ setInterval(() => {
     if (updated) {
       saveDb(db);
     }
+
+    const summary = { attempted: 0, sent: 0, skipped: 0, failed: 0 };
+    for (const pendingEmail of pendingEmails) {
+      const latestDb = loadDb();
+      if (latestDb.sentReminders.includes(pendingEmail.reminderKey)) continue;
+
+      const hasPrediction = latestDb.predictions.some(
+        (prediction) => prediction.userId === pendingEmail.user.id
+          && prediction.matchId === pendingEmail.matchId
+      );
+      if (hasPrediction) {
+        latestDb.sentReminders.push(pendingEmail.reminderKey);
+        saveDb(latestDb);
+        continue;
+      }
+
+      summary.attempted += 1;
+      const result = await Promise.resolve(
+        sendEventEmail(
+          pendingEmail.user,
+          pendingEmail.subject,
+          pendingEmail.title,
+          pendingEmail.message
+        )
+      ).catch((err) => ({
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+        to: pendingEmail.user.email
+      }));
+
+      if ("skipped" in result && result.skipped) {
+        summary.skipped += 1;
+      } else if (result?.ok) {
+        summary.sent += 1;
+      } else {
+        summary.failed += 1;
+        logEventEmailFailure(pendingEmail.user, pendingEmail.subject, result);
+        continue;
+      }
+
+      const persistedDb = loadDb();
+      if (!persistedDb.sentReminders.includes(pendingEmail.reminderKey)) {
+        persistedDb.sentReminders.push(pendingEmail.reminderKey);
+        saveDb(persistedDb);
+      }
+    }
+
+    if (summary.attempted > 0) {
+      console.info(
+        `Reminder email summary: attempted=${summary.attempted}, sent=${summary.sent}, skipped=${summary.skipped}, failed=${summary.failed}`
+      );
+    }
   } catch (err) {
     console.error("Error running scheduler:", err);
+  } finally {
+    reminderSchedulerRunning = false;
   }
+}
+
+// Background scheduler running every 30 seconds.
+// Sends alert notifications to users without registered prediction at 24 hours and 30 minutes before kick-off.
+setInterval(() => {
+  void runReminderScheduler();
 }, 30000);
 
 // Set up server listening and Vite configuration

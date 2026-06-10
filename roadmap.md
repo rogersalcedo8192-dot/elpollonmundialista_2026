@@ -218,6 +218,7 @@ Objetivo: convertir las notificaciones internas en recordatorios utiles.
 - Enviar alertas cuando se publiquen resultados.
 - Notificar cambios relevantes de ranking.
 - Integrar correo real para usuarios suscritos.
+- Esperar y verificar cada envio automatico por partido; reintentar fallos del proveedor sin duplicar la alerta interna.
 - Evaluar WhatsApp solo si hay presupuesto/API adecuada.
 - Preparar plantillas de email en espanol e ingles.
 - Evitar notificaciones duplicadas con llaves de envio.
