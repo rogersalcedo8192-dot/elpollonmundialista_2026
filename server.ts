@@ -265,7 +265,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "";
 const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || "";
 const EMAIL_APP_URL = process.env.APP_URL || "";
-const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 24 horas antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
+const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 1 hora antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
@@ -3960,7 +3960,7 @@ app.delete("/api/predictions/:matchId", (req, res) => {
 });
 
 // Tournament Lock Time and long term predictions APIs
-const TOURNAMENT_PREDICTIONS_LOCK_TIME = new Date("2026-06-10T19:00:00.000Z").getTime();
+const TOURNAMENT_PREDICTIONS_LOCK_TIME = new Date("2026-06-11T18:00:00.000Z").getTime();
 
 // Get tournament predictions for a user
 app.get("/api/tournament-predictions", (req, res) => {
@@ -4000,8 +4000,8 @@ app.post("/api/tournament-predictions", (req, res) => {
   }
 
   const now = Date.now();
-  if (now > TOURNAMENT_PREDICTIONS_LOCK_TIME) {
-    return res.status(400).json({ error: "Las predicciones de favoritos ya están cerradas (vencieron 24 horas antes del inicio del mundial)." });
+  if (now >= TOURNAMENT_PREDICTIONS_LOCK_TIME) {
+    return res.status(400).json({ error: "Las predicciones de favoritos ya están cerradas (vencieron 1 hora antes del inicio del Mundial)." });
   }
 
   const { groupWinners, octavosTeams, cuartosTeams, semifinalTeams, finalists, subchampion, champion } = req.body;

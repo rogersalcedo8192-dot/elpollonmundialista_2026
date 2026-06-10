@@ -60,13 +60,13 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   const t = (es: string, en: string) => (lang === "es" ? es : en);
 
   // Lock status calculation
-  // Locked 24h before kick-off: June 10, 2026 at 19:00 UTC
-  const LOCK_TIME = new Date("2026-06-10T19:00:00.000Z").getTime();
-  const [isLocked, setIsLocked] = useState(Date.now() > LOCK_TIME);
+  // Locked one hour before kick-off: June 11, 2026 at 18:00 UTC
+  const LOCK_TIME = new Date("2026-06-11T18:00:00.000Z").getTime();
+  const [isLocked, setIsLocked] = useState(Date.now() >= LOCK_TIME);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setIsLocked(Date.now() > LOCK_TIME);
+      setIsLocked(Date.now() >= LOCK_TIME);
     }, 15000);
     return () => clearInterval(timer);
   }, []);
@@ -230,12 +230,12 @@ export const TournamentPredictionsView: React.FC<Props> = ({
           </p>
           <p className="opacity-90 leading-relaxed">
             {t(
-              "Estas predicciones especiales se bloquean a las 19:00 UTC el 10 de Junio de 2026 (exactamente 24 horas antes del primer partido del mundial). ¡Arriesga tus campeones ahora!",
-              "These special predictions lock at 19:00 UTC on June 10, 2026 (exactly 24h before the kick-off match of World Cup). Lock in your favorites early!"
+              "Estas predicciones especiales se bloquean a las 18:00 UTC el 11 de junio de 2026, exactamente una hora antes del primer partido del Mundial.",
+              "These special predictions lock at 18:00 UTC on June 11, 2026, exactly one hour before the first World Cup match."
             )}
           </p>
           <p className="font-semibold text-[10px] bg-white/50 dark:bg-black/25 px-2 py-0.5 rounded inline-block mt-1 border border-current-color/20">
-            {t("Plazo máximo: 10 de Junio, 2026 a las 14:00 (Hora Bogotá)", "Deadline: June 10, 2026 at 14:00 (Bogota standard local time)")}
+            {t("Plazo máximo: 11 de junio de 2026 a la 1:00 p. m. (hora de Bogotá)", "Deadline: June 11, 2026 at 1:00 p.m. (Bogota time)")}
           </p>
         </div>
       </div>

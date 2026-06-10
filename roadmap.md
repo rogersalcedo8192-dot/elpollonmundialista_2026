@@ -20,6 +20,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Cuenta regresiva dinámica por evento hasta el cierre de pronósticos.
 - Bloqueo backend/frontend para impedir pronosticos de usuarios sin pago confirmado.
 - Pronosticos especiales de torneo: lideres de grupo, clasificados por fase, finalistas, subcampeon y campeon.
+- El guardado de favoritos del torneo se bloquea una hora antes del primer partido: 11 de junio de 2026, 18:00 UTC (1:00 p. m. en Bogota).
 - Ranking en tiempo real con exportacion CSV.
 - Panel admin para usuarios, partidos, resultados, comunicados, assets, banners y configuracion.
 - Gestión de usuarios responsive con tarjetas móviles y clasificación por tipo de acceso y rol.
