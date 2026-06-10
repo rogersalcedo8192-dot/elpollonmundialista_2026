@@ -5172,8 +5172,8 @@ export default function App() {
                         </span>
                         <div className="space-y-2 text-xs">
                           <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
-                          <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>👨‍💼 Administración Polla</span><b>{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
-                          <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>🏦 Comisión bancaria</span><b>{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-slate-400"><span>👨‍💼 Administración Polla <span className="line-through text-slate-500">(-10%)</span></span><b>{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                          <div className="flex justify-between border-b border-white/10 pb-2 text-slate-400"><span>🏦 Comisión bancaria <span className="line-through text-slate-500">(-3.5%)</span></span><b>{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
                           <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
                           <div className="flex justify-between"><span>💰 Premio acumulado (100%)</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
                           {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatCop(publicPrizePool?.prizeSeed || 0)}</b></div>}
@@ -5257,8 +5257,8 @@ export default function App() {
                       </span>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between border-b border-white/10 pb-2"><span>🏆 Total Recaudado</span><b>{formatCop(publicPrizePool?.grossPool || 0)}</b></div>
-                        <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>👨‍💼 Administración Polla</span><b>{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
-                        <div className="flex justify-between border-b border-white/10 pb-2 text-slate-500 line-through"><span>🏦 Comisión bancaria</span><b>{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-slate-400"><span>👨‍💼 Administración Polla <span className="line-through text-slate-500">(-10%)</span></span><b>{formatCop(publicPrizePool?.ownerGrossProfit || 0)}</b></div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 text-slate-400"><span>🏦 Comisión bancaria <span className="line-through text-slate-500">(-3.5%)</span></span><b>{formatCop(publicPrizePool?.bankCommission || 0)}</b></div>
                         <div className="flex justify-between border-b border-white/10 pb-2"><span>👥 Participantes de Pago</span><b>{publicPrizePool?.paidParticipants || 0}</b></div>
                         <div className="flex justify-between"><span>💰 Premio acumulado (100%)</span><b className="text-emerald-300">{formatCop(publicPrizePool?.prizePool || 0)}</b></div>
                         {(publicPrizePool?.prizeSeed || 0) > 0 && <div className="flex justify-between text-emerald-200"><span>Aporte inicial administrador</span><b>+{formatCop(publicPrizePool?.prizeSeed || 0)}</b></div>}
@@ -6207,12 +6207,12 @@ export default function App() {
                             <span className="text-sm font-black">{formatCop(stats.prizePool.grossPool)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[9px] text-slate-500 uppercase font-bold block line-through">Comisión bancaria</span>
-                            <span className="text-sm font-black text-slate-500 line-through">{formatCop(stats.prizePool.bankCommission)}</span>
+                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Comisión bancaria <span className="line-through text-slate-500">(-3.5%)</span></span>
+                            <span className="text-sm font-black text-slate-200">{formatCop(stats.prizePool.bankCommission)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[9px] text-slate-500 uppercase font-bold block line-through">Administración Polla</span>
-                            <span className="text-sm font-black text-slate-500 line-through">{formatCop(stats.prizePool.ownerGrossProfit)}</span>
+                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Administración Polla <span className="line-through text-slate-500">(-10%)</span></span>
+                            <span className="text-sm font-black text-slate-200">{formatCop(stats.prizePool.ownerGrossProfit)}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                             <span className="text-[9px] text-emerald-300 uppercase font-bold block">Premios {Math.round(stats.prizePool.prizePoolRate * 1000) / 10}%</span>

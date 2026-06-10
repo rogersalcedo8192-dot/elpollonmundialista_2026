@@ -39,7 +39,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
   - 5% para tercer puesto.
 - Dashboard de usuario con premio acumulado visible.
 - Dashboard admin con desglose de participantes pagos, premio y ganancia estimada.
-- En los paneles de premios, comision bancaria y administracion permanecen visibles, tachadas y con valor $0.
+- En los paneles de premios se tachan solo los porcentajes anteriores de administracion (-10%) y comision bancaria (-3.5%); sus valores actuales de $0 se muestran sin tachar.
 - Navegacion mobile integrada en el header con menu desplegable compacto.
 - Header mobile compacto con avatar, etiqueta de usuario, posicion en ranking y puntaje visible sin desbordar la tarjeta.
 - Resumen mobile above the fold con puntos, posicion, CTA de pronosticos/ranking y proximo partido.
