@@ -241,6 +241,10 @@ const hasCloudinaryConfig = Boolean(
 );
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
+const FOOTBALL_DATA_SYNC_INTERVAL_MS = Math.max(
+  60_000,
+  Number(process.env.FOOTBALL_DATA_SYNC_INTERVAL_MS) || 5 * 60_000
+);
 const APP_MODE = (process.env.APP_MODE || "PAID").toUpperCase() === "FREE" ? "FREE" : "PAID";
 const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "stripe").toLowerCase() === "wompi" ? "wompi" : "stripe";
 const DEFAULT_COMPANY_MAX_PLAYERS = 50;
@@ -3573,16 +3577,10 @@ app.post("/api/matches", (req, res) => {
   res.json({ message: "Partido registrado exitosamente.", match: newMatch });
 });
 
-app.post("/api/admin/matches/sync-football-data", async (req, res) => {
-  const admin = getAuthenticatedUser(req);
-  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
-  const apiOnly = Boolean(req.body?.apiOnly);
-
+async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResults = false) {
   const token = process.env.FOOTBALL_DATA_API_TOKEN;
   if (!token) {
-    return res.status(400).json({
-      error: "Falta configurar FOOTBALL_DATA_API_TOKEN en las variables de entorno."
-    });
+    throw new Error("Falta configurar FOOTBALL_DATA_API_TOKEN en las variables de entorno.");
   }
 
   const competitionCode = process.env.FOOTBALL_DATA_COMPETITION || "WC";
@@ -3590,111 +3588,125 @@ app.post("/api/admin/matches/sync-football-data", async (req, res) => {
   const url = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/matches`);
   url.searchParams.set("season", season);
 
-  try {
-    const apiRes = await fetch(url, {
-      headers: {
-        "X-Auth-Token": token,
-        "Accept": "application/json"
-      }
-    });
+  const apiRes = await fetch(url, {
+    headers: {
+      "X-Auth-Token": token,
+      "Accept": "application/json"
+    }
+  });
 
-    const payload = await apiRes.json().catch(() => ({}));
-    if (!apiRes.ok) {
-      return res.status(apiRes.status).json({
-        error: payload.message || payload.error || "No se pudo consultar football-data.org."
-      });
+  const payload = await apiRes.json().catch(() => ({}));
+  if (!apiRes.ok) {
+    const error = new Error(payload.message || payload.error || "No se pudo consultar football-data.org.");
+    (error as Error & { status?: number }).status = apiRes.status;
+    throw error;
+  }
+
+  const apiMatches = Array.isArray(payload.matches) ? payload.matches : [];
+  const db = loadDb();
+  let created = 0;
+  let updated = 0;
+  let ignored = 0;
+  let resultChanged = false;
+  let nextId = db.matches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
+  const incomingMatches: Match[] = [];
+
+  apiMatches.forEach((apiMatch: any) => {
+    const homeName = normalizeExternalTeamName(apiMatch?.homeTeam?.name);
+    const awayName = normalizeExternalTeamName(apiMatch?.awayTeam?.name);
+    if (!apiMatch?.id || homeName === "Por definir" || awayName === "Por definir") {
+      ignored += 1;
+      return;
     }
 
-    const apiMatches = Array.isArray(payload.matches) ? payload.matches : [];
-    const db = loadDb();
-    let created = 0;
-    let updated = 0;
-    let ignored = 0;
-    let resultChanged = false;
-    let nextId = db.matches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
-    const incomingMatches: Match[] = [];
+    const scores = getFootballDataScore(apiMatch);
+    const incoming: Match = {
+      id: nextId,
+      stage: mapFootballDataStage(apiMatch.stage, apiMatch.group),
+      local: homeName,
+      visitor: awayName,
+      date: apiMatch.utcDate || new Date().toISOString(),
+      stadium: apiMatch.venue || "Por definir",
+      status: mapFootballDataStatus(apiMatch.status),
+      localScore: scores.localScore,
+      visitorScore: scores.visitorScore,
+      externalSource: FOOTBALL_DATA_SOURCE,
+      externalSourceId: String(apiMatch.id)
+    };
+    incomingMatches.push(incoming);
 
-    apiMatches.forEach((apiMatch: any) => {
-      const homeName = normalizeExternalTeamName(apiMatch?.homeTeam?.name);
-      const awayName = normalizeExternalTeamName(apiMatch?.awayTeam?.name);
-      if (!apiMatch?.id || homeName === "Por definir" || awayName === "Por definir") {
-        ignored += 1;
-        return;
-      }
+    const existing = db.matches.find((match) =>
+      match.externalSource === FOOTBALL_DATA_SOURCE &&
+      match.externalSourceId === incoming.externalSourceId
+    ) || db.matches.find((match) => isSameFixtureCandidate(match, incoming));
 
-      const scores = getFootballDataScore(apiMatch);
-      const incoming: Match = {
-        id: nextId,
-        stage: mapFootballDataStage(apiMatch.stage, apiMatch.group),
-        local: homeName,
-        visitor: awayName,
-        date: apiMatch.utcDate || new Date().toISOString(),
-        stadium: apiMatch.venue || "Por definir",
-        status: mapFootballDataStatus(apiMatch.status),
-        localScore: scores.localScore,
-        visitorScore: scores.visitorScore,
-        externalSource: FOOTBALL_DATA_SOURCE,
-        externalSourceId: String(apiMatch.id)
-      };
-      incomingMatches.push(incoming);
+    if (!existing) {
+      db.matches.push({ ...incoming, id: nextId });
+      nextId += 1;
+      created += 1;
+      if (incoming.status === "finished") resultChanged = true;
+      return;
+    }
 
-      const existing = db.matches.find((match) =>
-        match.externalSource === FOOTBALL_DATA_SOURCE &&
-        match.externalSourceId === incoming.externalSourceId
-      ) || db.matches.find((match) => isSameFixtureCandidate(match, incoming));
-
-      if (!existing) {
-        db.matches.push({ ...incoming, id: nextId });
-        nextId += 1;
-        created += 1;
-        if (incoming.status === "finished") resultChanged = true;
-        return;
-      }
-
-      const previousResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
-      existing.stage = incoming.stage;
-      existing.local = incoming.local;
-      existing.visitor = incoming.visitor;
-      existing.date = incoming.date;
-      existing.stadium = incoming.stadium;
+    const previousResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
+    existing.stage = incoming.stage;
+    existing.local = incoming.local;
+    existing.visitor = incoming.visitor;
+    existing.date = incoming.date;
+    existing.stadium = incoming.stadium;
+    const keepFinishedResult = preserveFinishedResults
+      && existing.status === "finished"
+      && incoming.status !== "finished";
+    if (!keepFinishedResult) {
       existing.status = incoming.status;
       existing.localScore = incoming.localScore;
       existing.visitorScore = incoming.visitorScore;
-      existing.externalSource = FOOTBALL_DATA_SOURCE;
-      existing.externalSourceId = incoming.externalSourceId;
-      updated += 1;
+    }
+    existing.externalSource = FOOTBALL_DATA_SOURCE;
+    existing.externalSourceId = incoming.externalSourceId;
+    updated += 1;
 
-      const nextResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
-      if (previousResult !== nextResult && existing.status === "finished") {
-        resultChanged = true;
-      }
-    });
+    const nextResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
+    if (previousResult !== nextResult && existing.status === "finished") {
+      resultChanged = true;
+    }
+  });
 
-    const strictApiReplacement = apiOnly
-      ? replaceMatchesWithApiSource(db, incomingMatches)
-      : null;
-    const merged = apiOnly ? 0 : mergeDuplicateMatches(db);
-    const apiOnlyCleanup = apiOnly
-      ? { pruned: strictApiReplacement?.removed || 0, predictionsRemoved: strictApiReplacement?.predictionsRemoved || 0 }
-      : { pruned: 0, predictionsRemoved: 0 };
-    saveDb(db);
-    if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0) recalculateScoresAndRankings();
+  const strictApiReplacement = apiOnly
+    ? replaceMatchesWithApiSource(db, incomingMatches)
+    : null;
+  const merged = apiOnly ? 0 : mergeDuplicateMatches(db);
+  const apiOnlyCleanup = apiOnly
+    ? { pruned: strictApiReplacement?.removed || 0, predictionsRemoved: strictApiReplacement?.predictionsRemoved || 0 }
+    : { pruned: 0, predictionsRemoved: 0 };
+  saveDb(db);
+  if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0) recalculateScoresAndRankings();
 
-    res.json({
-      message: apiOnly
-        ? `API oficial aplicada: ${created} creados, ${updated} actualizados, ${merged} duplicados fusionados, ${apiOnlyCleanup.pruned} partidos manuales eliminados.`
-        : `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos, ${merged} duplicados fusionados.`,
-      created,
-      updated,
-      ignored,
-      merged,
-      pruned: apiOnlyCleanup.pruned,
-      predictionsRemoved: apiOnlyCleanup.predictionsRemoved,
-      finalCount: strictApiReplacement?.finalCount ?? db.matches.length,
-      recalculated: resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0
-    });
+  return {
+    message: apiOnly
+      ? `API oficial aplicada: ${created} creados, ${updated} actualizados, ${merged} duplicados fusionados, ${apiOnlyCleanup.pruned} partidos manuales eliminados.`
+      : `Sincronizacion completada: ${created} creados, ${updated} actualizados, ${ignored} omitidos, ${merged} duplicados fusionados.`,
+    created,
+    updated,
+    ignored,
+    merged,
+    pruned: apiOnlyCleanup.pruned,
+    predictionsRemoved: apiOnlyCleanup.predictionsRemoved,
+    finalCount: strictApiReplacement?.finalCount ?? db.matches.length,
+    recalculated: resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0
+  };
+}
+
+app.post("/api/admin/matches/sync-football-data", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== "admin") return res.status(403).json({ error: "No autorizado." });
+
+  try {
+    const result = await syncMatchesFromFootballData(Boolean(req.body?.apiOnly));
+    res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Error sincronizando partidos desde football-data.org." });
+    const status = Number(err?.status) || (String(err?.message || "").includes("FOOTBALL_DATA_API_TOKEN") ? 400 : 500);
+    res.status(status).json({ error: err.message || "Error sincronizando partidos desde football-data.org." });
   }
 });
 
@@ -4324,6 +4336,31 @@ app.get("/api/admin/stats", (req, res) => {
   });
 });
 
+let footballDataSyncRunning = false;
+
+async function runFootballDataSyncScheduler() {
+  if (!process.env.FOOTBALL_DATA_API_TOKEN || footballDataSyncRunning) return;
+
+  footballDataSyncRunning = true;
+  try {
+    const result = await syncMatchesFromFootballData(false, true);
+    if (result.created > 0 || result.recalculated) {
+      console.info(
+        `Football-data sync: created=${result.created}, updated=${result.updated}, ignored=${result.ignored}, recalculated=${result.recalculated}`
+      );
+    }
+  } catch (err) {
+    console.error("Error running football-data.org sync:", err);
+  } finally {
+    footballDataSyncRunning = false;
+  }
+}
+
+// Keep API-sourced fixtures and final scores current without deleting manual data.
+setInterval(() => {
+  void runFootballDataSyncScheduler();
+}, FOOTBALL_DATA_SYNC_INTERVAL_MS);
+
 let reminderSchedulerRunning = false;
 
 async function runReminderScheduler() {
@@ -4476,6 +4513,7 @@ setInterval(() => {
 async function startServer() {
   await initializeDb();
   recalculateScoresAndRankings();
+  void runFootballDataSyncScheduler();
 
   if (process.env.NODE_ENV !== "production") {
     // Development Mode: Mount Vite in middleware Mode

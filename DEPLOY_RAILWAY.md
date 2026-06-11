@@ -119,13 +119,16 @@ La app puede sincronizar calendario y resultados desde football-data.org. Crea u
 FOOTBALL_DATA_API_TOKEN=tu_token
 FOOTBALL_DATA_COMPETITION=WC
 FOOTBALL_DATA_SEASON=2026
+FOOTBALL_DATA_SYNC_INTERVAL_MS=300000
 ```
 
-Luego entra como admin a `Gestion de Partidos` y usa `Sincronizar API`.
+Al iniciar el servidor y luego cada 5 minutos, la app consulta automaticamente calendario, estados y marcadores. El boton `Usar solo API` queda como sincronizacion manual y limpieza controlada.
 
 Notas:
 
-- La app no borra partidos ni predicciones existentes.
+- La sincronizacion automatica no borra partidos ni predicciones existentes.
+- El plan gratuito de football-data.org entrega los marcadores con retraso; no debe tratarse como un livescore instantaneo.
+- Si el admin registra manualmente un resultado final mientras la API sigue retrasada, la sincronizacion automatica conserva esa correccion hasta que la API tambien publique el resultado final.
 - Los partidos sincronizados quedan marcados con origen `API`.
 - Si un partido llega como finalizado con marcador, se recalcula el ranking automaticamente.
 - Si agregas `externalSource` y `externalSourceId` al modelo `Match`, ejecuta de nuevo `npm run db:push` en Railway para actualizar Postgres.

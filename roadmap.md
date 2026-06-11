@@ -284,6 +284,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-11: automatizada la sincronizacion de calendario, estados y resultados con football-data.org al iniciar el servidor y cada 5 minutos; el control manual queda como respaldo.
 - 2026-06-11: corregido el envio de publicaciones del superadmin para usar exactamente el titulo escrito como asunto y encabezado visible del correo.
 - 2026-06-03: corregidos textos publicos en espanol del footer, FAQ y modal informativo: tildes, signos de apertura `¿...?`, preguntas de confirmacion administrativas y verificacion con `npm run build`.
 - 2026-06-02: actualizado header mobile con etiqueta de usuario, posicion y `Puntaje: X`; agregado filtro fase/fecha por logica futbolera; separadas politicas de premios en dinero y premios de empresa segun rol, empresa y pago.

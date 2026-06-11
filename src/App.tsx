@@ -6871,7 +6871,7 @@ export default function App() {
                       <h2 className="text-xl font-bold flex items-center gap-2">
                         <Calendar className="text-amber-500 w-5 h-5" /> Gestión de Partidos & Resultados Reales
                       </h2>
-                      <p className="text-xs text-slate-500 mt-1">Cargar y editar partidos del Mundial 2026. Introducir puntajes reales para calcular escalafones.</p>
+                      <p className="text-xs text-slate-500 mt-1">Los partidos y resultados de football-data.org se actualizan automáticamente cada 5 minutos. También puedes sincronizar o corregir un resultado manualmente.</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
