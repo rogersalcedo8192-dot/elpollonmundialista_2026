@@ -48,6 +48,7 @@ import {
 import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool, Company, CompanyInvitation } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
+import { MatchResultsTicker } from "./components/MatchResultsTicker";
 
 const createEmojiAvatar = (emoji: string, background: string) => {
   const svg = `
@@ -2160,6 +2161,21 @@ export default function App() {
     }
     fetchGlobalData();
     syncCurrentUserProfile();
+  }, []);
+
+  useEffect(() => {
+    const refreshMatches = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const response = await fetch("/api/matches", { cache: "no-store" });
+        if (response.ok) setMatches(await response.json());
+      } catch (err) {
+        console.error("Error refreshing match ticker:", err);
+      }
+    };
+
+    const timer = window.setInterval(refreshMatches, 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -8190,6 +8206,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <MatchResultsTicker matches={matches} getTeamFlag={getTeamFlag} />
 
       {/* Football-inspired high contrast informational footer line */}
       <footer className="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 shrink-0 text-xs">
