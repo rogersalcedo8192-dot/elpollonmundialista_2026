@@ -1875,7 +1875,7 @@ export default function App() {
       const kRes = await fetch("/api/knockout-fixtures");
       if (kRes.ok) setKnockoutFixtures(await kRes.json());
 
-      const rRes = await fetch("/api/rankings");
+      const rRes = await fetch("/api/rankings", { headers: getHeaders() });
       if (rRes.ok) setRankings(await rRes.json());
 
       const aRes = await fetch("/api/announcements");
@@ -1915,6 +1915,9 @@ export default function App() {
 
       const aRes = await fetch("/api/announcements", { headers: getHeaders() });
       if (aRes.ok) setAnnouncements(await aRes.json());
+
+      const rRes = await fetch("/api/rankings", { headers: getHeaders() });
+      if (rRes.ok) setRankings(await rRes.json());
 
       const tpRes = await fetch(`/api/tournament-predictions?userId=${currentUser.id}`, { headers: getHeaders() });
       if (tpRes.ok) {
@@ -2570,7 +2573,7 @@ export default function App() {
     setTournamentPredictions(data.prediction);
     
     // Reload rankings
-    const rRes = await fetch("/api/rankings");
+    const rRes = await fetch("/api/rankings", { headers: getHeaders() });
     if (rRes.ok) setRankings(await rRes.json());
   };
 
@@ -3331,6 +3334,16 @@ export default function App() {
     currentUser?.paymentStatus === "paid" &&
     (currentUser.paymentProvider || currentUser.paymentReference || currentUser.paymentTransactionId || currentUser.stripeCheckoutSessionId || currentUser.stripePaymentIntentId)
   );
+  const rankingTitle = hasRealPrizeAccess || isSuperAdminUser
+    ? "Ranking general de usuarios pagos"
+    : currentUser?.companyId
+      ? "Ranking gratuito de tu empresa"
+      : "Ranking de usuarios gratuitos";
+  const rankingDescription = hasRealPrizeAccess || isSuperAdminUser
+    ? "Incluye únicamente participantes con pago real confirmado, aunque pertenezcan a una empresa."
+    : currentUser?.companyId
+      ? "Incluye al administrador y los invitados de tu empresa que no hayan pagado Polla REAL."
+      : "Esta clasificación es independiente del ranking de usuarios pagos.";
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
   const hasFreshCompanyInviteSummary = companyInvitationSummary.companyId === selectedCompanyId;
   const companyInviteSlots = {
@@ -5745,9 +5758,9 @@ export default function App() {
                   <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Trophy className="text-emerald-600 w-5 h-5" id="user_ranking_sidebar_trophy" /> {t("rank_title", "Tabla de Clasificación en Tiempo Real")}
+                        <Trophy className="text-emerald-600 w-5 h-5" id="user_ranking_sidebar_trophy" /> {rankingTitle}
                       </h2>
-                      <p className="text-xs text-slate-500 mt-1">{t("rank_desc", "Conoce tu posición frente a otros participantes del torneo")}</p>
+                      <p className="text-xs text-slate-500 mt-1">{rankingDescription}</p>
                     </div>
 
                     <button
@@ -6523,7 +6536,8 @@ export default function App() {
                         </div>
 
                         <div className="p-4 rounded-xl border bg-white">
-                          <h3 className="text-xs font-black uppercase text-slate-500 mb-3">Ranking empresarial</h3>
+                          <h3 className="text-xs font-black uppercase text-slate-500 mb-1">Ranking empresarial gratuito</h3>
+                          <p className="text-[10px] text-slate-400 mb-3">No incluye usuarios de la empresa que pagaron Polla REAL.</p>
                           <div className="space-y-2 max-h-56 overflow-y-auto">
                             {companyRanking.length === 0 ? <p className="text-xs text-slate-400">Sin ranking para esta empresa.</p> : companyRanking.map((row) => (
                               <div key={row.userId} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-slate-50 text-xs">

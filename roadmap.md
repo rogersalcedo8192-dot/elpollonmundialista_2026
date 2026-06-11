@@ -295,5 +295,6 @@ Criterio de cierre:
 - 2026-06-01: popup ahora permite imagen desde assets y las tarjetas de partidos tienen controles tactiles +/-, expansion por toque e indicador 1X2.
 - 2026-06-01: actualizado tras integrar menu mobile en header, resumen mobile above the fold, filtros mobile de partidos corregidos, busqueda sin tildes, boton limpiar filtros, mejoras tactiles en pronosticos y skeleton loaders basicos.
 - 2026-06-10: actualizado esquema de premios: 100% de lo recaudado por usuarios pagos se destina a premios, sin descuento bancario ni de administracion; ambas filas permanecen visibles, tachadas y en $0.
+- 2026-06-11: separados los rankings por modalidad: todo participante con pago real confirmado compite en el ranking general pago, incluso administradores e invitados de empresa; los participantes corporativos sin pago permanecen exclusivamente en el ranking gratuito de su empresa.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.

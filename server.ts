@@ -591,6 +591,52 @@ function isRealMoneyPaidParticipant(user: User) {
   return user.paymentStatus === "paid" && hasRealPaymentRecord(user) && !isSuperAdmin(user);
 }
 
+function getVisibleRankingUserIds(db: DatabaseSchema, viewer: User | null, companyId?: string) {
+  if (companyId) {
+    return new Set(
+      db.users
+        .filter((user) => user.companyId === companyId && !isRealMoneyPaidParticipant(user) && !isSuperAdmin(user))
+        .map((user) => user.id)
+    );
+  }
+
+  if (!viewer || isSuperAdmin(viewer) || isRealMoneyPaidParticipant(viewer)) {
+    return new Set(db.users.filter(isRealMoneyPaidParticipant).map((user) => user.id));
+  }
+
+  if (viewer.companyId) {
+    return new Set(
+      db.users
+        .filter((user) => user.companyId === viewer.companyId && !isRealMoneyPaidParticipant(user) && !isSuperAdmin(user))
+        .map((user) => user.id)
+    );
+  }
+
+  return new Set(
+    db.users
+      .filter((user) => !user.companyId && !isRealMoneyPaidParticipant(user) && !isSuperAdmin(user))
+      .map((user) => user.id)
+  );
+}
+
+function buildVisibleRanking(db: DatabaseSchema, viewer: User | null, companyId?: string) {
+  const visibleUserIds = getVisibleRankingUserIds(db, viewer, companyId);
+  const usersById = new Map(db.users.map((user) => [user.id, user]));
+
+  return db.rankings
+    .filter((ranking) => visibleUserIds.has(ranking.userId))
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
+      return b.drawCount - a.drawCount;
+    })
+    .map((ranking, index) => ({
+      ...ranking,
+      position: index + 1,
+      userCountry: normalizeCountryName(ranking.userCountry || usersById.get(ranking.userId)?.country)
+    }));
+}
+
 function getRequestOrigin(req: express.Request) {
   const configuredUrl = process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
   if (configuredUrl) {
@@ -2967,15 +3013,8 @@ app.get("/api/rankings/company/:id", (req, res) => {
   const user = getAuthenticatedUser(req);
   const db = loadDb();
   if (!canManageCompany(user, req.params.id) && user?.companyId !== req.params.id) return res.status(403).json({ error: "No autorizado." });
-  const companyUsers = new Set(db.users.filter((dbUser) => dbUser.companyId === req.params.id).map((dbUser) => dbUser.id));
-  const companyRanking = db.rankings
-    .filter((ranking) => companyUsers.has(ranking.userId))
-    .sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
-      return b.drawCount - a.drawCount;
-    })
-    .map((ranking, index) => ({ ...ranking, companyPosition: index + 1 }));
+  const companyRanking = buildVisibleRanking(db, user, req.params.id)
+    .map((ranking) => ({ ...ranking, companyPosition: ranking.position }));
   res.json(companyRanking);
 });
 
@@ -4093,12 +4132,9 @@ app.post("/api/tournament-outcomes", (req, res) => {
 
 // API: Leaderboards
 app.get("/api/rankings", (req, res) => {
+  const user = getAuthenticatedUser(req);
   const db = loadDb();
-  const usersById = new Map(db.users.map((u) => [u.id, u]));
-  res.json(db.rankings.map((ranking) => ({
-    ...ranking,
-    userCountry: normalizeCountryName(ranking.userCountry || usersById.get(ranking.userId)?.country)
-  })));
+  res.json(buildVisibleRanking(db, user));
 });
 
 // API: Announcements / Comunicados
