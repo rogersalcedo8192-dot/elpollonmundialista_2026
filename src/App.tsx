@@ -933,10 +933,10 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     db_desc: "Acompanhe seu progresso, acertos e estatísticas",
     db_my_points: "MEUS PONTOS TOTAIS",
     db_my_points_sub: "🏅 Posição atual",
-    db_exact: "PLACAR EXATO (15 pts)",
+    db_exact: "PLACAR EXATO (25/35 pts)",
     db_exact_hits: "acertos",
     db_exact_sub: "Palpites com placar exato",
-    db_draw: "EMPATE CORRETO (10 pts)",
+    db_draw: "RESULTADO CORRETO (15 pts)",
     db_draw_hits: "empates",
     db_draw_sub: "Empates resultantes",
     db_estimated: "PALPITES REALIZADOS",
@@ -989,10 +989,10 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     db_desc: "Suivez votre progression, réussites et statistiques",
     db_my_points: "MES POINTS TOTAUX",
     db_my_points_sub: "🏅 Classement actuel",
-    db_exact: "SCORE EXACT (15 pts)",
+    db_exact: "SCORE EXACT (25/35 pts)",
     db_exact_hits: "exacts",
     db_exact_sub: "Scores exacts réussis",
-    db_draw: "MATCH NUL REUSSI (10 pts)",
+    db_draw: "RESULTAT CORRECT (15 pts)",
     db_draw_hits: "nuls",
     db_draw_sub: "Matchs nuls enregistrés",
     db_estimated: "MATCHS PRÉDITS",
@@ -5998,7 +5998,7 @@ export default function App() {
                             <Trophy className="w-4.5 h-4.5 text-emerald-600" /> {t("rules_dist_pt", "Distribución de Puntos")}
                           </h3>
                           <div className="text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed space-y-1">
-                            {renderFormattedText(torneo?.rulesText, "REGLAS DE PUNTUACION:\n- **Empate exacto:** 35 puntos\n- **Marcador exacto con ganador:** 25 puntos\n- **Resultado 1X2 acertado:** 15 puntos\n- **Participacion:** 5 puntos")}
+                            {renderFormattedText(torneo?.rulesText, "REGLAS DE PUNTUACION:\n- **Empate exacto:** 35 puntos\n- **Marcador exacto con ganador:** 25 puntos\n- **Resultado 1X2 acertado:** 15 puntos\n- **Participacion:** 5 puntos\n- **Sin pronostico:** 0 puntos")}
                           </div>
                         </div>
 
@@ -6287,12 +6287,12 @@ export default function App() {
                           <div>
                             <div className="flex justify-between mb-1 text-[11px] font-bold">
                               <span className="text-emerald-700">Marcadores exactos (25 o 35 pts)</span>
-                              <span>{stats.distribution.exact15} ocurrencias</span>
+                              <span>{stats.distribution.exact25or35} ocurrencias</span>
                             </div>
                             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                               <div
                                 className="bg-emerald-500 h-2.5 rounded-full"
-                                style={{ width: `${Math.min(100, stats.totalPredictionsCount > 0 ? (stats.distribution.exact15 / stats.totalPredictionsCount) * 100 : 0)}%` }}
+                                style={{ width: `${Math.min(100, stats.totalPredictionsCount > 0 ? (stats.distribution.exact25or35 / stats.totalPredictionsCount) * 100 : 0)}%` }}
                               />
                             </div>
                           </div>
@@ -6300,13 +6300,13 @@ export default function App() {
                           {/* 10 pts chart */}
                           <div>
                             <div className="flex justify-between mb-1 text-[11px] font-bold">
-                              <span className="text-indigo-700">Empates Acertados / Asignados (10 pts)</span>
-                              <span>{stats.distribution.draw10} ocurrencias</span>
+                              <span className="text-indigo-700">Resultados 1X2 acertados (15 pts)</span>
+                              <span>{stats.distribution.outcome15} ocurrencias</span>
                             </div>
                             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                               <div
                                 className="bg-indigo-500 h-2.5 rounded-full"
-                                style={{ width: `${Math.min(100, stats.totalPredictionsCount > 0 ? (stats.distribution.draw10 / stats.totalPredictionsCount) * 100 : 0)}%` }}
+                                style={{ width: `${Math.min(100, stats.totalPredictionsCount > 0 ? (stats.distribution.outcome15 / stats.totalPredictionsCount) * 100 : 0)}%` }}
                               />
                             </div>
                           </div>

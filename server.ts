@@ -269,7 +269,53 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "";
 const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || "";
 const EMAIL_APP_URL = process.env.APP_URL || "";
-const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 1 hora antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
+const DEFAULT_RULES_TEXT = "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-0 y termina 2-0) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 0-0 y termina 0-0) → **35 PTS TOTALES**\n(10 pts por bono de empate exacto + 10 pts por marcador exacto + 10 pts por acertar empate + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 1 hora antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**";
+
+const PARTICIPATION_POINTS = 5;
+const OUTCOME_POINTS = 10;
+const EXACT_SCORE_POINTS = 10;
+const EXACT_DRAW_BONUS_POINTS = 10;
+
+function calculateMatchPredictionScore(
+  predictedLocal: number,
+  predictedVisitor: number,
+  realLocal: number,
+  realVisitor: number
+) {
+  const predictedOutcome = Math.sign(predictedLocal - predictedVisitor);
+  const realOutcome = Math.sign(realLocal - realVisitor);
+  const outcomeHit = predictedOutcome === realOutcome;
+  const exactHit = predictedLocal === realLocal && predictedVisitor === realVisitor;
+  const exactDrawHit = exactHit && realLocal === realVisitor;
+
+  return {
+    points:
+      PARTICIPATION_POINTS +
+      (outcomeHit ? OUTCOME_POINTS : 0) +
+      (exactHit ? EXACT_SCORE_POINTS : 0) +
+      (exactDrawHit ? EXACT_DRAW_BONUS_POINTS : 0),
+    reason: exactHit ? "exact" as const : outcomeHit ? "draw" as const : "participation" as const,
+    outcomeHit,
+    exactHit,
+    exactDrawHit
+  };
+}
+
+function validateMatchScoringRules() {
+  const cases = [
+    { label: "participar sin acertar", actual: calculateMatchPredictionScore(0, 1, 2, 0).points, expected: 5 },
+    { label: "acertar ganador local", actual: calculateMatchPredictionScore(1, 0, 2, 0).points, expected: 15 },
+    { label: "acertar ganador visitante", actual: calculateMatchPredictionScore(0, 1, 0, 2).points, expected: 15 },
+    { label: "acertar empate no exacto", actual: calculateMatchPredictionScore(1, 1, 2, 2).points, expected: 15 },
+    { label: "acertar Mexico 2-0", actual: calculateMatchPredictionScore(2, 0, 2, 0).points, expected: 25 },
+    { label: "acertar empate exacto 0-0", actual: calculateMatchPredictionScore(0, 0, 0, 0).points, expected: 35 },
+    { label: "acertar empate exacto 1-1", actual: calculateMatchPredictionScore(1, 1, 1, 1).points, expected: 35 }
+  ];
+  const failed = cases.find((testCase) => testCase.actual !== testCase.expected);
+  if (failed) {
+    throw new Error(`Regla de puntuacion invalida: ${failed.label} dio ${failed.actual}, esperaba ${failed.expected}.`);
+  }
+}
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
@@ -948,6 +994,11 @@ function isSameFixtureCandidate(existing: Match, incoming: Match) {
 
 function applyKnownOfficialResultCorrections(db: DatabaseSchema) {
   let corrected = false;
+
+  if (!db.torneo.rulesText.includes("10 pts por bono de empate exacto")) {
+    db.torneo.rulesText = DEFAULT_RULES_TEXT;
+    corrected = true;
+  }
 
   db.matches.forEach((match) => {
     const isMexicoSouthAfricaOpener =
@@ -1953,28 +2004,12 @@ function createDefaultDb(): DatabaseSchema {
       // calculate correct status
       const realLocal = matchObj.localScore!;
       const realVisitor = matchObj.visitorScore!;
-      let pts = 5;
-      let reason: "exact" | "draw" | "participation" = "participation";
-
-      if (localPred === realLocal && visitorPred === realVisitor) {
-        if (realLocal === realVisitor) {
-          pts = 35;
-          reason = "exact";
-        } else {
-          pts = 25;
-          reason = "exact";
-        }
-      } else {
-        const predictedWin = localPred > visitorPred ? "local" : (localPred < visitorPred ? "visitor" : "draw");
-        const realWin = realLocal > realVisitor ? "local" : (realLocal < realVisitor ? "visitor" : "draw");
-        if (predictedWin === realWin) {
-          pts = 15;
-          reason = "draw";
-        } else {
-          pts = 5;
-          reason = "participation";
-        }
-      }
+      const { points: pts, reason } = calculateMatchPredictionScore(
+        localPred,
+        visitorPred,
+        realLocal,
+        realVisitor
+      );
 
       predictions.push({
         id: `pred_${u.id}_${m}`,
@@ -2227,29 +2262,19 @@ function recalculateScoresAndRankings() {
         const realLocal = m.localScore!;
         const realVisitor = m.visitorScore!;
         
-        let pts = 5;
-        let reason: "exact" | "draw" | "participation" = "participation";
+        const score = calculateMatchPredictionScore(
+          p.localScore,
+          p.visitorScore,
+          realLocal,
+          realVisitor
+        );
+        const pts = score.points;
+        const reason = score.reason;
 
-        if (p.localScore === realLocal && p.visitorScore === realVisitor) {
-          if (realLocal === realVisitor) {
-            pts = 35;
-            reason = "exact";
-          } else {
-            pts = 25;
-            reason = "exact";
-          }
+        if (score.exactHit) {
           exactHits++;
-        } else {
-          const predictedWin = p.localScore > p.visitorScore ? "local" : (p.localScore < p.visitorScore ? "visitor" : "draw");
-          const realWin = realLocal > realVisitor ? "local" : (realLocal < realVisitor ? "visitor" : "draw");
-          if (predictedWin === realWin) {
-            pts = 15;
-            reason = "draw";
-            drawHits++;
-          } else {
-            pts = 5;
-            reason = "participation";
-          }
+        } else if (score.outcomeHit) {
+          drawHits++;
         }
 
         p.pointsEarned = pts;
@@ -4355,7 +4380,7 @@ app.get("/api/admin/stats", (req, res) => {
   const finishedMatches = db.matches.filter(isActuallyFinishedMatch).length;
   const pendingMatches = totalMatchesCount - finishedMatches;
   
-  // Points distribution: count amount of exact (25/35), outcome (15), participation (5)
+  // Points distribution: exact score (25/35), correct outcome (15), participation (5)
   let pts25or35Count = 0;
   let pts15Count = 0;
   let pts5Count = 0;
@@ -4385,8 +4410,8 @@ app.get("/api/admin/stats", (req, res) => {
     totalPredictionsCount,
     averagePoints,
     distribution: {
-      exact15: pts25or35Count,
-      draw10: pts15Count,
+      exact25or35: pts25or35Count,
+      outcome15: pts15Count,
       participation5: pts5Count
     },
     prizePool,
@@ -4569,6 +4594,7 @@ setInterval(() => {
 
 // Set up server listening and Vite configuration
 async function startServer() {
+  validateMatchScoringRules();
   await initializeDb();
   applyKnownOfficialResultCorrections(loadDb());
   recalculateScoresAndRankings();

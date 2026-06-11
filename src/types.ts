@@ -206,8 +206,8 @@ export interface DashboardStats {
   totalPredictionsCount: number;
   averagePoints: string;
   distribution: {
-    exact15: number;
-    draw10: number;
+    exact25or35: number;
+    outcome15: number;
     participation5: number;
   };
   prizePool: PublicPrizePool & {
