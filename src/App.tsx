@@ -4873,7 +4873,7 @@ export default function App() {
                     </div>
 
                     <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-xl">
-                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold block uppercase">{t("db_exact", "MARCADOR EXACTO (15 pts)")}</span>
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold block uppercase">{t("db_exact", "MARCADOR EXACTO (25/35 pts)")}</span>
                       <span className="text-2xl font-black text-emerald-950 dark:text-emerald-200 mt-1 block">{currentUser.exactCount} {t("db_exact_hits", "aciertos")}</span>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">{t("db_exact_sub", "Aciertos exactos oficiales")}</span>
                     </div>
@@ -5781,8 +5781,8 @@ export default function App() {
                             <th className="py-2.5 px-3">{t("rank_col_name", "Nombre")}</th>
                             <th className="py-2.5 px-3 hidden md:table-cell">País</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_pts", "Pts Totales")}</th>
-                            <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_exact", "Aciertos 15pts")}</th>
-                            <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_draw", "Empates 10pts")}</th>
+                            <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_exact", "Marcadores exactos")}</th>
+                            <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_draw", "Resultados 1X2")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_matches", "Partidos")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_trend", "Tendencia")}</th>
                             <th className="py-2.5 px-3 text-center">Certificado</th>
@@ -5998,7 +5998,7 @@ export default function App() {
                             <Trophy className="w-4.5 h-4.5 text-emerald-600" /> {t("rules_dist_pt", "Distribución de Puntos")}
                           </h3>
                           <div className="text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed space-y-1">
-                            {renderFormattedText(torneo?.rulesText, "REGLAS DE PUNTUACION:\n- **Empate exacto:** 25 puntos\n- **Marcador exacto con ganador:** 15 puntos\n- **Resultado acertado:** 10 puntos\n- **Participacion:** 5 puntos")}
+                            {renderFormattedText(torneo?.rulesText, "REGLAS DE PUNTUACION:\n- **Empate exacto:** 35 puntos\n- **Marcador exacto con ganador:** 25 puntos\n- **Resultado 1X2 acertado:** 15 puntos\n- **Participacion:** 5 puntos")}
                           </div>
                         </div>
 
@@ -6286,7 +6286,7 @@ export default function App() {
                           {/* 15 pts chart */}
                           <div>
                             <div className="flex justify-between mb-1 text-[11px] font-bold">
-                              <span className="text-emerald-700">Aciertos Marcador Exacto (15 pts)</span>
+                              <span className="text-emerald-700">Marcadores exactos (25 o 35 pts)</span>
                               <span>{stats.distribution.exact15} ocurrencias</span>
                             </div>
                             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">

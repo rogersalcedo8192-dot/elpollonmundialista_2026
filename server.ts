@@ -946,6 +946,30 @@ function isSameFixtureCandidate(existing: Match, incoming: Match) {
   );
 }
 
+function applyKnownOfficialResultCorrections(db: DatabaseSchema) {
+  let corrected = false;
+
+  db.matches.forEach((match) => {
+    const isMexicoSouthAfricaOpener =
+      normalizeFixtureTeamName(match.local) === "mexico" &&
+      normalizeFixtureTeamName(match.visitor) === "sudafrica" &&
+      match.date.startsWith("2026-06-11");
+
+    if (
+      isMexicoSouthAfricaOpener &&
+      (match.status !== "finished" || match.localScore !== 2 || match.visitorScore !== 0)
+    ) {
+      match.status = "finished";
+      match.localScore = 2;
+      match.visitorScore = 0;
+      corrected = true;
+    }
+  });
+
+  if (corrected) saveDb(db);
+  return corrected;
+}
+
 function mergeDuplicateMatches(db: DatabaseSchema) {
   const groupedMatches = new Map<string, Match[]>();
   db.matches.forEach((match) => {
@@ -3693,9 +3717,7 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     existing.visitor = incoming.visitor;
     existing.date = incoming.date;
     existing.stadium = incoming.stadium;
-    const keepFinishedResult = preserveFinishedResults
-      && existing.status === "finished"
-      && incoming.status !== "finished";
+    const keepFinishedResult = preserveFinishedResults && existing.status === "finished";
     if (!keepFinishedResult) {
       existing.status = incoming.status;
       existing.localScore = incoming.localScore;
@@ -3811,8 +3833,8 @@ app.put("/api/matches/:id", async (req, res) => {
         const ptsEarned = pred ? (pred.pointsEarned || 0) : 0;
         let diffReason = "no participaste";
         if (pred) {
-          if (pred.reason === "exact") diffReason = "acertar marcador exacto (15 pts)";
-          else if (pred.reason === "draw") diffReason = "empate real (10 pts)";
+          if (pred.reason === "exact") diffReason = `acertar marcador exacto (${pred.pointsEarned || 0} pts)`;
+          else if (pred.reason === "draw") diffReason = "acertar el resultado 1X2 (15 pts)";
           else diffReason = "participación (5 pts)";
         }
 
@@ -3872,8 +3894,8 @@ app.post("/api/matches/:id/simulate", async (req, res) => {
     const pts = pred ? (pred.pointsEarned || 0) : 0;
     let reasonText = "participación (5 pts)";
     if (pred) {
-      if (pred.reason === "exact") reasonText = "marcador exacto (15 pts)";
-      else if (pred.reason === "draw") reasonText = "empate real (10 pts)";
+      if (pred.reason === "exact") reasonText = `marcador exacto (${pred.pointsEarned || 0} pts)`;
+      else if (pred.reason === "draw") reasonText = "resultado 1X2 acertado (15 pts)";
     }
 
     const simulationMessage = `El administrador simulo el partido ${m.local} vs ${m.visitor}. Marcador real final: ${m.localScore}-${m.visitorScore}. Obtuviste ${pred ? `${pts} pts por ${reasonText}` : "0 pts por no tener pronostico"}.`;
@@ -4548,6 +4570,7 @@ setInterval(() => {
 // Set up server listening and Vite configuration
 async function startServer() {
   await initializeDb();
+  applyKnownOfficialResultCorrections(loadDb());
   recalculateScoresAndRankings();
   void runFootballDataSyncScheduler();
 
