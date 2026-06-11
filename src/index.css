@@ -16,9 +16,9 @@
   display: flex;
   min-height: 78px;
   overflow: hidden;
-  border-top: 1px solid #1e293b;
-  border-bottom: 1px solid #1e293b;
-  background: #020617;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  background: linear-gradient(90deg, #e2e8f0, #ecfdf5 48%, #e0f2fe);
   color: #e2e8f0;
 }
 
@@ -94,13 +94,13 @@
   align-items: center;
   column-gap: 9px;
   padding: 8px 16px;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid #cbd5e1;
 }
 
 .match-ticker-status {
   grid-column: 1 / -1;
   justify-self: center;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 8px;
   font-weight: 900;
   letter-spacing: .08em;
@@ -131,7 +131,7 @@
 
 .match-ticker-name {
   overflow: hidden;
-  color: #f8fafc;
+  color: #0f172a;
   font-size: 10px;
   font-weight: 800;
   text-overflow: ellipsis;
