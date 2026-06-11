@@ -7105,7 +7105,7 @@ export default function App() {
                     <h3 className="font-bold text-xs text-slate-800">PUBLICAR COMUNICADO</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                       <div className="md:col-span-2">
-                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Título del Mensaje</label>
+                        <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Título del mensaje (asunto del correo)</label>
                         <input
                           type="text"
                           required

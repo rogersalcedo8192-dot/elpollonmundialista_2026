@@ -4117,7 +4117,9 @@ app.post("/api/announcements", async (req, res) => {
   if (!isSuperAdmin(admin) && !isCompanyAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
 
   const { title, content, urgent, publishAt } = req.body;
-  if (!title || !content) return res.status(400).json({ error: "El título y el mensaje son requeridos." });
+  const normalizedTitle = String(title || "").trim();
+  const normalizedContent = String(content || "").trim();
+  if (!normalizedTitle || !normalizedContent) return res.status(400).json({ error: "El título y el mensaje son requeridos." });
 
   const db = loadDb();
   const targetCompanyId = isCompanyAdmin(admin) ? admin.companyId : undefined;
@@ -4125,8 +4127,8 @@ app.post("/api/announcements", async (req, res) => {
   const effectivePublishAt = targetCompanyId ? undefined : publishAt;
   const newAnn: Announcement = {
     id: `announce-${Date.now()}`,
-    title,
-    content,
+    title: normalizedTitle,
+    content: normalizedContent,
     date: new Date().toISOString(),
     urgent: !!urgent,
     companyId: targetCompanyId,
@@ -4146,7 +4148,7 @@ app.post("/api/announcements", async (req, res) => {
         id: `not_company_ann_${Date.now()}_${u.id}`,
         userId: u.id,
         title: urgent ? "Comunicado urgente de tu empresa" : "Nuevo comunicado de tu empresa",
-        message: `Tu empresa publicó un comunicado: "${title}". Revísalo en el tablero de avisos.`,
+        message: `Tu empresa publicó un comunicado: "${normalizedTitle}". Revísalo en el tablero de avisos.`,
         type: "announcement",
         date: new Date().toISOString(),
         read: false
@@ -4156,7 +4158,7 @@ app.post("/api/announcements", async (req, res) => {
   } else if (!isScheduledInFuture && db.torneo.notificationConfig.announcements) {
     const emailPayloads = new Map<string, { subject: string; title: string; message: string }>();
     db.users.forEach((u) => {
-      const announcementMessage = `El administrador ha publicado un anuncio: "${title}". Consúltalo en la sección de anuncios.`;
+      const announcementMessage = `El administrador ha publicado un anuncio: "${normalizedTitle}". Consúltalo en la sección de anuncios.`;
       db.notifications.push({
         id: `not_ann_${Date.now()}_${u.id}`,
         userId: u.id,
@@ -4167,9 +4169,9 @@ app.post("/api/announcements", async (req, res) => {
         read: false
       });
       emailPayloads.set(u.id, {
-        subject: urgent ? `Urgente: ${title}` : `Nuevo comunicado: ${title}`,
-        title: urgent ? "Comunicado Urgente" : "Nuevo Comunicado",
-        message: content
+        subject: normalizedTitle,
+        title: normalizedTitle,
+        message: normalizedContent
       });
     });
     saveDb(db);
