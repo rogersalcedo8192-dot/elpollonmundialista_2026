@@ -5545,8 +5545,13 @@ export default function App() {
                               </div>
                               <div className="w-full flex items-center justify-center gap-3">
                               {/* HOME TEAM */}
-                              <div className="w-16 text-right font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.local, lang)}>
-                                {getTeamShortCode(m.local)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span>
+                              <div className="w-16 flex flex-col items-end text-right font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.local, lang)}>
+                                {isExpanded && (
+                                  <span className="md:hidden block w-full mb-0.5 truncate rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-center text-[8px] leading-none font-bold text-slate-600 dark:text-slate-300">
+                                    {getTeamDisplayName(m.local, lang)}
+                                  </span>
+                                )}
+                                <span>{getTeamShortCode(m.local)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span></span>
                               </div>
                               
                               {/* INPUT SCORES CONTAINER */}
@@ -5622,8 +5627,13 @@ export default function App() {
                               )}
                               
                               {/* VISITOR TEAM */}
-                              <div className="w-16 text-left font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.visitor, lang)}>
-                                <span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getTeamShortCode(m.visitor)}
+                              <div className="w-16 flex flex-col items-start text-left font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.visitor, lang)}>
+                                {isExpanded && (
+                                  <span className="md:hidden block w-full mb-0.5 truncate rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-center text-[8px] leading-none font-bold text-slate-600 dark:text-slate-300">
+                                    {getTeamDisplayName(m.visitor, lang)}
+                                  </span>
+                                )}
+                                <span><span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getTeamShortCode(m.visitor)}</span>
                               </div>
                               </div>
                               {!isLocked && !isExpanded && (
