@@ -3365,6 +3365,74 @@ export default function App() {
     if (position === 3) return "3er puesto";
     return `puesto ${position}`;
   };
+  const renderPrizePodium = (
+    payouts: { first: number; second: number; third: number },
+    payoutRates = { first: 0.8, second: 0.15, third: 0.05 },
+    variant: "dark" | "light" | "solid" = "light"
+  ) => {
+    const places = [
+      {
+        key: "second",
+        label: "2do puesto",
+        medal: "2",
+        amount: payouts.second,
+        rate: payoutRates.second,
+        order: "order-2 sm:order-1",
+        height: "min-h-24 sm:min-h-28",
+        tone: variant === "dark"
+          ? "bg-white/10 border-white/10 text-white"
+          : variant === "solid"
+            ? "bg-slate-200 border-slate-300 text-slate-950"
+            : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-950 dark:text-white"
+      },
+      {
+        key: "first",
+        label: "1er puesto",
+        medal: "1",
+        amount: payouts.first,
+        rate: payoutRates.first,
+        order: "order-1 col-span-2 sm:order-2 sm:col-span-1 sm:-translate-y-3",
+        height: "min-h-28 sm:min-h-32",
+        tone: variant === "dark"
+          ? "bg-amber-300/15 border-amber-300/30 text-amber-100"
+          : "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-slate-950 dark:text-amber-100"
+      },
+      {
+        key: "third",
+        label: "3er puesto",
+        medal: "3",
+        amount: payouts.third,
+        rate: payoutRates.third,
+        order: "order-3",
+        height: "min-h-20 sm:min-h-24",
+        tone: variant === "dark"
+          ? "bg-orange-300/10 border-orange-300/20 text-white"
+          : variant === "solid"
+            ? "bg-orange-200 border-orange-300 text-slate-950"
+            : "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900 text-slate-950 dark:text-orange-100"
+      }
+    ];
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 items-end pt-3">
+        {places.map((place) => (
+          <div
+            key={place.key}
+            className={`${place.order} ${place.height} ${place.tone} min-w-0 rounded-xl border p-3 flex flex-col items-center justify-center text-center shadow-sm`}
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950 text-amber-300 text-xs font-black shadow-sm">
+              {place.medal}
+            </span>
+            <span className="mt-2 block text-[9px] uppercase font-black tracking-wide">{place.label}</span>
+            <span className="mt-1 block w-full max-w-full text-[clamp(0.82rem,4.2vw,1.125rem)] sm:text-base lg:text-lg font-black leading-tight tracking-[-0.035em] [overflow-wrap:anywhere]">
+              {formatCop(place.amount)}
+            </span>
+            <span className="mt-1 block text-[9px] opacity-70">{Math.round(place.rate * 100)}% del premio</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
   const getUserRoleLabel = (user: User) => {
     if (user.role === "admin" || user.role === "superadmin") return t("admin_title", "Administrador");
     if (user.role === "company_admin") return "Admin empresa";
@@ -4836,22 +4904,8 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 min-w-full lg:min-w-[330px]">
-                          <div className="rounded-lg bg-white/10 border border-white/10 p-3">
-                            <span className="block text-[9px] uppercase font-black text-amber-300">1er puesto</span>
-                            <span className="block text-lg font-black mt-1">{formatCop(publicPrizePool.payouts.first)}</span>
-                            <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.first * 100)}%</span>
-                          </div>
-                          <div className="rounded-lg bg-white/10 border border-white/10 p-3">
-                            <span className="block text-[9px] uppercase font-black text-slate-300">2do puesto</span>
-                            <span className="block text-lg font-black mt-1">{formatCop(publicPrizePool.payouts.second)}</span>
-                            <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.second * 100)}%</span>
-                          </div>
-                          <div className="rounded-lg bg-white/10 border border-white/10 p-3">
-                            <span className="block text-[9px] uppercase font-black text-slate-300">3er puesto</span>
-                            <span className="block text-lg font-black mt-1">{formatCop(publicPrizePool.payouts.third)}</span>
-                            <span className="block text-[10px] text-slate-400">{Math.round(publicPrizePool.payoutRates.third * 100)}%</span>
-                          </div>
+                        <div className="min-w-full lg:min-w-[390px]">
+                          {renderPrizePodium(publicPrizePool.payouts, publicPrizePool.payoutRates, "dark")}
                         </div>
                       </div>
                       {!hasRealPrizeAccess && currentUser.companyId && (
@@ -5129,23 +5183,10 @@ export default function App() {
                             </div>
                           )}
 
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
-                              <span className="block text-[10px] text-amber-700 dark:text-amber-300 uppercase font-bold">1er puesto</span>
-                              <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatCop(publicPrizePool?.payouts.first || 0)}</span>
-                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">80% del premio</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">2do puesto</span>
-                              <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatCop(publicPrizePool?.payouts.second || 0)}</span>
-                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">15% del premio</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
-                              <span className="block text-[10px] text-orange-700 dark:text-orange-300 uppercase font-bold">3er puesto</span>
-                              <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatCop(publicPrizePool?.payouts.third || 0)}</span>
-                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">5% del premio</span>
-                            </div>
-                          </div>
+                          {renderPrizePodium(
+                            publicPrizePool?.payouts || { first: 0, second: 0, third: 0 },
+                            publicPrizePool?.payoutRates
+                          )}
 
                           {hasRealPrizeAccess ? (
                             <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 font-semibold">
@@ -5209,9 +5250,9 @@ export default function App() {
                         </div>
                         <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
                           <h4 className="font-black text-amber-300">Distribución de Premios</h4>
-                          <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatCop(publicPrizePool?.payouts.first || 0)}</b></div>
-                          <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
-                          <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
+                          <div className="flex justify-between gap-3"><span>🥇 1er Puesto</span><b className="min-w-0 max-w-[58%] text-right [overflow-wrap:anywhere]">{formatCop(publicPrizePool?.payouts.first || 0)}</b></div>
+                          <div className="flex justify-between gap-3"><span>🥈 2do Puesto</span><b className="min-w-0 max-w-[58%] text-right [overflow-wrap:anywhere]">{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
+                          <div className="flex justify-between gap-3"><span>🥉 3er Puesto</span><b className="min-w-0 max-w-[58%] text-right [overflow-wrap:anywhere]">{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
                         </div>
                         <p className="text-[11px] text-slate-400 leading-relaxed">El 100% de lo recaudado por usuarios pagos se destina a premios. Esta bolsa aplica solo para participantes inscritos en Polla REAL.</p>
                       </div>
@@ -5241,23 +5282,10 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900">
-                            <span className="block text-[10px] text-amber-700 dark:text-amber-300 uppercase font-bold">1er puesto</span>
-                            <span className="font-black text-slate-950 dark:text-amber-100 text-lg">{formatCop(publicPrizePool?.payouts.first || 0)}</span>
-                            <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">80% del premio</span>
-                          </div>
-                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                            <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">2do puesto</span>
-                            <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{formatCop(publicPrizePool?.payouts.second || 0)}</span>
-                            <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">15% del premio</span>
-                          </div>
-                          <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
-                            <span className="block text-[10px] text-orange-700 dark:text-orange-300 uppercase font-bold">3er puesto</span>
-                            <span className="font-black text-slate-900 dark:text-orange-100 text-lg">{formatCop(publicPrizePool?.payouts.third || 0)}</span>
-                            <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">5% del premio</span>
-                          </div>
-                        </div>
+                        renderPrizePodium(
+                          publicPrizePool?.payouts || { first: 0, second: 0, third: 0 },
+                          publicPrizePool?.payoutRates
+                        )
                       )}
 
                       {appMode === "FREE" || currentUser.paymentStatus === "paid" ? (
@@ -5294,9 +5322,9 @@ export default function App() {
                       </div>
                       <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
                         <h4 className="font-black text-amber-300">Distribución de Premios</h4>
-                        <div className="flex justify-between"><span>🥇 1er Puesto</span><b>{formatCop(publicPrizePool?.payouts.first || 0)}</b></div>
-                        <div className="flex justify-between"><span>🥈 2do Puesto</span><b>{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
-                        <div className="flex justify-between"><span>🥉 3er Puesto</span><b>{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
+                        <div className="flex justify-between gap-3"><span>🥇 1er Puesto</span><b className="min-w-0 max-w-[58%] text-right [overflow-wrap:anywhere]">{formatCop(publicPrizePool?.payouts.first || 0)}</b></div>
+                        <div className="flex justify-between gap-3"><span>🥈 2do Puesto</span><b className="min-w-0 max-w-[58%] text-right [overflow-wrap:anywhere]">{formatCop(publicPrizePool?.payouts.second || 0)}</b></div>
+                        <div className="flex justify-between gap-3"><span>🥉 3er Puesto</span><b className="min-w-0 max-w-[58%] text-right [overflow-wrap:anywhere]">{formatCop(publicPrizePool?.payouts.third || 0)}</b></div>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-relaxed">La bolsa recibe el 100% de cada inscripción pagada y se actualiza con los pagos confirmados.</p>
                     </div>
@@ -6263,20 +6291,7 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                          <div className="p-3 rounded-lg bg-amber-400 text-slate-950">
-                            <span className="text-[10px] uppercase font-black block">1er puesto · 80%</span>
-                            <span className="text-xl font-black">{formatCop(stats.prizePool.payouts.first)}</span>
-                          </div>
-                          <div className="p-3 rounded-lg bg-slate-200 text-slate-950">
-                            <span className="text-[10px] uppercase font-black block">2do puesto · 15%</span>
-                            <span className="text-xl font-black">{formatCop(stats.prizePool.payouts.second)}</span>
-                          </div>
-                          <div className="p-3 rounded-lg bg-orange-300 text-slate-950">
-                            <span className="text-[10px] uppercase font-black block">3er puesto · 5%</span>
-                            <span className="text-xl font-black">{formatCop(stats.prizePool.payouts.third)}</span>
-                          </div>
-                        </div>
+                        {renderPrizePodium(stats.prizePool.payouts, stats.prizePool.payoutRates, "solid")}
                       </div>
 
                       {/* Score distribution indicators */}
