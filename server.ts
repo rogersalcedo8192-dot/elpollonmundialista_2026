@@ -261,8 +261,6 @@ const FIRST_PLACE_RATE = 0.8;
 const SECOND_PLACE_RATE = 0.15;
 const THIRD_PLACE_RATE = 0.05;
 const PREDICTION_LOCK_MINUTES = 5;
-const REMINDER_24H_WINDOW_START_MS = 24 * 60 * 60 * 1000 + 30 * 60 * 1000;
-const REMINDER_24H_WINDOW_END_MS = 24 * 60 * 60 * 1000 - 5 * 60 * 1000;
 const REMINDER_30M_WINDOW_START_MS = 30 * 60 * 1000;
 const REMINDER_30M_WINDOW_END_MS = 5 * 60 * 1000;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -4471,55 +4469,38 @@ async function runReminderScheduler() {
       const diffToKickoff = matchTime - now;
       if (!db.torneo.notificationConfig.reminders || m.status !== "pending" || diffToKickoff <= REMINDER_30M_WINDOW_END_MS) return;
 
-      const reminderWindows = [
-        {
-          keySuffix: "24h",
-          startMs: REMINDER_24H_WINDOW_START_MS,
-          endMs: REMINDER_24H_WINDOW_END_MS,
-          message: `Quedan menos de 24 horas para el inicio del partido ${m.local} vs ${m.visitor}. Recuerda ingresar tu marcador pronosticado antes de que cierre el plazo.`
-        },
-        {
-          keySuffix: "30m",
-          startMs: REMINDER_30M_WINDOW_START_MS,
-          endMs: REMINDER_30M_WINDOW_END_MS,
-          message: `Quedan menos de 30 minutos para el partido ${m.local} vs ${m.visitor}. Si aun no tienes pronostico, registralo ahora: el cierre es 5 minutos antes del inicio.`
-        }
-      ];
+      if (diffToKickoff > REMINDER_30M_WINDOW_START_MS || diffToKickoff < REMINDER_30M_WINDOW_END_MS) return;
 
-      reminderWindows.forEach((windowConfig) => {
-        if (diffToKickoff > windowConfig.startMs || diffToKickoff < windowConfig.endMs) return;
+      db.users.forEach((u) => {
+        if (u.role === "admin") return;
+        const reminderKey = `30m_${u.id}_${m.id}`;
+        if (db.sentReminders.includes(reminderKey)) return;
 
-        db.users.forEach((u) => {
-          if (u.role === "admin") return;
-          const reminderKey = `${windowConfig.keySuffix}_${u.id}_${m.id}`;
-          const legacyReminderKey = `${u.id}_${m.id}`;
-          if (db.sentReminders.includes(reminderKey) || (windowConfig.keySuffix === "24h" && db.sentReminders.includes(legacyReminderKey))) return;
+        const hasPrediction = db.predictions.some((p) => p.userId === u.id && p.matchId === m.id);
+        if (hasPrediction) return;
 
-          const hasPrediction = db.predictions.some((p) => p.userId === u.id && p.matchId === m.id);
-          if (hasPrediction) return;
-
-          const notificationId = `not_remind_${windowConfig.keySuffix}_${u.id}_${m.id}`;
-          if (!db.notifications.some((notification) => notification.id === notificationId)) {
-            db.notifications.push({
-              id: notificationId,
-              userId: u.id,
-              title: "Recordatorio de Pronostico",
-              message: windowConfig.message,
-              type: "reminder",
-              date: new Date().toISOString(),
-              read: false
-            });
-            updated = true;
-          }
-
-          pendingEmails.push({
-            user: u,
-            matchId: m.id,
-            reminderKey,
-            subject: `Recordatorio: ${m.local} vs ${m.visitor}`,
+        const message = `Quedan menos de 30 minutos para el partido ${m.local} vs ${m.visitor}. Si aun no tienes pronostico, registralo ahora: el cierre es 5 minutos antes del inicio.`;
+        const notificationId = `not_remind_30m_${u.id}_${m.id}`;
+        if (!db.notifications.some((notification) => notification.id === notificationId)) {
+          db.notifications.push({
+            id: notificationId,
+            userId: u.id,
             title: "Recordatorio de Pronostico",
-            message: windowConfig.message
+            message,
+            type: "reminder",
+            date: new Date().toISOString(),
+            read: false
           });
+          updated = true;
+        }
+
+        pendingEmails.push({
+          user: u,
+          matchId: m.id,
+          reminderKey,
+          subject: `Recordatorio: ${m.local} vs ${m.visitor}`,
+          title: "Recordatorio de Pronostico",
+          message
         });
       });
     });
@@ -4587,7 +4568,7 @@ async function runReminderScheduler() {
 }
 
 // Background scheduler running every 30 seconds.
-// Sends alert notifications to users without registered prediction at 24 hours and 30 minutes before kick-off.
+// Sends one alert to users without a prediction 30 minutes before kick-off.
 setInterval(() => {
   void runReminderScheduler();
 }, 30000);

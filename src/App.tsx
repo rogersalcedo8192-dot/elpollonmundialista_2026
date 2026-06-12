@@ -7680,7 +7680,7 @@ export default function App() {
                                 notificationConfig: { ...torneo.notificationConfig, reminders: e.target.checked }
                               })}
                             />
-                            <label htmlFor="not_remind_ch">Alertas de predicciones faltantes (24h y 30 min antes)</label>
+                            <label htmlFor="not_remind_ch">Alerta de predicción faltante (30 min antes)</label>
                           </div>
 
                           <div className="flex items-center gap-2">

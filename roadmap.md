@@ -214,7 +214,7 @@ Criterio de cierre:
 
 Objetivo: convertir las notificaciones internas en recordatorios utiles.
 
-- Programar recordatorios automaticos 24h y 1h antes del cierre.
+- COMPLETADO: recordatorio automatico unico 30 minutos antes del partido para usuarios sin marcador; eliminado el aviso de 24 horas.
 - Enviar alertas cuando se publiquen resultados.
 - Notificar cambios relevantes de ranking.
 - Integrar correo real para usuarios suscritos.
@@ -299,5 +299,6 @@ Criterio de cierre:
 - 2026-06-11: corregido el resultado oficial Mexico 2-0 Sudafrica con recalculo completo de puntajes existentes; los marcadores exactos con ganador otorgan 25 puntos y los resultados finales confirmados quedan protegidos frente a sobrescrituras automaticas.
 - 2026-06-11: centralizada la puntuacion de partidos como suma auditable: 0 sin pronostico, 5 por participar, 10 adicionales por acertar el resultado 1X2 y 10 adicionales por marcador exacto.
 - 2026-06-11: precisada la excepcion de empate exacto: suma un bono adicional de 10 puntos por dificultad, para un total de 35; los marcadores exactos con ganador permanecen en 25.
+- 2026-06-11: eliminado el recordatorio de pronostico faltante de 24 horas; se conserva un unico aviso 30 minutos antes del partido.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.
