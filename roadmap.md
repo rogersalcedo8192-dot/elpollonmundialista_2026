@@ -301,5 +301,6 @@ Criterio de cierre:
 - 2026-06-11: precisada la excepcion de empate exacto: suma un bono adicional de 10 puntos por dificultad, para un total de 35; los marcadores exactos con ganador permanecen en 25.
 - 2026-06-11: eliminado el recordatorio de pronostico faltante de 24 horas; se conserva un unico aviso 30 minutos antes del partido.
 - 2026-06-11: reorganizados los tres premios monetarios como podio responsive; en mobile el primer lugar queda destacado arriba y los montos se ajustan sin desbordar las tarjetas.
+- 2026-06-11: centralizada toda la navegacion mobile y desktop para que cada opcion abra su vista correcta y solo la seccion actual quede activa; incluye Pronosticos, Favoritos y todos los modulos administrativos permitidos.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.
