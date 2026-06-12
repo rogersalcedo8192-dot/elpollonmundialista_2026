@@ -5798,15 +5798,21 @@ export default function App() {
                                   </span>
                                 ))}
                               </div>
-                              <div className="w-full flex items-center justify-center gap-3">
-                              {/* HOME TEAM */}
-                              <div className="w-16 flex flex-col items-end text-right font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.local, lang)}>
-                                {isExpanded && (
-                                  <span className="md:hidden block w-full mb-0.5 truncate rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-center text-[8px] leading-none font-bold text-slate-600 dark:text-slate-300">
+                              <div className="w-full min-w-0">
+                              {isExpanded && (
+                                <div className="md:hidden grid grid-cols-2 gap-2 mb-2">
+                                  <span className="min-w-0 rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-1 text-center text-[10px] leading-tight font-bold text-slate-700 dark:text-slate-200 break-words">
                                     {getTeamDisplayName(m.local, lang)}
                                   </span>
-                                )}
-                                <span>{getTeamShortCode(m.local)} <span className="ml-1 text-sm select-none">{getTeamFlag(m.local)}</span></span>
+                                  <span className="min-w-0 rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-1 text-center text-[10px] leading-tight font-bold text-slate-700 dark:text-slate-200 break-words">
+                                    {getTeamDisplayName(m.visitor, lang)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="w-full min-w-0 flex items-center justify-center gap-1 sm:gap-3">
+                              {/* HOME TEAM */}
+                              <div className="w-12 sm:w-16 shrink-0 flex flex-col items-end text-right font-black text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.local, lang)}>
+                                <span className="whitespace-nowrap">{getTeamShortCode(m.local)} <span className="ml-0.5 sm:ml-1 text-sm select-none">{getTeamFlag(m.local)}</span></span>
                               </div>
                               
                               {/* INPUT SCORES CONTAINER */}
@@ -5834,11 +5840,11 @@ export default function App() {
                                 </div>
                               ) : (
                                 /* INPUT ACTIVE STATE VIEW */
-                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="min-w-0 flex items-center gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
                                   {isExpanded && (
                                     <div className="flex flex-col gap-1">
-                                      <button type="button" onClick={() => updatePredictionScore(m.id, "local", 1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-emerald-600 text-white font-black disabled:bg-slate-300">+</button>
-                                      <button type="button" onClick={() => updatePredictionScore(m.id, "local", -1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-slate-100 text-slate-700 font-black border disabled:text-slate-300">-</button>
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "local", 1)} disabled={!canSubmitPredictions} className="w-8 sm:w-10 h-9 rounded-xl bg-emerald-600 text-white font-black disabled:bg-slate-300">+</button>
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "local", -1)} disabled={!canSubmitPredictions} className="w-8 sm:w-10 h-9 rounded-xl bg-slate-100 text-slate-700 font-black border disabled:text-slate-300">-</button>
                                     </div>
                                   )}
                                   <input
@@ -5848,7 +5854,7 @@ export default function App() {
                                     min="0"
                                     placeholder="?"
                                     disabled={!canSubmitPredictions}
-                                    className={`w-12 h-12 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl text-base md:text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
+                                    className={`w-10 sm:w-12 h-12 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl text-base md:text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                                     value={localVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
@@ -5864,7 +5870,7 @@ export default function App() {
                                     min="0"
                                     placeholder="?"
                                     disabled={!canSubmitPredictions}
-                                    className={`w-12 h-12 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl text-base md:text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
+                                    className={`w-10 sm:w-12 h-12 text-center border border-slate-200 dark:border-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl text-base md:text-xs font-bold font-mono ${canSubmitPredictions ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                                     value={visVal}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
@@ -5874,21 +5880,17 @@ export default function App() {
                                   />
                                   {isExpanded && (
                                     <div className="flex flex-col gap-1">
-                                      <button type="button" onClick={() => updatePredictionScore(m.id, "visitor", 1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-emerald-600 text-white font-black disabled:bg-slate-300">+</button>
-                                      <button type="button" onClick={() => updatePredictionScore(m.id, "visitor", -1)} disabled={!canSubmitPredictions} className="w-10 h-9 rounded-xl bg-slate-100 text-slate-700 font-black border disabled:text-slate-300">-</button>
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "visitor", 1)} disabled={!canSubmitPredictions} className="w-8 sm:w-10 h-9 rounded-xl bg-emerald-600 text-white font-black disabled:bg-slate-300">+</button>
+                                      <button type="button" onClick={() => updatePredictionScore(m.id, "visitor", -1)} disabled={!canSubmitPredictions} className="w-8 sm:w-10 h-9 rounded-xl bg-slate-100 text-slate-700 font-black border disabled:text-slate-300">-</button>
                                     </div>
                                   )}
                                 </div>
                               )}
                               
                               {/* VISITOR TEAM */}
-                              <div className="w-16 flex flex-col items-start text-left font-black text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.visitor, lang)}>
-                                {isExpanded && (
-                                  <span className="md:hidden block w-full mb-0.5 truncate rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-center text-[8px] leading-none font-bold text-slate-600 dark:text-slate-300">
-                                    {getTeamDisplayName(m.visitor, lang)}
-                                  </span>
-                                )}
-                                <span><span className="mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getTeamShortCode(m.visitor)}</span>
+                              <div className="w-12 sm:w-16 shrink-0 flex flex-col items-start text-left font-black text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 tabular-nums" title={getTeamDisplayName(m.visitor, lang)}>
+                                <span className="whitespace-nowrap"><span className="mr-0.5 sm:mr-1 text-sm select-none">{getTeamFlag(m.visitor)}</span> {getTeamShortCode(m.visitor)}</span>
+                              </div>
                               </div>
                               </div>
                               {!isLocked && !isExpanded && (
