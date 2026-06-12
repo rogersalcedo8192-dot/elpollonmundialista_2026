@@ -2531,8 +2531,21 @@ function canSubmitPredictions(user: User) {
   return user.role === "admin" || user.role === "superadmin" || user.role === "company_admin" || Boolean(user.companyId) || user.paymentStatus === "paid";
 }
 
+const TEMPORARY_FAVORITES_ACCESS_DEADLINE = new Date("2026-06-12T18:00:00.000Z").getTime();
+
+function isTemporaryFavoritesAccessOpen(date = new Date()) {
+  return date.getTime() < TEMPORARY_FAVORITES_ACCESS_DEADLINE;
+}
+
 function canSubmitTournamentFavorites(user: User) {
-  return user.role === "admin" || user.role === "superadmin" || user.role === "company_admin" || Boolean(user.companyId) || user.paymentStatus === "paid";
+  return (
+    isTemporaryFavoritesAccessOpen() ||
+    user.role === "admin" ||
+    user.role === "superadmin" ||
+    user.role === "company_admin" ||
+    Boolean(user.companyId) ||
+    user.paymentStatus === "paid"
+  );
 }
 
 const COUNTRY_ALIASES: Record<string, string> = {
@@ -2595,7 +2608,9 @@ app.get("/api/app-config", (_req, res) => {
     appMode: APP_MODE,
     paymentProvider: PAYMENT_PROVIDER,
     paymentsEnabled: APP_MODE === "PAID",
-    companyMaxPlayers: DEFAULT_COMPANY_MAX_PLAYERS
+    companyMaxPlayers: DEFAULT_COMPANY_MAX_PLAYERS,
+    temporaryFavoritesAccessDeadline: new Date(TEMPORARY_FAVORITES_ACCESS_DEADLINE).toISOString(),
+    temporaryFavoritesAccessOpen: isTemporaryFavoritesAccessOpen()
   });
 });
 
@@ -4342,7 +4357,7 @@ app.delete("/api/predictions/:matchId", (req, res) => {
 });
 
 // Tournament Lock Time and long term predictions APIs
-const TOURNAMENT_PREDICTIONS_LOCK_TIME = new Date("2026-06-11T18:00:00.000Z").getTime();
+const TOURNAMENT_PREDICTIONS_LOCK_TIME = TEMPORARY_FAVORITES_ACCESS_DEADLINE;
 
 // Get tournament predictions for a user
 app.get("/api/tournament-predictions", (req, res) => {
@@ -4383,7 +4398,7 @@ app.post("/api/tournament-predictions", (req, res) => {
 
   const now = Date.now();
   if (now >= TOURNAMENT_PREDICTIONS_LOCK_TIME) {
-    return res.status(400).json({ error: "Las predicciones de favoritos ya están cerradas (vencieron 1 hora antes del inicio del Mundial)." });
+    return res.status(400).json({ error: "El plazo especial para guardar favoritos, finalistas, subcampeón y campeón cerró el 12 de junio de 2026 a la 1:00 p. m. hora de Bogotá." });
   }
 
   const { groupWinners, octavosTeams, cuartosTeams, semifinalTeams, finalists, subchampion, champion } = req.body;

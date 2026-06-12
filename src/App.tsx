@@ -1623,6 +1623,8 @@ export default function App() {
   const [isUserLoading, setIsUserLoading] = useState(false);
   const [appMode, setAppMode] = useState<"FREE" | "PAID">("PAID");
   const [paymentProvider, setPaymentProvider] = useState<"stripe" | "wompi">("stripe");
+  const [temporaryFavoritesAccessDeadline, setTemporaryFavoritesAccessDeadline] = useState("2026-06-12T18:00:00.000Z");
+  const [temporaryFavoritesAccessOpen, setTemporaryFavoritesAccessOpen] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
   const [companies, setCompanies] = useState<Array<Company & { playersCount?: number; availableSlots?: number }>>([]);
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitation[]>([]);
@@ -1871,6 +1873,8 @@ export default function App() {
         const cfg = await cfgRes.json();
         setAppMode(cfg.appMode === "FREE" ? "FREE" : "PAID");
         setPaymentProvider(cfg.paymentProvider === "wompi" ? "wompi" : "stripe");
+        setTemporaryFavoritesAccessDeadline(cfg.temporaryFavoritesAccessDeadline || "2026-06-12T18:00:00.000Z");
+        setTemporaryFavoritesAccessOpen(Boolean(cfg.temporaryFavoritesAccessOpen));
       }
 
       const trRes = await fetch("/api/torneo");
@@ -3587,6 +3591,7 @@ export default function App() {
   const isCompanyAdminUser = currentUser?.role === "company_admin";
   const canCreateGroupPool = Boolean(currentUser?.role === "standard" && !currentUser.companyId);
   const canSaveTournamentFavorites = Boolean(
+    temporaryFavoritesAccessOpen ||
     currentUser?.role === "admin" ||
     currentUser?.role === "superadmin" ||
     currentUser?.role === "company_admin" ||
@@ -5760,6 +5765,8 @@ export default function App() {
                       tournamentPredictions={tournamentPredictions}
                       tournamentOutcomes={tournamentOutcomes}
                       canSave={canSaveTournamentFavorites}
+                      lockTime={temporaryFavoritesAccessDeadline}
+                      temporaryAccessOpen={temporaryFavoritesAccessOpen}
                       onSave={handleSaveTournamentPredictions}
                     />
                   ) : predictionsMode === "knockout" ? (

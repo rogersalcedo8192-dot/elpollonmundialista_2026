@@ -38,6 +38,8 @@ interface Props {
   tournamentPredictions: TournamentPredictions | null;
   tournamentOutcomes: TournamentOutcomes | null;
   canSave: boolean;
+  lockTime: string;
+  temporaryAccessOpen: boolean;
   onSave: (preds: {
     groupWinners: Record<string, string>;
     octavosTeams: string[];
@@ -55,21 +57,23 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   tournamentPredictions,
   tournamentOutcomes,
   canSave,
+  lockTime,
+  temporaryAccessOpen,
   onSave
 }) => {
   const t = (es: string, en: string) => (lang === "es" ? es : en);
 
   // Lock status calculation
-  // Locked one hour before kick-off: June 11, 2026 at 18:00 UTC
-  const LOCK_TIME = new Date("2026-06-11T18:00:00.000Z").getTime();
+  const LOCK_TIME = new Date(lockTime).getTime();
   const [isLocked, setIsLocked] = useState(Date.now() >= LOCK_TIME);
 
   useEffect(() => {
+    setIsLocked(Date.now() >= LOCK_TIME);
     const timer = setInterval(() => {
       setIsLocked(Date.now() >= LOCK_TIME);
     }, 15000);
     return () => clearInterval(timer);
-  }, []);
+  }, [LOCK_TIME]);
 
   // Form states initialized to empty or saved predictions
   const [groupWinners, setGroupWinners] = useState<Record<string, string>>({});
@@ -211,6 +215,16 @@ export const TournamentPredictionsView: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
+      {temporaryAccessOpen && !isLocked && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/25 dark:border-amber-800 p-4">
+          <p className="text-sm font-black text-amber-900 dark:text-amber-200">
+            Ventana especial habilitada para todos los usuarios
+          </p>
+          <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+            Puedes guardar o actualizar Favoritos, Finalistas, Subcampeón y Campeón hasta hoy, 12 de junio, a la 1:00 p. m. hora de Bogotá.
+          </p>
+        </div>
+      )}
       {/* Informational banner / Deadline Status */}
       <div className={`p-4 rounded-2xl border flex items-start gap-3.5 ${
         isLocked 
