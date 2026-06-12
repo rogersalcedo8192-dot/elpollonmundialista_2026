@@ -3494,9 +3494,6 @@ export default function App() {
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
   const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
   const currentRanking = currentUser ? rankings.find((r) => r.userId === currentUser.id) : null;
-  const nextOpenMatch = matches
-    .filter((m) => m.status === "pending" && !isMatchPredictionLocked(m))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
   const finalMatch = matches.find((m) => m.stage === "Final");
   const finalClosedByMatch = finalMatch?.status === "finished" && nowMs >= new Date(finalMatch.date).getTime() + 60 * 1000;
   const finalClosedByOutcome = Boolean(tournamentOutcomes?.champion);
@@ -5055,20 +5052,82 @@ export default function App() {
                       </button>
                     </div>
 
-                    {nextOpenMatch && (
+                  </div>
+
+                  {(() => {
+                    const pendingMatches = matches
+                      .filter((m) => m.status === "pending")
+                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                    const fallbackMatches = [...matches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                    const displayMatches = pendingMatches.length > 0 ? pendingMatches.slice(0, 3) : fallbackMatches.slice(0, 3);
+
+                    if (displayMatches.length === 0) return null;
+
+                    return (
                       <button
                         type="button"
                         onClick={() => setActiveTab("predictions")}
-                        className="w-full min-h-12 rounded-xl bg-white/5 border border-white/10 p-3 text-left"
+                        className="md:hidden w-full bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-4 shadow-md border border-emerald-800/40 space-y-3 text-left"
                       >
-                        <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold">Próximo partido</span>
-                        <span className="block text-sm font-black text-white truncate">
-                          {getShortTeamName(nextOpenMatch.local, lang)} vs {getShortTeamName(nextOpenMatch.visitor, lang)}
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-extrabold text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                            {ui("next_3_matches")}
+                          </span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold uppercase tracking-wider">
+                            {ui("live_ticker")}
+                          </span>
                         </span>
-                        <span className="block text-[11px] text-slate-400 mt-0.5">{formatMatchDate(nextOpenMatch.date)}</span>
+
+                        <span className="block space-y-2 divide-y divide-slate-800/60">
+                          {displayMatches.map((m, index) => {
+                            const timeLabel = getMatchTimeRemainingLabel(m);
+                            const isPending = m.status === "pending";
+
+                            return (
+                              <span key={m.id} className={`block space-y-1.5 ${index !== 0 ? "pt-2" : ""}`}>
+                                <span className="flex items-center justify-between gap-2 text-[9px]">
+                                  <span className="shrink-0 bg-slate-800/80 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase text-emerald-300 border border-slate-700">
+                                    {getStageLabel(m.stage)}
+                                  </span>
+                                  <span className="truncate text-slate-400 font-mono" title={m.stadium}>
+                                    {m.stadium}
+                                  </span>
+                                </span>
+
+                                <span className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 bg-slate-950/40 p-2 rounded-xl border border-slate-800">
+                                  <span className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-sm shrink-0 select-none">{getTeamFlag(m.local)}</span>
+                                    <span className="truncate text-xs font-bold text-slate-100">{getShortTeamName(m.local, lang)}</span>
+                                  </span>
+                                  <span className="text-emerald-400 text-[10px] font-bold">
+                                    {m.status === "finished" ? `${m.localScore} - ${m.visitorScore}` : "vs"}
+                                  </span>
+                                  <span className="flex items-center justify-end gap-1.5 min-w-0">
+                                    <span className="truncate text-xs font-bold text-slate-100">{getShortTeamName(m.visitor, lang)}</span>
+                                    <span className="text-sm shrink-0 select-none">{getTeamFlag(m.visitor)}</span>
+                                  </span>
+                                </span>
+
+                                <span className="flex items-center justify-between gap-2 text-[9px]">
+                                  <span className="truncate text-emerald-300 font-mono">
+                                    {formatMatchDate(m.date).replace(` (${ui("bogota")})`, "")}
+                                  </span>
+                                  <span className={`shrink-0 px-1.5 py-0.5 rounded-full font-bold uppercase text-[8px] ${
+                                    isPending
+                                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
+                                      : "bg-slate-800 text-slate-400 border border-slate-700"
+                                  }`}>
+                                    {timeLabel}
+                                  </span>
+                                </span>
+                              </span>
+                            );
+                          })}
+                        </span>
                       </button>
-                    )}
-                  </div>
+                    );
+                  })()}
 
                   {publicPrizePool && (
                     <div className="bg-slate-950 text-white rounded-xl border border-slate-800 shadow-sm overflow-hidden">
@@ -5740,7 +5799,7 @@ export default function App() {
                       </div>
 
                   {/* Core Matches Prediction Loop */}
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[500px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[calc(100vh-220px)] lg:max-h-[calc(100vh-180px)] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
                     {filteredMatches.length === 0 ? (
                       <p className="p-8 text-center text-xs text-slate-400">{t("pred_no_results", "No se encontraron partidos programados con los filtros indicados.")}</p>
                     ) : (
@@ -5800,7 +5859,7 @@ export default function App() {
                               </div>
                               <div className="w-full min-w-0">
                               {isExpanded && (
-                                <div className="md:hidden grid grid-cols-2 gap-2 mb-2">
+                                <div className="grid grid-cols-2 gap-2 mb-2">
                                   <span className="min-w-0 rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-1 text-center text-[10px] leading-tight font-bold text-slate-700 dark:text-slate-200 break-words">
                                     {getTeamDisplayName(m.local, lang)}
                                   </span>
