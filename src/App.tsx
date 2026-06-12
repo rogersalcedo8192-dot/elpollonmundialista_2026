@@ -5799,7 +5799,7 @@ export default function App() {
                       </div>
 
                   {/* Core Matches Prediction Loop */}
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[calc(100vh-220px)] lg:max-h-[calc(100vh-180px)] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[850px] lg:max-h-[950px] xl:max-h-[1050px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
                     {filteredMatches.length === 0 ? (
                       <p className="p-8 text-center text-xs text-slate-400">{t("pred_no_results", "No se encontraron partidos programados con los filtros indicados.")}</p>
                     ) : (
