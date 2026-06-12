@@ -284,6 +284,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-12: agregado importador Excel de pronosticos en Gestion de Usuarios del SuperAdmin, con vista previa, validacion de pago real, mapeo por grupo y selecciones, respeto del cierre a 5 minutos y omision de partidos iniciados.
 - 2026-06-12: agregado modulo de Pronosticos Publicos en menu mobile y desktop; permite comparar marcadores de participantes de la misma modalidad unicamente cuando el partido esta en curso o finalizado, sin exponer datos privados ni pronosticos futuros.
 - 2026-06-12: cierre verificado de la jornada: rankings separados por modalidad, Mexico 2-0 Sudafrica recalculado, puntuacion 0/5/15/25/35 consolidada, recordatorio unico a 30 minutos, podio responsive, navegacion activa coherente y tarjeta social de ranking; `npm.cmd run lint` y `npm.cmd run build` aprobados sin modificar datos reales.
 - 2026-06-11: agregado ticker publico de lectura antes del footer con resultados recientes, partidos en curso y proximos encuentros, alimentado por `/api/matches` sin escrituras en base de datos.

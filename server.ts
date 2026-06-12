@@ -6,6 +6,7 @@ import { createHash, randomBytes } from "crypto";
 import { createServer as createViteServer } from "vite";
 import { PrismaClient } from "@prisma/client";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import ExcelJS from "exceljs";
 
 interface TorneoConfig {
   title: string;
@@ -938,12 +939,16 @@ function normalizeFixtureTeamName(name: string) {
     "korea republic": "rep de corea",
     "republica de corea": "rep de corea",
     "corea del sur": "rep de corea",
+    "bosnia y herzeg": "bosnia y herzegovina",
+    "bosnia y herzegovina": "bosnia y herzegovina",
     "iran": "ri de iran",
     "ir iran": "ri de iran",
     "paises bajos": "paises bajos",
     "netherlands": "paises bajos",
     "saudi arabia": "arabia saudi",
+    "arabia saudita": "arabia saudi",
     "arabia saudi": "arabia saudi",
+    "rep del congo": "rd congo",
     "turkiye": "turquia",
     "turkey": "turquia"
   };
@@ -3287,6 +3292,201 @@ app.get("/api/admin/users", (req, res) => {
     stripeCheckoutSessionId: u.stripeCheckoutSessionId,
     password: u.password // accessible for administrator manual reset view
   })));
+});
+
+type SpreadsheetPrediction = {
+  group: string;
+  sourceMatchId: number;
+  local: string;
+  visitor: string;
+  localScore: number;
+  visitorScore: number;
+};
+
+async function parseGroupStagePredictionsWorkbook(fileBase64: string) {
+  const normalizedBase64 = String(fileBase64 || "").replace(/^data:.*?;base64,/, "");
+  const fileBuffer = Buffer.from(normalizedBase64, "base64");
+  if (!fileBuffer.length || fileBuffer.length > 10 * 1024 * 1024) {
+    throw new Error("El archivo Excel es invalido o supera el limite de 10 MB.");
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+  const predictions: SpreadsheetPrediction[] = [];
+  const predictionRows = [8, 12, 16, 20, 24, 28];
+
+  for (const group of "ABCDEFGHIJKL") {
+    const sheet = workbook.getWorksheet(group);
+    if (!sheet) throw new Error(`Falta la hoja del grupo ${group}.`);
+
+    for (const row of predictionRows) {
+      const sourceMatchId = Number(sheet.getCell(`B${row}`).value);
+      const local = sheet.getCell(`F${row}`).text.trim();
+      const visitor = sheet.getCell(`N${row}`).text.trim();
+      const localScore = Number(sheet.getCell(`I${row}`).value);
+      const visitorScore = Number(sheet.getCell(`K${row}`).value);
+
+      if (
+        !Number.isInteger(sourceMatchId) ||
+        !local ||
+        !visitor ||
+        !Number.isInteger(localScore) ||
+        !Number.isInteger(visitorScore) ||
+        localScore < 0 ||
+        visitorScore < 0
+      ) {
+        throw new Error(`Datos invalidos en la hoja ${group}, fila ${row}.`);
+      }
+
+      predictions.push({
+        group,
+        sourceMatchId,
+        local,
+        visitor,
+        localScore,
+        visitorScore
+      });
+    }
+  }
+
+  if (predictions.length !== 72) {
+    throw new Error(`Se esperaban 72 pronosticos de grupos y se encontraron ${predictions.length}.`);
+  }
+  return predictions;
+}
+
+app.post("/api/admin/predictions/import-excel", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!isSuperAdmin(admin)) return res.status(403).json({ error: "Solo el SuperAdmin puede importar pronosticos." });
+
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const apply = req.body?.apply === true;
+    if (!email || !req.body?.fileBase64) {
+      return res.status(400).json({ error: "El correo y el archivo Excel son requeridos." });
+    }
+
+    const db = loadDb();
+    const targetUser = db.users.find((user) => user.email.toLowerCase() === email);
+    if (!targetUser) return res.status(404).json({ error: `No existe un usuario con el correo ${email}.` });
+    if (targetUser.paymentStatus !== "paid" || !hasRealPaymentRecord(targetUser)) {
+      return res.status(400).json({ error: "El usuario no tiene un pago real confirmado." });
+    }
+
+    const sourcePredictions = await parseGroupStagePredictionsWorkbook(req.body.fileBase64);
+    const existingByMatchId = new Map(
+      db.predictions
+        .filter((prediction) => prediction.userId === targetUser.id)
+        .map((prediction) => [prediction.matchId, prediction])
+    );
+    const nowMs = Date.now();
+    const seenMatchIds = new Set<number>();
+
+    const rows = sourcePredictions.map((source) => {
+      const match = db.matches.find((candidate) =>
+        candidate.stage === `Grupo ${source.group}` &&
+        normalizeFixtureTeamName(candidate.local) === normalizeFixtureTeamName(source.local) &&
+        normalizeFixtureTeamName(candidate.visitor) === normalizeFixtureTeamName(source.visitor)
+      );
+      if (!match) return { ...source, status: "unmatched" as const };
+      if (seenMatchIds.has(match.id)) return { ...source, matchId: match.id, status: "duplicate_match" as const };
+      seenMatchIds.add(match.id);
+
+      const existing = existingByMatchId.get(match.id);
+      if (
+        existing &&
+        existing.localScore === source.localScore &&
+        existing.visitorScore === source.visitorScore
+      ) {
+        return { ...source, matchId: match.id, match, status: "already_equal" as const };
+      }
+
+      const lockTime = new Date(match.date).getTime() - PREDICTION_LOCK_MINUTES * 60 * 1000;
+      if (match.status !== "pending" || nowMs >= lockTime) {
+        return { ...source, matchId: match.id, match, existing, status: "closed" as const };
+      }
+
+      return {
+        ...source,
+        matchId: match.id,
+        match,
+        existing,
+        status: existing ? "ready_to_update" as const : "ready_to_create" as const
+      };
+    });
+
+    const invalidRows = rows.filter((row) => row.status === "unmatched" || row.status === "duplicate_match");
+    if (invalidRows.length > 0) {
+      return res.status(400).json({
+        error: "El Excel contiene partidos que no se pudieron relacionar de forma segura.",
+        rows: invalidRows
+      });
+    }
+
+    const summary = rows.reduce<Record<string, number>>((result, row) => {
+      result[row.status] = (result[row.status] || 0) + 1;
+      return result;
+    }, {});
+
+    let imported = 0;
+    if (apply) {
+      rows.forEach((row) => {
+        if (row.status !== "ready_to_create" && row.status !== "ready_to_update") return;
+        const existing = existingByMatchId.get(row.matchId);
+        if (existing) {
+          existing.localScore = row.localScore;
+          existing.visitorScore = row.visitorScore;
+          existing.pointsEarned = null;
+          existing.reason = null;
+          existing.dateCreated = new Date().toISOString();
+        } else {
+          db.predictions.push({
+            id: `pred_${targetUser.id}_${row.matchId}`,
+            userId: targetUser.id,
+            matchId: row.matchId,
+            localScore: row.localScore,
+            visitorScore: row.visitorScore,
+            pointsEarned: null,
+            reason: null,
+            dateCreated: new Date().toISOString()
+          });
+        }
+        imported += 1;
+      });
+
+      if (imported > 0) {
+        saveDb(db);
+        recalculateScoresAndRankings();
+      }
+      console.info(
+        `Admin prediction import: admin=${admin?.id} user=${targetUser.id} email=${email} imported=${imported} closed=${summary.closed || 0} unchanged=${summary.already_equal || 0}`
+      );
+    }
+
+    res.json({
+      mode: apply ? "applied" : "preview",
+      user: {
+        id: targetUser.id,
+        name: targetUser.name,
+        email: targetUser.email,
+        paymentStatus: targetUser.paymentStatus
+      },
+      total: rows.length,
+      imported,
+      summary,
+      rows: rows.map((row) => ({
+        group: row.group,
+        matchId: "matchId" in row ? row.matchId : undefined,
+        local: row.local,
+        visitor: row.visitor,
+        localScore: row.localScore,
+        visitorScore: row.visitorScore,
+        status: row.status
+      }))
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "No se pudo procesar el Excel." });
+  }
 });
 
 // Admin: Create User Account

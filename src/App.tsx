@@ -1709,6 +1709,10 @@ export default function App() {
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
   const [userPredictionsView, setUserPredictionsView] = useState<Prediction[]>([]);
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
+  const [predictionImportEmail, setPredictionImportEmail] = useState("dir.comercial@millonarios.com.co");
+  const [predictionImportFile, setPredictionImportFile] = useState<File | null>(null);
+  const [predictionImportBusy, setPredictionImportBusy] = useState(false);
+  const [predictionImportResult, setPredictionImportResult] = useState<any>(null);
 
   // Admin Matches Create/Edit Info
   const [matchForm, setMatchForm] = useState<any>(null);
@@ -3344,6 +3348,61 @@ export default function App() {
       }
     } catch (err) {
       showToast("No se pudieron cargar las predicciones del usuario", "error");
+    }
+  };
+
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("No se pudo leer el archivo Excel."));
+      reader.readAsDataURL(file);
+    });
+
+  const handlePredictionExcelImport = async (apply: boolean) => {
+    if (!predictionImportFile) {
+      showToast("Selecciona el archivo Excel con los pronósticos.", "error");
+      return;
+    }
+    if (!predictionImportEmail.trim()) {
+      showToast("Ingresa el correo del participante.", "error");
+      return;
+    }
+    if (
+      apply &&
+      !window.confirm(
+        "Se importarán únicamente los pronósticos de partidos todavía abiertos. Los partidos iniciados o finalizados serán omitidos. ¿Deseas continuar?"
+      )
+    ) {
+      return;
+    }
+
+    setPredictionImportBusy(true);
+    try {
+      const fileBase64 = await fileToBase64(predictionImportFile);
+      const response = await fetch("/api/admin/predictions/import-excel", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          email: predictionImportEmail.trim().toLowerCase(),
+          fileBase64,
+          apply
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "No se pudo procesar el Excel.");
+      setPredictionImportResult(data);
+      if (apply) {
+        showToast(`Importación completada: ${data.imported} pronósticos guardados.`, "success");
+        fetchAdminUsers();
+      } else {
+        showToast("Vista previa lista. Revisa el resumen antes de importar.", "info");
+      }
+    } catch (error: any) {
+      setPredictionImportResult(null);
+      showToast(error.message || "No se pudo procesar el Excel.", "error");
+    } finally {
+      setPredictionImportBusy(false);
     }
   };
 
@@ -7062,6 +7121,106 @@ export default function App() {
                       <Plus className="w-3.5 h-3.5" /> Registrar Participante
                     </button>
                   </div>
+
+                  {isSuperAdminUser && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-900 p-4 md:p-5 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-black text-emerald-950 dark:text-emerald-200 flex items-center gap-2">
+                          <FileSpreadsheet className="w-4 h-4" />
+                          Importar pronósticos desde Excel
+                        </h3>
+                        <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80 mt-1">
+                          Lee las hojas A-L, valida 72 partidos de grupos y guarda únicamente los que continúan abiertos.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+                        <label>
+                          <span className="block text-[10px] uppercase font-black text-slate-500 mb-1">Correo del participante</span>
+                          <input
+                            type="email"
+                            value={predictionImportEmail}
+                            onChange={(event) => {
+                              setPredictionImportEmail(event.target.value);
+                              setPredictionImportResult(null);
+                            }}
+                            className="w-full min-h-11 px-3 rounded-xl border border-slate-200 bg-white text-xs"
+                          />
+                        </label>
+                        <label>
+                          <span className="block text-[10px] uppercase font-black text-slate-500 mb-1">Archivo Excel</span>
+                          <input
+                            type="file"
+                            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            onChange={(event) => {
+                              setPredictionImportFile(event.target.files?.[0] || null);
+                              setPredictionImportResult(null);
+                            }}
+                            className="block w-full min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs file:mr-3 file:border-0 file:bg-slate-900 file:text-white file:rounded-lg file:px-3 file:py-1"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => void handlePredictionExcelImport(false)}
+                          disabled={predictionImportBusy || !predictionImportFile}
+                          className="md:self-end min-h-11 px-4 rounded-xl bg-slate-900 text-white text-xs font-black disabled:bg-slate-300"
+                        >
+                          {predictionImportBusy ? "Procesando..." : "Vista previa"}
+                        </button>
+                      </div>
+
+                      {predictionImportResult && (
+                        <div className="rounded-xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                              <p className="text-sm font-black text-slate-950 dark:text-white">
+                                {predictionImportResult.user.name}
+                              </p>
+                              <p className="text-[11px] text-slate-500">{predictionImportResult.user.email}</p>
+                            </div>
+                            <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                              Pago confirmado
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                            <div className="rounded-lg bg-emerald-50 p-2">
+                              <span className="block text-xl font-black text-emerald-700">
+                                {(predictionImportResult.summary.ready_to_create || 0) + (predictionImportResult.summary.ready_to_update || 0)}
+                              </span>
+                              <span className="text-[9px] uppercase font-black text-emerald-800">Listos</span>
+                            </div>
+                            <div className="rounded-lg bg-amber-50 p-2">
+                              <span className="block text-xl font-black text-amber-700">{predictionImportResult.summary.closed || 0}</span>
+                              <span className="text-[9px] uppercase font-black text-amber-800">Cerrados</span>
+                            </div>
+                            <div className="rounded-lg bg-slate-100 p-2">
+                              <span className="block text-xl font-black text-slate-700">{predictionImportResult.summary.already_equal || 0}</span>
+                              <span className="text-[9px] uppercase font-black text-slate-600">Ya iguales</span>
+                            </div>
+                            <div className="rounded-lg bg-blue-50 p-2">
+                              <span className="block text-xl font-black text-blue-700">{predictionImportResult.total}</span>
+                              <span className="text-[9px] uppercase font-black text-blue-800">Total Excel</span>
+                            </div>
+                          </div>
+
+                          {predictionImportResult.mode === "preview" && (
+                            <button
+                              type="button"
+                              onClick={() => void handlePredictionExcelImport(true)}
+                              disabled={
+                                predictionImportBusy ||
+                                ((predictionImportResult.summary.ready_to_create || 0) + (predictionImportResult.summary.ready_to_update || 0) === 0)
+                              }
+                              className="w-full min-h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black disabled:bg-slate-300"
+                            >
+                              Importar únicamente los pronósticos válidos y abiertos
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Search box filters on user list */}
                   <div className="relative">
