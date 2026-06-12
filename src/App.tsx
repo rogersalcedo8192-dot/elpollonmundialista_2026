@@ -1617,6 +1617,7 @@ export default function App() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [publicPrizePool, setPublicPrizePool] = useState<PublicPrizePool | null>(null);
   const [winnerCertificate, setWinnerCertificate] = useState<Ranking | null>(null);
+  const [winnerEmailPreviewPosition, setWinnerEmailPreviewPosition] = useState<1 | 2 | 3>(1);
   const [rankingShareBusy, setRankingShareBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
@@ -3661,6 +3662,10 @@ export default function App() {
     if (position === 3) return "3er puesto";
     return `puesto ${position}`;
   };
+  const winnerEmailPreviewRanking = rankings.find((ranking) => ranking.position === winnerEmailPreviewPosition);
+  const winnerEmailPreviewUser = adminUsers.find((user) => user.id === winnerEmailPreviewRanking?.userId);
+  const winnerEmailPreviewName = winnerEmailPreviewRanking?.userName || `Participante del ${getWinnerPlaceLabel(winnerEmailPreviewPosition)}`;
+  const winnerEmailPreviewPrize = getWinnerPrize(winnerEmailPreviewPosition);
   const renderPrizePodium = (
     payouts: { first: number; second: number; third: number },
     payoutRates = { first: 0.8, second: 0.15, third: 0.05 },
@@ -8111,6 +8116,89 @@ export default function App() {
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">Personaliza el nombre, descripciones, zona horaria base, mensaje de bienvenida y habilitación de notificaciones</p>
                   </div>
+
+                  <section className="rounded-2xl border border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/10 p-4 md:p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div>
+                        <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-amber-700 dark:text-amber-300">
+                          <Mail className="w-4 h-4" />
+                          Vista previa, sin envio
+                        </span>
+                        <h3 className="text-lg font-black text-slate-950 dark:text-white mt-1">Correo final para los tres ganadores</h3>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                          Simula el mensaje que recibiria cada ganador cuando el ranking final sea validado.
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-amber-200 bg-white dark:bg-slate-950 dark:border-amber-900 px-3 py-2 text-[10px] font-bold text-amber-800 dark:text-amber-200">
+                        Esta pantalla no envia correos
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {([1, 2, 3] as const).map((position) => (
+                        <button
+                          key={position}
+                          type="button"
+                          onClick={() => setWinnerEmailPreviewPosition(position)}
+                          className={`min-h-11 rounded-xl border px-2 text-xs font-black transition-colors ${
+                            winnerEmailPreviewPosition === position
+                              ? "bg-slate-950 border-slate-950 text-amber-300 dark:bg-amber-300 dark:border-amber-300 dark:text-slate-950"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-amber-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {getWinnerPlaceLabel(position)}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="max-w-2xl mx-auto rounded-2xl bg-slate-100 dark:bg-slate-900 p-3 md:p-5 shadow-inner">
+                      <div className="mb-3 rounded-xl border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-800 p-3 text-xs space-y-1">
+                        <p><strong>Para:</strong> {winnerEmailPreviewUser?.email || "correo registrado del ganador"}</p>
+                        <p><strong>Asunto:</strong> Felicitaciones: ganaste el {getWinnerPlaceLabel(winnerEmailPreviewPosition)} en El Pollon Mundialista 2026</p>
+                      </div>
+
+                      <div className="overflow-hidden rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <div className="bg-slate-950 text-white px-5 py-5 border-b-4 border-emerald-500">
+                          <p className="text-[10px] uppercase tracking-widest font-black text-emerald-300">El Pollon Mundialista FIFA 2026</p>
+                          <h4 className="text-xl md:text-2xl font-black mt-2">Eres uno de nuestros ganadores</h4>
+                        </div>
+                        <div className="p-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300 space-y-4">
+                          <p>Hola <strong className="text-slate-950 dark:text-white">{winnerEmailPreviewName}</strong>,</p>
+                          <p>
+                            Finalizo el Mundial y, despues de calcular los resultados y validar el ranking de participantes pagos,
+                            ocupaste el <strong>{getWinnerPlaceLabel(winnerEmailPreviewPosition)}</strong> de El Pollon Mundialista 2026.
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900 p-3">
+                              <span className="block text-[9px] uppercase font-black text-emerald-700 dark:text-emerald-300">Premio asignado</span>
+                              <strong className="block text-xl text-emerald-800 dark:text-emerald-200 mt-1">{formatCop(winnerEmailPreviewPrize)}</strong>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800 p-3">
+                              <span className="block text-[9px] uppercase font-black text-slate-500">Puntaje final</span>
+                              <strong className="block text-xl text-slate-950 dark:text-white mt-1">{winnerEmailPreviewRanking?.points ?? 0} pts</strong>
+                            </div>
+                          </div>
+
+                          <p>
+                            Para gestionar la entrega, responde a este correo con tu certificado de ganador, documento de identidad
+                            y certificacion bancaria. El premio se entregara despues de verificar tu identidad, los datos bancarios y el ranking final.
+                          </p>
+                          <p className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-3 text-xs text-amber-900 dark:text-amber-200">
+                            No envies contrasenas, claves bancarias ni datos de tarjetas. El equipo de El Pollon Mundialista nunca solicitara esa informacion.
+                          </p>
+                          <div>
+                            <span className="inline-flex min-h-11 items-center rounded-lg bg-emerald-600 px-4 text-white font-black">
+                              Ver ranking y certificado
+                            </span>
+                          </div>
+                        </div>
+                        <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 text-center text-[10px] text-slate-400">
+                          Recibes este correo por tu participacion en El Pollon Mundialista FIFA 2026.
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
                   {torneo && (
                     <form onSubmit={handleSaveTorneoPreferences} className="space-y-4 text-xs">
