@@ -6165,13 +6165,15 @@ export default function App() {
                                 <td className="py-2.5 px-3 text-center text-slate-500 dark:text-slate-400">{r.predictCount}</td>
                                 <td className="py-2.5 px-3 text-center">
                                   {r.shift === "up" && (
-                                    <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold" title="Subió posición">
-                                      <ChevronUp className="w-3.5 h-3.5 stroke-[3]" /> {t("rank_status_up", "Subió")}
+                                    <span className="inline-flex items-center justify-center gap-0.5 whitespace-nowrap text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold" title="Subió posición" aria-label={t("rank_status_up", "Subió")}>
+                                      <ChevronUp className="w-4 h-4 shrink-0 stroke-[3]" aria-hidden="true" />
+                                      <span className="hidden sm:inline">{t("rank_status_up", "Subió")}</span>
                                     </span>
                                   )}
                                   {r.shift === "down" && (
-                                    <span className="inline-flex items-center text-rose-500 text-[10px] font-mono font-bold" title="Bajó posición">
-                                      <ChevronDown className="w-3.5 h-3.5 stroke-[3]" /> {t("rank_status_down", "Bajó")}
+                                    <span className="inline-flex items-center justify-center gap-0.5 whitespace-nowrap text-rose-500 text-[10px] font-mono font-bold" title="Bajó posición" aria-label={t("rank_status_down", "Bajó")}>
+                                      <ChevronDown className="w-4 h-4 shrink-0 stroke-[3]" aria-hidden="true" />
+                                      <span className="hidden sm:inline">{t("rank_status_down", "Bajó")}</span>
                                     </span>
                                   )}
                                   {r.shift === "equal" && (
