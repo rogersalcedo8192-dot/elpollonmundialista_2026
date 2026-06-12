@@ -284,6 +284,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-12: corregido selector de los dos finalistas para mobile y desktop; ahora funciona por botones tactiles, permite marcar o desmarcar exactamente dos equipos y bloquea el resto al alcanzar el limite.
 - 2026-06-12: habilitada ventana temporal para que todos los usuarios registrados guarden Favoritos, Finalistas, Subcampeon y Campeon hasta la 1:00 p. m. hora de Bogota, con cierre automatico simultaneo en frontend y backend.
 - 2026-06-12: agregado importador Excel de pronosticos en Gestion de Usuarios del SuperAdmin, con vista previa, validacion de pago real, mapeo por grupo y selecciones, respeto del cierre a 5 minutos y omision de partidos iniciados.
 - 2026-06-12: agregado modulo de Pronosticos Publicos en menu mobile y desktop; permite comparar marcadores de participantes de la misma modalidad unicamente cuando el partido esta en curso o finalizado, sin exponer datos privados ni pronosticos futuros.

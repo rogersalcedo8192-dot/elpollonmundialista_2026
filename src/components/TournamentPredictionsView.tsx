@@ -656,21 +656,36 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                 <label className="text-[11px] text-slate-400 block font-medium">
                   {t("Elige exactamente 2 selecciones de la lista:", "Select exactly 2 teams below:")}
                 </label>
-                <select
-                  disabled={isLocked}
-                  multiple
-                  value={finalists}
-                  onChange={(e) => {
-                    const opts = Array.from(e.target.selectedOptions, (o: any) => o.value);
-                    if (opts.length <= 2) setFinalists(opts);
-                  }}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                  style={{ height: "140px" }}
-                >
-                  {ALL_TEAMS.map(team => (
-                    <option key={team} value={team}>{team}</option>
-                  ))}
-                </select>
+                <div className="max-h-52 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-2">
+                  {ALL_TEAMS.map((team) => {
+                    const isSelected = finalists.includes(team);
+                    const limitReached = finalists.length >= 2 && !isSelected;
+                    return (
+                      <button
+                        key={team}
+                        type="button"
+                        disabled={isLocked || limitReached}
+                        onClick={() => {
+                          setFinalists((current) =>
+                            current.includes(team)
+                              ? current.filter((selectedTeam) => selectedTeam !== team)
+                              : [...current, team]
+                          );
+                        }}
+                        className={`min-h-10 rounded-lg px-3 text-left text-xs font-bold flex items-center justify-between gap-2 transition-colors ${
+                          isSelected
+                            ? "bg-emerald-600 text-white"
+                            : limitReached
+                              ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed"
+                              : "bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 hover:border-emerald-400 border border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        <span>{team}</span>
+                        {isSelected && <Check className="w-4 h-4 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {finalists.map(team => (
                     <span key={team} className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold rounded-full px-2.5 py-1 text-[11px] border border-emerald-500/20">
@@ -684,7 +699,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   ))}
                 </div>
                 <p className="text-[10px] text-slate-500 italic">
-                  {t("Ctrl + Click (Windows) o Cmd + Click (Mac) para marcar hasta 2 equipos en la lista móvil.", "Hold Ctrl (Windows) or Cmd (Mac) to click multiple items, or click tags to remove them.")}
+                  {t(`${finalists.length}/2 seleccionados. Toca un equipo para marcarlo o quitarlo.`, `${finalists.length}/2 selected. Tap a team to select or remove it.`)}
                 </p>
               </div>
             </div>
