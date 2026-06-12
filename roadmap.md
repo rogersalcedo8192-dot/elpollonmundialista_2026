@@ -302,5 +302,6 @@ Criterio de cierre:
 - 2026-06-11: eliminado el recordatorio de pronostico faltante de 24 horas; se conserva un unico aviso 30 minutos antes del partido.
 - 2026-06-11: reorganizados los tres premios monetarios como podio responsive; en mobile el primer lugar queda destacado arriba y los montos se ajustan sin desbordar las tarjetas.
 - 2026-06-11: centralizada toda la navegacion mobile y desktop para que cada opcion abra su vista correcta y solo la seccion actual quede activa; incluye Pronosticos, Favoritos y todos los modulos administrativos permitidos.
+- 2026-06-11: agregado compartir ranking para todos los participantes: tarjeta PNG con avatar, nombre publico, posicion, puntos, exactos y modalidad; compartir nativo, descarga y copia de enlace sin datos privados.
 - 2026-05-31: marcado como MUY IMPORTANTE - PENDIENTE rehacer recuperacion de contrasena con token temporal, correo real y passwords con hash antes de usuarios/pagos reales.
 - 2026-05-30: actualizado tras integrar Railway/Postgres, Cloudinary, Stripe Checkout, premio acumulado, bloqueo por pago, paises con banderas, API de partidos, eliminacion directa separada y banners dinamicos.

@@ -40,6 +40,7 @@ import {
   Megaphone,
   ExternalLink,
   Copy,
+  Share2,
   CreditCard,
   Eraser,
   Menu,
@@ -1612,6 +1613,7 @@ export default function App() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [publicPrizePool, setPublicPrizePool] = useState<PublicPrizePool | null>(null);
   const [winnerCertificate, setWinnerCertificate] = useState<Ranking | null>(null);
+  const [rankingShareBusy, setRankingShareBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const [isUserLoading, setIsUserLoading] = useState(false);
@@ -2806,7 +2808,7 @@ export default function App() {
   const handleExportRankingCSV = () => {
     try {
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "Posicion,Nombre,Pais,Puntos,Exactos(15pts),Empates(10pts),Partidos Predichos\n";
+      csvContent += "Posicion,Nombre,Pais,Puntos,Marcadores exactos,Resultados 1X2,Partidos Predichos\n";
       rankings.forEach((r) => {
         csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.exactCount},${r.drawCount},${r.predictCount}\n`;
       });
@@ -2820,6 +2822,191 @@ export default function App() {
       showToast("Ranking exportado a CSV exitosamente", "success");
     } catch (err) {
       showToast("Error al exportar CSV", "error");
+    }
+  };
+
+  const getRankingShareText = () => {
+    const position = currentRanking?.position ? `#${currentRanking.position}` : "sin posición asignada";
+    const exactCount = currentRanking?.exactCount ?? currentUser?.exactCount ?? 0;
+    const points = currentRanking?.points ?? currentUser?.points ?? 0;
+    return `Estoy en el puesto ${position} de ${rankingTitle} en El Pollón Mundialista FIFA 2026, con ${points} puntos y ${exactCount} marcadores exactos. ¿Puedes superarme?`;
+  };
+
+  const loadShareImage = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = src;
+    });
+
+  const createRankingShareCard = async () => {
+    if (!currentUser) throw new Error("Debes iniciar sesión para compartir tu ranking.");
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo generar la tarjeta.");
+
+    const position = currentRanking?.position || "-";
+    const points = currentRanking?.points ?? currentUser.points;
+    const exactCount = currentRanking?.exactCount ?? currentUser.exactCount;
+    const outcomeCount = currentRanking?.drawCount ?? currentUser.drawCount;
+    const predictedCount = currentRanking?.predictCount ?? currentUser.predictCount;
+    const appUrl = window.location.origin;
+
+    const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+    gradient.addColorStop(0, "#020617");
+    gradient.addColorStop(0.58, "#064e3b");
+    gradient.addColorStop(1, "#022c22");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.beginPath();
+    ctx.arc(930, 160, 280, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(100, 1190, 240, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "900 38px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("EL POLLÓN MUNDIALISTA FIFA 2026", 540, 100);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 58px Arial, sans-serif";
+    ctx.fillText("MI POSICIÓN EN EL RANKING", 540, 180);
+
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    ctx.beginPath();
+    ctx.roundRect(90, 240, 900, 860, 44);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(251,191,36,0.35)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    const avatarX = 540;
+    const avatarY = 390;
+    const avatarRadius = 112;
+    let avatarDrawn = false;
+    try {
+      const avatar = await loadShareImage(currentUser.avatar);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(avatar, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+      ctx.restore();
+      avatarDrawn = true;
+    } catch {
+      avatarDrawn = false;
+    }
+
+    if (!avatarDrawn) {
+      ctx.fillStyle = "#10b981";
+      ctx.beginPath();
+      ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#022c22";
+      ctx.font = "900 82px Arial, sans-serif";
+      ctx.fillText(currentUser.name.trim().slice(0, 2).toUpperCase(), avatarX, avatarY + 28);
+    }
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(avatarX, avatarY, avatarRadius + 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 48px Arial, sans-serif";
+    ctx.fillText(currentUser.name.slice(0, 30), 540, 570);
+    ctx.fillStyle = "#a7f3d0";
+    ctx.font = "700 27px Arial, sans-serif";
+    ctx.fillText(rankingTitle.toUpperCase(), 540, 620);
+
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "900 184px Arial, sans-serif";
+    ctx.fillText(`#${position}`, 540, 805);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 31px Arial, sans-serif";
+    ctx.fillText("POSICIÓN ACTUAL", 540, 855);
+
+    const stats = [
+      { value: points, label: "PUNTOS" },
+      { value: exactCount, label: "EXACTOS" },
+      { value: outcomeCount, label: "RESULTADOS 1X2" },
+      { value: predictedCount, label: "PARTIDOS" }
+    ];
+    stats.forEach((stat, index) => {
+      const x = 180 + index * 240;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 40px Arial, sans-serif";
+      ctx.fillText(String(stat.value), x, 990);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "700 18px Arial, sans-serif";
+      ctx.fillText(stat.label, x, 1025);
+    });
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 38px Arial, sans-serif";
+    ctx.fillText("¿PUEDES SUPERARME?", 540, 1170);
+    ctx.fillStyle = "#a7f3d0";
+    ctx.font = "700 26px Arial, sans-serif";
+    ctx.fillText(appUrl.replace(/^https?:\/\//, ""), 540, 1225);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "600 18px Arial, sans-serif";
+    ctx.fillText("Comparte tu posición. No incluye correo, pagos ni pronósticos privados.", 540, 1290);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo exportar la tarjeta.")), "image/png", 0.95);
+    });
+  };
+
+  const downloadRankingShareCard = async () => {
+    setRankingShareBusy(true);
+    try {
+      const blob = await createRankingShareCard();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mi-ranking-pollon-${currentUser?.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "usuario"}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast("Tarjeta de ranking descargada.", "success");
+    } catch (err: any) {
+      showToast(err.message || "No se pudo descargar la tarjeta.", "error");
+    } finally {
+      setRankingShareBusy(false);
+    }
+  };
+
+  const shareCurrentRanking = async () => {
+    setRankingShareBusy(true);
+    try {
+      const text = getRankingShareText();
+      const url = window.location.origin;
+      const blob = await createRankingShareCard();
+      const file = new File([blob], "mi-ranking-pollon.png", { type: "image/png" });
+      const shareData = { title: "Mi ranking en El Pollón Mundialista", text, url, files: [file] };
+
+      if (navigator.share) {
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share(shareData);
+        } else {
+          await navigator.share({ title: shareData.title, text, url });
+        }
+      } else {
+        await copyTextToClipboard(`${text}\n${url}`, "Texto y enlace del ranking copiados.");
+        await downloadRankingShareCard();
+      }
+    } catch (err: any) {
+      if (err?.name !== "AbortError") showToast(err.message || "No se pudo compartir el ranking.", "error");
+    } finally {
+      setRankingShareBusy(false);
     }
   };
 
@@ -5808,6 +5995,56 @@ export default function App() {
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5" /> {t("rank_export", "Exportar CSV")}
                     </button>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50 to-amber-50 dark:from-emerald-950/30 dark:to-amber-950/20 p-4 md:p-5 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={currentUser.avatar}
+                          alt={currentUser.name}
+                          className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shadow-sm shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0">
+                          <span className="text-[10px] uppercase tracking-widest font-black text-emerald-700 dark:text-emerald-300">Comparte tu avance</span>
+                          <h3 className="text-base font-black text-slate-950 dark:text-white truncate">
+                            Puesto #{currentRanking?.position || "-"} · {currentRanking?.points ?? currentUser.points} puntos
+                          </h3>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                            La tarjeta muestra tu nombre público, avatar, ranking, puntos y aciertos. No incluye datos privados.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={shareCurrentRanking}
+                          disabled={rankingShareBusy}
+                          className="min-h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          {rankingShareBusy ? "Preparando..." : "Compartir"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={downloadRankingShareCard}
+                          disabled={rankingShareBusy}
+                          className="min-h-11 px-4 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white text-xs font-black flex items-center justify-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Descargar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyTextToClipboard(`${getRankingShareText()}\n${window.location.origin}`, "Texto y enlace del ranking copiados.")}
+                          className="min-h-11 px-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black flex items-center justify-center gap-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copiar enlace
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Leaderboard Table Grid */}
