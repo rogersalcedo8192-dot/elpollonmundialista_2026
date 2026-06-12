@@ -291,7 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
-- 2026-06-12: agregada en Configuracion del SuperAdmin una vista previa sin envio de los correos finales para primer, segundo y tercer puesto, usando nombres, puntajes y valores estimados de la bolsa actual.
+- 2026-06-12: ampliado el modulo de correos finales del SuperAdmin: permite elegir desde Assets un poster distinto para cada puesto, previsualizarlo dentro del mensaje y enviar manualmente cada correo real despues del cierre validado de la final; el servidor verifica ganador, premio e imagen antes del envio.
 - 2026-06-12: documentado para la proxima version como pendiente prioritario el rediseño de Favoritos y rondas eliminatorias mediante una llave tradicional; la implementacion actual usa listas independientes y no comunica ni valida los cruces entre 16avos, octavos, cuartos, semifinal y final.
 - 2026-06-12: corregido selector de los dos finalistas para mobile y desktop; ahora funciona por botones tactiles, permite marcar o desmarcar exactamente dos equipos y bloquea el resto al alcanzar el limite.
 - 2026-06-12: habilitada ventana temporal para que todos los usuarios registrados guarden Favoritos, Finalistas, Subcampeon y Campeon hasta la 1:00 p. m. hora de Bogota, con cierre automatico simultaneo en frontend y backend.

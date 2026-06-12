@@ -2647,6 +2647,93 @@ app.post("/api/admin/email-test", async (req, res) => {
   res.json({ message: "Correo de prueba enviado.", result });
 });
 
+app.post("/api/admin/winner-email", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+
+  const position = Number(req.body?.position);
+  const imageUrl = String(req.body?.imageUrl || "").trim();
+  if (![1, 2, 3].includes(position)) {
+    return res.status(400).json({ error: "Selecciona un puesto valido entre primero, segundo y tercero." });
+  }
+
+  const db = loadDb();
+  const finalMatch = db.matches.find((match) => match.stage === "Final");
+  const finalClosedByMatch = Boolean(
+    finalMatch &&
+    finalMatch.status === "finished" &&
+    Date.now() >= new Date(finalMatch.date).getTime() + 60_000
+  );
+  const finalClosedByOutcome = Boolean(db.tournamentOutcomes?.champion);
+  if (!finalClosedByMatch && !finalClosedByOutcome) {
+    return res.status(409).json({ error: "El correo de ganadores solo puede enviarse despues de cerrar y validar la final." });
+  }
+
+  const selectedAsset = (db.assets || []).find((asset) => asset.type === "image" && asset.url === imageUrl);
+  if (!selectedAsset) {
+    return res.status(400).json({ error: "Selecciona un poster valido desde la biblioteca de imagenes." });
+  }
+
+  const ranking = buildVisibleRanking(db, admin).find((row) => row.position === position);
+  if (!ranking) return res.status(404).json({ error: `No existe un ganador confirmado para el puesto ${position}.` });
+
+  const winner = db.users.find((user) => user.id === ranking.userId);
+  if (!winner) return res.status(404).json({ error: "No se encontro la cuenta del ganador." });
+
+  const prizePool = calculatePrizePool(db.users.filter(isRealMoneyPaidParticipant).length);
+  const prize = position === 1
+    ? prizePool.payouts.first
+    : position === 2
+      ? prizePool.payouts.second
+      : prizePool.payouts.third;
+  const placeLabel = position === 1 ? "1er puesto" : position === 2 ? "2do puesto" : "3er puesto";
+  const absoluteImageUrl = selectedAsset.url.startsWith("http")
+    ? selectedAsset.url
+    : `${getRequestOrigin(req).replace(/\/$/, "")}${selectedAsset.url.startsWith("/") ? "" : "/"}${selectedAsset.url}`;
+  const formattedPrize = `$${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(prize)} COP`;
+  const subject = `Felicitaciones: ganaste el ${placeLabel} en El Pollon Mundialista 2026`;
+  const text = `Hola ${winner.name}. Finalizo el Mundial y ocupaste el ${placeLabel} con ${ranking.points} puntos. Tu premio asignado es ${formattedPrize}. Responde este correo con tu certificado de ganador, documento de identidad y certificacion bancaria.`;
+  const result = await sendEmail(
+    winner.email,
+    subject,
+    buildEmailLayout(
+      "Eres uno de nuestros ganadores",
+      `<p style="font-size:16px;line-height:1.6;margin:0">Hola <strong>${escapeHtml(winner.name)}</strong>,</p>
+       <p style="font-size:15px;line-height:1.7">Finalizo el Mundial y, despues de calcular los resultados y validar el ranking de participantes pagos, ocupaste el <strong>${escapeHtml(placeLabel)}</strong> de El Pollon Mundialista 2026.</p>
+       <img src="${escapeHtml(absoluteImageUrl)}" alt="Poster de ganador ${escapeHtml(placeLabel)}" style="display:block;width:100%;max-width:560px;height:auto;margin:22px auto;border-radius:14px;border:1px solid #e2e8f0" />
+       <div style="display:flex;gap:12px;margin:22px 0">
+         <div style="flex:1;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:14px">
+           <div style="font-size:10px;text-transform:uppercase;font-weight:800;color:#047857">Premio asignado</div>
+           <div style="font-size:22px;font-weight:900;color:#065f46;margin-top:5px">${escapeHtml(formattedPrize)}</div>
+         </div>
+         <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px">
+           <div style="font-size:10px;text-transform:uppercase;font-weight:800;color:#64748b">Puntaje final</div>
+           <div style="font-size:22px;font-weight:900;color:#0f172a;margin-top:5px">${ranking.points} pts</div>
+         </div>
+       </div>
+       <p style="font-size:15px;line-height:1.7">Para gestionar la entrega, responde a este correo con tu certificado de ganador, documento de identidad y certificacion bancaria. El premio se entregara despues de verificar tu identidad, los datos bancarios y el ranking final.</p>
+       <p style="font-size:13px;line-height:1.6;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;color:#78350f">No envies contrasenas, claves bancarias ni datos de tarjetas. El equipo de El Pollon Mundialista nunca solicitara esa informacion.</p>`,
+      appLink() ? { label: "Ver ranking y certificado", href: appLink() } : undefined
+    ),
+    text
+  );
+
+  if (!result.ok) {
+    return res.status(500).json({
+      error: "No se pudo enviar el correo al ganador.",
+      detail: result.error,
+      status: result.status,
+      hint: result.hint
+    });
+  }
+
+  res.json({
+    message: `Correo del ${placeLabel} enviado a ${winner.name}.`,
+    winner: { userId: winner.id, name: winner.name, email: winner.email, position, prize },
+    result
+  });
+});
+
 app.post("/api/torneo", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== "admin") {

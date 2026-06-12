@@ -1618,6 +1618,8 @@ export default function App() {
   const [publicPrizePool, setPublicPrizePool] = useState<PublicPrizePool | null>(null);
   const [winnerCertificate, setWinnerCertificate] = useState<Ranking | null>(null);
   const [winnerEmailPreviewPosition, setWinnerEmailPreviewPosition] = useState<1 | 2 | 3>(1);
+  const [winnerEmailPosterByPosition, setWinnerEmailPosterByPosition] = useState<Record<1 | 2 | 3, string>>({ 1: "", 2: "", 3: "" });
+  const [winnerEmailSendingPosition, setWinnerEmailSendingPosition] = useState<1 | 2 | 3 | null>(null);
   const [rankingShareBusy, setRankingShareBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
@@ -2679,6 +2681,42 @@ export default function App() {
       fetchGlobalData();
     } catch (err: any) {
       showToast(err.message, "error");
+    }
+  };
+
+  const handleSendWinnerEmail = async (position: 1 | 2 | 3) => {
+    const ranking = rankings.find((row) => row.position === position);
+    const posterUrl = winnerEmailPosterByPosition[position];
+    if (!ranking) {
+      showToast("Todavia no existe un ganador confirmado para ese puesto.", "error");
+      return;
+    }
+    if (!posterUrl) {
+      showToast("Selecciona primero el poster que se incluira en el correo.", "error");
+      return;
+    }
+    if (!certificatesEnabled) {
+      showToast("El envio se habilitara cuando la final este cerrada y validada.", "error");
+      return;
+    }
+    if (!window.confirm(`Se enviara el correo real del ${getWinnerPlaceLabel(position)} a ${ranking.userName}. ¿Deseas continuar?`)) {
+      return;
+    }
+
+    setWinnerEmailSendingPosition(position);
+    try {
+      const res = await fetch("/api/admin/winner-email", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ position, imageUrl: posterUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.detail || "No se pudo enviar el correo.");
+      showToast(data.message, "success");
+    } catch (err: any) {
+      showToast(err.message || "No se pudo enviar el correo.", "error");
+    } finally {
+      setWinnerEmailSendingPosition(null);
     }
   };
 
@@ -8151,6 +8189,45 @@ export default function App() {
                       ))}
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+                      <label className="block">
+                        <span className="block text-[10px] uppercase tracking-wider font-black text-slate-500 dark:text-slate-400 mb-1.5">
+                          Poster para el {getWinnerPlaceLabel(winnerEmailPreviewPosition)}
+                        </span>
+                        <select
+                          value={winnerEmailPosterByPosition[winnerEmailPreviewPosition]}
+                          onChange={(event) => setWinnerEmailPosterByPosition((current) => ({
+                            ...current,
+                            [winnerEmailPreviewPosition]: event.target.value
+                          }))}
+                          className="w-full min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:bg-slate-900 dark:border-slate-700"
+                        >
+                          <option value="">Selecciona una imagen de Assets</option>
+                          {uploadedAssets.filter((asset) => asset.type === "image").map((asset) => (
+                            <option key={asset.id} value={asset.url}>{asset.originalName}</option>
+                          ))}
+                        </select>
+                        <span className="block text-[10px] text-slate-500 mt-1">
+                          Sube primero el poster en Assets. Puedes elegir una imagen diferente para cada puesto.
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => void handleSendWinnerEmail(winnerEmailPreviewPosition)}
+                        disabled={
+                          !certificatesEnabled ||
+                          !winnerEmailPreviewRanking ||
+                          !winnerEmailPosterByPosition[winnerEmailPreviewPosition] ||
+                          winnerEmailSendingPosition !== null
+                        }
+                        className="min-h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                        title={!certificatesEnabled ? "Disponible cuando la final este cerrada y validada" : "Enviar correo real al ganador"}
+                      >
+                        <Mail className="w-4 h-4" />
+                        {winnerEmailSendingPosition === winnerEmailPreviewPosition ? "Enviando..." : "Enviar al ganador"}
+                      </button>
+                    </div>
+
                     <div className="max-w-2xl mx-auto rounded-2xl bg-slate-100 dark:bg-slate-900 p-3 md:p-5 shadow-inner">
                       <div className="mb-3 rounded-xl border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-800 p-3 text-xs space-y-1">
                         <p><strong>Para:</strong> {winnerEmailPreviewUser?.email || "correo registrado del ganador"}</p>
@@ -8168,6 +8245,19 @@ export default function App() {
                             Finalizo el Mundial y, despues de calcular los resultados y validar el ranking de participantes pagos,
                             ocupaste el <strong>{getWinnerPlaceLabel(winnerEmailPreviewPosition)}</strong> de El Pollon Mundialista 2026.
                           </p>
+
+                          {winnerEmailPosterByPosition[winnerEmailPreviewPosition] ? (
+                            <img
+                              src={winnerEmailPosterByPosition[winnerEmailPreviewPosition]}
+                              alt={`Poster del ${getWinnerPlaceLabel(winnerEmailPreviewPosition)}`}
+                              className="block w-full h-auto rounded-xl border border-slate-200 dark:border-slate-800"
+                            />
+                          ) : (
+                            <div className="min-h-40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center p-5 text-slate-400">
+                              <ImageIcon className="w-8 h-8 mb-2" />
+                              <p className="text-xs font-bold">El poster seleccionado aparecera aqui y dentro del correo.</p>
+                            </div>
+                          )}
 
                           <div className="grid grid-cols-2 gap-3">
                             <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900 p-3">
