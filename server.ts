@@ -3997,6 +3997,57 @@ app.get("/api/predictions", (req, res) => {
   res.json(userPredictions);
 });
 
+app.get("/api/public-predictions", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+
+  const db = loadDb();
+  const nowMs = Date.now();
+  const visibleUserIds = getVisibleRankingUserIds(db, user);
+  const visibleRankings = buildVisibleRanking(db, user);
+  const positionsByUserId = new Map(visibleRankings.map((ranking) => [ranking.userId, ranking.position]));
+  const usersById = new Map(db.users.map((dbUser) => [dbUser.id, dbUser]));
+
+  const visibleMatches = db.matches
+    .filter((match) =>
+      (match.status === "in_progress" || match.status === "finished") &&
+      new Date(match.date).getTime() <= nowMs
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map((match) => {
+      const publicPredictions = db.predictions
+        .filter((prediction) => prediction.matchId === match.id && visibleUserIds.has(prediction.userId))
+        .map((prediction) => {
+          const predictionUser = usersById.get(prediction.userId);
+          return {
+            userId: prediction.userId,
+            userName: predictionUser?.name || "Participante",
+            userAvatar: predictionUser?.avatar || "",
+            userCountry: normalizeCountryName(predictionUser?.country),
+            position: positionsByUserId.get(prediction.userId),
+            localScore: prediction.localScore,
+            visitorScore: prediction.visitorScore,
+            pointsEarned: match.status === "finished" ? prediction.pointsEarned : null
+          };
+        })
+        .sort((a, b) => (a.position || Number.MAX_SAFE_INTEGER) - (b.position || Number.MAX_SAFE_INTEGER));
+
+      return {
+        id: match.id,
+        stage: match.stage,
+        local: match.local,
+        visitor: match.visitor,
+        date: match.date,
+        status: match.status,
+        localScore: match.localScore,
+        visitorScore: match.visitorScore,
+        predictions: publicPredictions
+      };
+    });
+
+  res.json({ matches: visibleMatches });
+});
+
 // Input/Modify forecasts
 app.post("/api/predictions", (req, res) => {
   const user = getAuthenticatedUser(req);

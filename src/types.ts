@@ -133,6 +133,29 @@ export interface Prediction {
   dateCreated: string;
 }
 
+export interface PublicPredictionEntry {
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userCountry?: string;
+  position?: number;
+  localScore: number;
+  visitorScore: number;
+  pointsEarned: number | null;
+}
+
+export interface PublicPredictionMatch {
+  id: number;
+  stage: string;
+  local: string;
+  visitor: string;
+  date: string;
+  status: "in_progress" | "finished";
+  localScore: number | null;
+  visitorScore: number | null;
+  predictions: PublicPredictionEntry[];
+}
+
 export interface Ranking {
   userId: string;
   userName: string;

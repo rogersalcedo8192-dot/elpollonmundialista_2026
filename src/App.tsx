@@ -46,7 +46,7 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { User, Match, Prediction, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool, Company, CompanyInvitation } from "./types";
+import { User, Match, Prediction, PublicPredictionMatch, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, KnockoutFixture, PublicPrizePool, Company, CompanyInvitation } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 import { MatchResultsTicker } from "./components/MatchResultsTicker";
@@ -1606,6 +1606,10 @@ export default function App() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [knockoutFixtures, setKnockoutFixtures] = useState<KnockoutFixture[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [publicPredictionMatches, setPublicPredictionMatches] = useState<PublicPredictionMatch[]>([]);
+  const [selectedPublicMatchId, setSelectedPublicMatchId] = useState<number | null>(null);
+  const [publicPredictionsLoading, setPublicPredictionsLoading] = useState(false);
+  const [publicPredictionsError, setPublicPredictionsError] = useState("");
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [sponsorBanners, setSponsorBanners] = useState<SponsorBanner[]>([]);
@@ -2036,6 +2040,28 @@ export default function App() {
       if (res.ok) setCompanyRanking(await res.json());
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchPublicPredictions = async () => {
+    if (!currentUser) return;
+    setPublicPredictionsLoading(true);
+    setPublicPredictionsError("");
+    try {
+      const res = await fetch("/api/public-predictions", { headers: getHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudieron cargar los pronósticos públicos.");
+      const publicMatches: PublicPredictionMatch[] = data.matches || [];
+      setPublicPredictionMatches(publicMatches);
+      setSelectedPublicMatchId((currentId) =>
+        currentId && publicMatches.some((match) => match.id === currentId)
+          ? currentId
+          : publicMatches[0]?.id || null
+      );
+    } catch (err: any) {
+      setPublicPredictionsError(err.message || "No se pudieron cargar los pronósticos públicos.");
+    } finally {
+      setPublicPredictionsLoading(false);
     }
   };
 
@@ -3545,9 +3571,11 @@ export default function App() {
       setPredictionsMode("matches");
     } else {
       setActiveTab(key);
+      if (key === "public-predictions") void fetchPublicPredictions();
     }
     setMobileMenuOpen(false);
   };
+  const selectedPublicPredictionMatch = publicPredictionMatches.find((match) => match.id === selectedPublicMatchId) || null;
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
   const hasFreshCompanyInviteSummary = companyInvitationSummary.companyId === selectedCompanyId;
   const companyInviteSlots = {
@@ -4152,6 +4180,7 @@ export default function App() {
               { key: "favorites", label: "Favoritos", icon: Trophy },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "Clasificación", icon: Trophy },
+              { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(isSuperAdminUser ? [{ key: "admin-stats", label: "Métricas", icon: BarChart3 }] : []),
               ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
@@ -4530,6 +4559,15 @@ export default function App() {
                     <Trophy className="hidden md:block w-4 h-4 shrink-0" />
                     <span className="md:hidden">Clasificación</span>
                     <span className="hidden md:inline">{t("tab_ranking", "Tabla de Clasificación")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateToMenuItem("public-predictions")}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "public-predictions" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <Eye className="w-4 h-4 shrink-0" />
+                    <span>Pronósticos Públicos</span>
                   </button>
 
                   <button
@@ -6280,7 +6318,135 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4. MÓDULO USER: REGLAS Y PREMIACIONES TAB */}
+              {/* 4. MÓDULO USER: PRONÓSTICOS PÚBLICOS */}
+              {activeTab === "public-predictions" && (
+                <div className="space-y-5">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Eye className="text-emerald-600 w-5 h-5" /> Pronósticos Públicos
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Consulta los marcadores pronosticados por los participantes de tu misma modalidad cuando el partido ya está en curso o finalizó.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void fetchPublicPredictions()}
+                      disabled={publicPredictionsLoading}
+                      className="min-h-10 px-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-black inline-flex items-center gap-2 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${publicPredictionsLoading ? "animate-spin" : ""}`} />
+                      Actualizar
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 text-xs text-amber-900 dark:text-amber-200">
+                    Los pronósticos permanecen privados antes del inicio de cada partido. Esta pantalla no muestra correos ni información privada.
+                  </div>
+
+                  {publicPredictionsError ? (
+                    <div className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/20 p-4 text-sm text-rose-700 dark:text-rose-300">
+                      {publicPredictionsError}
+                    </div>
+                  ) : publicPredictionsLoading && publicPredictionMatches.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
+                      Cargando pronósticos públicos...
+                    </div>
+                  ) : publicPredictionMatches.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-8 text-center">
+                      <Eye className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                      <p className="font-bold text-slate-700 dark:text-slate-200">Todavía no hay partidos disponibles.</p>
+                      <p className="text-xs text-slate-500 mt-1">Los pronósticos aparecerán cuando un partido comience.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block">
+                        <span className="block text-xs font-black text-slate-600 dark:text-slate-300 mb-1.5">Selecciona un partido</span>
+                        <select
+                          value={selectedPublicMatchId || ""}
+                          onChange={(event) => setSelectedPublicMatchId(Number(event.target.value))}
+                          className="w-full min-h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100"
+                        >
+                          {publicPredictionMatches.map((match) => (
+                            <option key={match.id} value={match.id}>
+                              {match.local} vs {match.visitor} · {match.status === "finished" ? "Finalizado" : "En curso"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {selectedPublicPredictionMatch && (
+                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+                          <div className="p-4 md:p-5 bg-slate-950 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest font-black text-emerald-300">{selectedPublicPredictionMatch.stage}</p>
+                              <h3 className="text-lg font-black mt-1">
+                                {getTeamFlag(selectedPublicPredictionMatch.local)} {selectedPublicPredictionMatch.local}
+                                <span className="mx-2 text-slate-400">vs</span>
+                                {getTeamFlag(selectedPublicPredictionMatch.visitor)} {selectedPublicPredictionMatch.visitor}
+                              </h3>
+                            </div>
+                            <div className="text-left sm:text-right">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-black uppercase ${
+                                selectedPublicPredictionMatch.status === "finished"
+                                  ? "bg-slate-700 text-slate-100"
+                                  : "bg-rose-500 text-white"
+                              }`}>
+                                {selectedPublicPredictionMatch.status === "finished" ? "Finalizado" : "En curso"}
+                              </span>
+                              {selectedPublicPredictionMatch.status === "finished" && (
+                                <p className="text-xl font-black mt-1">
+                                  {selectedPublicPredictionMatch.localScore} - {selectedPublicPredictionMatch.visitorScore}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {selectedPublicPredictionMatch.predictions.length === 0 ? (
+                            <p className="p-6 text-center text-sm text-slate-500">Ningún participante visible registró pronóstico para este partido.</p>
+                          ) : (
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {selectedPublicPredictionMatch.predictions.map((prediction) => (
+                                <div key={prediction.userId} className="p-3 md:p-4 flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <img
+                                      src={prediction.userAvatar}
+                                      alt={prediction.userName}
+                                      className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                        {prediction.userName}
+                                        {prediction.userId === currentUser.id && <span className="ml-1 text-[9px] text-emerald-600">(Tú)</span>}
+                                      </p>
+                                      <p className="text-[10px] text-slate-500">
+                                        {prediction.userCountry ? `${getCountryFlag(prediction.userCountry)} ` : ""}
+                                        {prediction.position ? `Puesto #${prediction.position}` : "Participante"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <p className="text-xl font-black tabular-nums text-slate-950 dark:text-white">
+                                      {prediction.localScore} - {prediction.visitorScore}
+                                    </p>
+                                    {selectedPublicPredictionMatch.status === "finished" && prediction.pointsEarned !== null && (
+                                      <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">+{prediction.pointsEarned} pts</p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* 5. MÓDULO USER: REGLAS Y PREMIACIONES TAB */}
               {activeTab === "rules-prizes" && (() => {
                 const selectedRulesImageUrl = rulesFlyerPreviewLang === "en" 
                   ? (torneo?.rulesImageUrlEn || "/src/assets/images/polla_rules_en_1780083217819.png")
