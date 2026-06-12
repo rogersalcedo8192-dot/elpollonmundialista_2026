@@ -4224,12 +4224,10 @@ app.get("/api/public-predictions", (req, res) => {
   const usersById = new Map(db.users.map((dbUser) => [dbUser.id, dbUser]));
 
   const visibleMatches = db.matches
-    .filter((match) =>
-      (match.status === "in_progress" || match.status === "finished") &&
-      new Date(match.date).getTime() <= nowMs
-    )
+    .filter((match) => new Date(match.date).getTime() <= nowMs)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .map((match) => {
+      const publicStatus: Match["status"] = match.status === "finished" ? "finished" : "in_progress";
       const publicPredictions = db.predictions
         .filter((prediction) => prediction.matchId === match.id && visibleUserIds.has(prediction.userId))
         .map((prediction) => {
@@ -4253,7 +4251,7 @@ app.get("/api/public-predictions", (req, res) => {
         local: match.local,
         visitor: match.visitor,
         date: match.date,
-        status: match.status,
+        status: publicStatus,
         localScore: match.localScore,
         visitorScore: match.visitorScore,
         predictions: publicPredictions
