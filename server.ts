@@ -491,6 +491,24 @@ function queueEventEmail(user: User, subject: string, title: string, message: st
     .catch((err) => console.error(`Event email crashed ${subject} -> ${user.email} (${user.id}):`, err));
 }
 
+const RANKING_NOTIFICATION_TIME_ZONE = "America/Bogota";
+const RANKING_NOTIFICATION_START_HOUR = 9;
+const RANKING_NOTIFICATION_END_HOUR = 18;
+
+function isRankingNotificationWindowOpen(date = new Date()) {
+  const hourPart = new Intl.DateTimeFormat("en-US", {
+    timeZone: RANKING_NOTIFICATION_TIME_ZONE,
+    hour: "2-digit",
+    hour12: false,
+    hourCycle: "h23"
+  }).formatToParts(date).find((part) => part.type === "hour");
+  const bogotaHour = Number(hourPart?.value);
+
+  return Number.isInteger(bogotaHour)
+    && bogotaHour >= RANKING_NOTIFICATION_START_HOUR
+    && bogotaHour < RANKING_NOTIFICATION_END_HOUR;
+}
+
 async function sendBulkEventEmails(
   users: User[],
   buildPayload: (user: User) => { subject: string; title: string; message: string; force?: boolean }
@@ -2235,10 +2253,13 @@ function recalculateScoresAndRankings() {
       outcomes.champion
     )
   );
-  const canSendRankingChangeNotifications = Boolean(
+  const rankingNotificationsConfigured = Boolean(
     db.torneo.notificationConfig.rankingChanges &&
     (hasScoreableFinishedMatches || hasTournamentOutcomeResults)
   );
+  const rankingNotificationWindowOpen = isRankingNotificationWindowOpen();
+  const canSendRankingChangeNotifications = rankingNotificationsConfigured && rankingNotificationWindowOpen;
+  let suppressedRankingNotifications = 0;
   
   // 1. Loop through users and reset calculations
   const userStats = db.users.map((u) => {
@@ -2424,6 +2445,14 @@ function recalculateScoresAndRankings() {
       if (rankingUser) {
         queueEventEmail(rankingUser, "Cambio en tu ranking", "Cambio en el Ranking", rankMessage);
       }
+    } else if (
+      rankingNotificationsConfigured &&
+      !rankingNotificationWindowOpen &&
+      shift !== "equal" &&
+      ru.userId.indexOf("player") === -1 &&
+      ru.userId !== "user-admin"
+    ) {
+      suppressedRankingNotifications += 1;
     }
 
     return {
@@ -2447,12 +2476,18 @@ function recalculateScoresAndRankings() {
     };
   });
 
-  if (!canSendRankingChangeNotifications) {
+  if (!rankingNotificationsConfigured) {
     db.notifications = db.notifications.filter((notification) => notification.type !== "ranking");
   }
 
   db.rankings = updatedRankings;
   saveDb(db);
+
+  if (suppressedRankingNotifications > 0) {
+    console.info(
+      `Ranking notifications suppressed outside 09:00-18:00 ${RANKING_NOTIFICATION_TIME_ZONE}: count=${suppressedRankingNotifications}`
+    );
+  }
 }
 
 // REST Server API Init
