@@ -165,6 +165,13 @@ Objetivo: que participar sea rapido, claro y usable desde celular.
 - Pendiente: convertir ranking mobile a tarjetas para evitar lectura tipo tabla en pantallas pequenas.
 - Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
+- PROXIMA VERSION - MUY IMPORTANTE: reemplazar la seleccion independiente de equipos por ronda en Favoritos por una llave eliminatoria tradicional e interactiva.
+  - Mostrar los cruces oficiales desde 16avos hasta la final.
+  - El usuario debe elegir al ganador de cada partido y el sistema debe avanzarlo automaticamente a la siguiente ronda.
+  - Octavos, cuartos, semifinales y final deben depender de las decisiones tomadas en la ronda anterior.
+  - Impedir combinaciones imposibles y evitar que el participante tenga que adivinar como se cruzan los equipos.
+  - Preparar una llave amplia para escritorio y una version horizontal desplazable y clara para mobile.
+  - Guardar cada seleccion asociada al partido o posicion de la llave, no solo como listas de equipos sin orden.
 - Mejorar mensajes cuando el usuario no ha pagado.
 - COMPLETADO: destacar con claridad que los premios en dinero aplican a usuarios pagos de Polla REAL, especialmente para usuarios de empresa o modalidad gratuita.
 - COMPLETADO: inicio predeterminado en Reglas y Premiaciones para que cada usuario vea primero la informacion de premios que le corresponde.
@@ -284,6 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-12: documentado para la proxima version como pendiente prioritario el rediseño de Favoritos y rondas eliminatorias mediante una llave tradicional; la implementacion actual usa listas independientes y no comunica ni valida los cruces entre 16avos, octavos, cuartos, semifinal y final.
 - 2026-06-12: corregido selector de los dos finalistas para mobile y desktop; ahora funciona por botones tactiles, permite marcar o desmarcar exactamente dos equipos y bloquea el resto al alcanzar el limite.
 - 2026-06-12: habilitada ventana temporal para que todos los usuarios registrados guarden Favoritos, Finalistas, Subcampeon y Campeon hasta la 1:00 p. m. hora de Bogota, con cierre automatico simultaneo en frontend y backend.
 - 2026-06-12: agregado importador Excel de pronosticos en Gestion de Usuarios del SuperAdmin, con vista previa, validacion de pago real, mapeo por grupo y selecciones, respeto del cierre a 5 minutos y omision de partidos iniciados.
