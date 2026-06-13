@@ -1713,6 +1713,8 @@ export default function App() {
   const [searchUser, setSearchUser] = useState("");
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
   const [userPredictionsView, setUserPredictionsView] = useState<Prediction[]>([]);
+  const [adminPredictionDrafts, setAdminPredictionDrafts] = useState<Record<number, { local: number | ""; visitor: number | "" }>>({});
+  const [adminPredictionSavingMatchId, setAdminPredictionSavingMatchId] = useState<number | null>(null);
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
   const [predictionImportEmail, setPredictionImportEmail] = useState("dir.comercial@millonarios.com.co");
   const [predictionImportFile, setPredictionImportFile] = useState<File | null>(null);
@@ -3386,11 +3388,54 @@ export default function App() {
     try {
       const res = await fetch(`/api/predictions?userId=${user.id}`, { headers: getHeaders() });
       if (res.ok) {
-        setUserPredictionsView(await res.json());
+        const loadedPredictions: Prediction[] = await res.json();
+        setUserPredictionsView(loadedPredictions);
+        setAdminPredictionDrafts(Object.fromEntries(
+          loadedPredictions.map((prediction) => [
+            prediction.matchId,
+            { local: prediction.localScore, visitor: prediction.visitorScore }
+          ])
+        ));
         setSelectedUserForPredictions(user);
       }
     } catch (err) {
       showToast("No se pudieron cargar las predicciones del usuario", "error");
+    }
+  };
+
+  const handleSaveAdminPrediction = async (matchId: number) => {
+    if (!selectedUserForPredictions) return;
+    const score = adminPredictionDrafts[matchId];
+    if (!score || score.local === "" || score.visitor === "") {
+      showToast("Ingresa ambos marcadores antes de guardar.", "error");
+      return;
+    }
+
+    const match = matches.find((candidate) => candidate.id === matchId);
+    if (!window.confirm(`Corregir el pronostico de ${selectedUserForPredictions.name} para ${match?.local || "Local"} vs ${match?.visitor || "Visitante"} a ${score.local}-${score.visitor}?`)) {
+      return;
+    }
+
+    setAdminPredictionSavingMatchId(matchId);
+    try {
+      const res = await fetch(`/api/admin/users/${selectedUserForPredictions.id}/predictions/${matchId}`, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify({ localScore: score.local, visitorScore: score.visitor })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo corregir el pronostico.");
+      setUserPredictionsView((current) => {
+        const withoutMatch = current.filter((prediction) => prediction.matchId !== matchId);
+        return [...withoutMatch, data.prediction];
+      });
+      showToast(data.message, "success");
+      fetchGlobalData();
+      fetchAdminUsers();
+    } catch (err: any) {
+      showToast(err.message || "No se pudo corregir el pronostico.", "error");
+    } finally {
+      setAdminPredictionSavingMatchId(null);
     }
   };
 
@@ -7567,27 +7612,74 @@ export default function App() {
                       <h3 className="font-bold text-xs text-slate-800 mb-2">
                         Historial de Predicciones del Usuario: <span className="text-emerald-700">{selectedUserForPredictions.name}</span>
                       </h3>
-                      {userPredictionsView.length === 0 ? (
-                        <p className="text-xs text-slate-500 py-3 text-center">No tiene registrados pronósticos activos.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                          {userPredictionsView.map((up) => {
-                            const mt = matches.find((m) => m.id === up.matchId);
+                      <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 pr-16">
+                        Correccion excepcional del SuperAdmin. Permite crear o editar el marcador aunque el partido ya este cerrado y recalcula el ranking.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
+                        {[...matches]
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .map((mt) => {
+                            const prediction = userPredictionsView.find((item) => item.matchId === mt.id);
+                            const draft = adminPredictionDrafts[mt.id] || { local: "", visitor: "" };
+                            const isClosed = isMatchPredictionLocked(mt);
                             return (
-                              <div key={up.id} className="p-2 bg-white rounded border border-slate-200 text-xs flex justify-between items-center">
-                                <div>
-                                  <span className="font-bold block">Partido #{up.matchId}: {mt ? `${mt.local} vs ${mt.visitor}` : "Desconocido"}</span>
-                                  <span className="text-[10px] text-slate-400 font-mono">Pronóstico: {up.localScore}-{up.visitorScore}</span>
+                              <div key={mt.id} className="p-3 bg-white rounded-xl border border-slate-200 text-xs space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <span className="font-bold block">Partido #{mt.id}: {mt.local} vs {mt.visitor}</span>
+                                    <span className="text-[9px] text-slate-400">{formatMatchDate(mt.date)} · {mt.stage}</span>
+                                  </div>
+                                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black ${
+                                    prediction ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                                  }`}>
+                                    {prediction ? `${prediction.localScore}-${prediction.visitorScore}` : "SIN PRONOSTICO"}
+                                  </span>
                                 </div>
-                                <div className="text-right">
-                                  <span className="font-black text-emerald-700 block">+{up.pointsEarned || 0} pts</span>
-                                  <span className="text-[9px] text-slate-400 capitalize">{up.reason || "Pendiente"}</span>
+                                <div className="flex items-end gap-2">
+                                  <label className="flex-1">
+                                    <span className="block text-[8px] uppercase font-bold text-slate-400 mb-1">{mt.local}</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={draft.local}
+                                      onChange={(event) => setAdminPredictionDrafts((current) => ({
+                                        ...current,
+                                        [mt.id]: { local: event.target.value === "" ? "" : Number(event.target.value), visitor: current[mt.id]?.visitor ?? "" }
+                                      }))}
+                                      className="w-full min-h-10 rounded-lg border border-slate-200 px-2 text-center font-black"
+                                    />
+                                  </label>
+                                  <span className="pb-3 font-black text-slate-400">-</span>
+                                  <label className="flex-1">
+                                    <span className="block text-[8px] uppercase font-bold text-slate-400 mb-1">{mt.visitor}</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={draft.visitor}
+                                      onChange={(event) => setAdminPredictionDrafts((current) => ({
+                                        ...current,
+                                        [mt.id]: { local: current[mt.id]?.local ?? "", visitor: event.target.value === "" ? "" : Number(event.target.value) }
+                                      }))}
+                                      className="w-full min-h-10 rounded-lg border border-slate-200 px-2 text-center font-black"
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleSaveAdminPrediction(mt.id)}
+                                    disabled={adminPredictionSavingMatchId !== null}
+                                    className="min-h-10 px-3 rounded-lg bg-slate-950 hover:bg-emerald-700 text-white text-[9px] font-black disabled:opacity-50"
+                                  >
+                                    {adminPredictionSavingMatchId === mt.id ? "Guardando..." : prediction ? "Corregir" : "Crear"}
+                                  </button>
+                                </div>
+                                <div className="flex justify-between text-[9px] text-slate-400">
+                                  <span>{isClosed ? "Partido cerrado" : "Partido abierto"}</span>
+                                  <span>{prediction ? `Puntos: ${prediction.pointsEarned ?? 0}` : "Sin puntos"}</span>
                                 </div>
                               </div>
                             );
                           })}
-                        </div>
-                      )}
+                      </div>
                     </div>
                   )}
 

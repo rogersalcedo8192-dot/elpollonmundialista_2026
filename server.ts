@@ -4290,7 +4290,7 @@ app.get("/api/predictions", (req, res) => {
   const queryUserId = req.query.userId as string;
 
   // Normal users can only retrieve their own predictions. Admin can load anyone's forecasts.
-  if (user.role !== "admin" && queryUserId && queryUserId !== user.id) {
+  if (!isSuperAdmin(user) && queryUserId && queryUserId !== user.id) {
     return res.status(403).json({ error: "No autorizado para ver predicciones de otros usuarios." });
   }
 
@@ -4408,6 +4408,66 @@ app.post("/api/predictions", (req, res) => {
 
   saveDb(db);
   res.json({ message: "Predicción guardada exitosamente.", prediction: existing });
+});
+
+app.put("/api/admin/users/:userId/predictions/:matchId", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "Solo el SuperAdmin puede corregir pronosticos cerrados." });
+
+  const userId = String(req.params.userId || "");
+  const matchId = Number(req.params.matchId);
+  const parsedLocalScore = Number(req.body?.localScore);
+  const parsedVisitorScore = Number(req.body?.visitorScore);
+  if (
+    !Number.isInteger(matchId) ||
+    !Number.isInteger(parsedLocalScore) ||
+    !Number.isInteger(parsedVisitorScore) ||
+    parsedLocalScore < 0 ||
+    parsedVisitorScore < 0
+  ) {
+    return res.status(400).json({ error: "Ingresa marcadores validos para ambos equipos." });
+  }
+
+  const db = loadDb();
+  const targetUser = db.users.find((user) => user.id === userId);
+  if (!targetUser) return res.status(404).json({ error: "Usuario no encontrado." });
+  const match = db.matches.find((candidate) => candidate.id === matchId);
+  if (!match) return res.status(404).json({ error: "Partido no encontrado." });
+
+  let prediction = db.predictions.find((item) => item.userId === userId && item.matchId === matchId);
+  const previousScore = prediction ? `${prediction.localScore}-${prediction.visitorScore}` : "SIN PRONOSTICO";
+  if (prediction) {
+    prediction.localScore = parsedLocalScore;
+    prediction.visitorScore = parsedVisitorScore;
+    prediction.pointsEarned = null;
+    prediction.reason = null;
+    prediction.dateCreated = new Date().toISOString();
+  } else {
+    prediction = {
+      id: `pred_${userId}_${matchId}`,
+      userId,
+      matchId,
+      localScore: parsedLocalScore,
+      visitorScore: parsedVisitorScore,
+      pointsEarned: null,
+      reason: null,
+      dateCreated: new Date().toISOString()
+    };
+    db.predictions.push(prediction);
+  }
+
+  saveDb(db);
+  recalculateScoresAndRankings();
+  const refreshedDb = loadDb();
+  const refreshedPrediction = refreshedDb.predictions.find((item) => item.userId === userId && item.matchId === matchId);
+  console.info(
+    `SuperAdmin prediction correction: admin=${admin.id} user=${userId} match=${matchId} previous=${previousScore} new=${parsedLocalScore}-${parsedVisitorScore}`
+  );
+
+  res.json({
+    message: `Pronostico de ${targetUser.name} corregido para ${match.local} vs ${match.visitor}.`,
+    prediction: refreshedPrediction || prediction
+  });
 });
 
 app.delete("/api/predictions/:matchId", (req, res) => {

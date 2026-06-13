@@ -291,6 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-13: habilitada correccion excepcional de pronosticos desde Gestion de Usuarios exclusivamente para SuperAdmin; el historial ahora incluye partidos con "Sin pronostico", permite crear o editar marcadores cerrados, registra la correccion y recalcula puntajes y ranking.
 - 2026-06-12: ampliado el modulo de correos finales del SuperAdmin: permite elegir desde Assets un poster distinto para cada puesto, previsualizarlo dentro del mensaje y enviar manualmente cada correo real despues del cierre validado de la final; el servidor verifica ganador, premio e imagen antes del envio.
 - 2026-06-12: documentado para la proxima version como pendiente prioritario el rediseño de Favoritos y rondas eliminatorias mediante una llave tradicional; la implementacion actual usa listas independientes y no comunica ni valida los cruces entre 16avos, octavos, cuartos, semifinal y final.
 - 2026-06-12: corregido selector de los dos finalistas para mobile y desktop; ahora funciona por botones tactiles, permite marcar o desmarcar exactamente dos equipos y bloquea el resto al alcanzar el limite.
