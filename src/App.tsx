@@ -1711,6 +1711,7 @@ export default function App() {
   const [matchDedupeBusy, setMatchDedupeBusy] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [searchUser, setSearchUser] = useState("");
+  const [predictionCorrectionMode, setPredictionCorrectionMode] = useState(false);
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
   const [userPredictionsView, setUserPredictionsView] = useState<Prediction[]>([]);
   const [adminPredictionDrafts, setAdminPredictionDrafts] = useState<Record<number, { local: number | ""; visitor: number | "" }>>({});
@@ -3397,6 +3398,7 @@ export default function App() {
           ])
         ));
         setSelectedUserForPredictions(user);
+        window.setTimeout(() => document.getElementById("superadmin-prediction-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
       }
     } catch (err) {
       showToast("No se pudieron cargar las predicciones del usuario", "error");
@@ -3430,8 +3432,13 @@ export default function App() {
         return [...withoutMatch, data.prediction];
       });
       showToast(data.message, "success");
-      fetchGlobalData();
-      fetchAdminUsers();
+      const [rankingRes] = await Promise.all([
+        fetch("/api/rankings", { headers: getHeaders() }),
+        fetchAdminUsers(),
+        fetchAdminStats()
+      ]);
+      if (rankingRes.ok) setRankings(await rankingRes.json());
+      await handleLoadUserPredictions(selectedUserForPredictions);
     } catch (err: any) {
       showToast(err.message || "No se pudo corregir el pronostico.", "error");
     } finally {
@@ -3705,12 +3712,17 @@ export default function App() {
   const activeNavigationKey =
     onboardingOpen
       ? "how-to-play"
+      : activeTab === "admin-users" && predictionCorrectionMode
+      ? "admin-prediction-corrections"
       : activeTab === "predictions" && predictionsMode === "favorites"
       ? "favorites"
       : activeTab;
   const navigateToMenuItem = (key: string) => {
     if (key === "how-to-play") {
       setOnboardingOpen(true);
+    } else if (key === "admin-prediction-corrections") {
+      setPredictionCorrectionMode(true);
+      setActiveTab("admin-users");
     } else if (key === "favorites") {
       setActiveTab("predictions");
       setPredictionsMode("favorites");
@@ -3718,6 +3730,7 @@ export default function App() {
       setActiveTab("predictions");
       setPredictionsMode("matches");
     } else {
+      setPredictionCorrectionMode(false);
       setActiveTab(key);
       if (key === "public-predictions") void fetchPublicPredictions();
     }
@@ -4336,6 +4349,7 @@ export default function App() {
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(isSuperAdminUser ? [{ key: "admin-stats", label: "Métricas", icon: BarChart3 }] : []),
               ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
+              ...(isSuperAdminUser ? [{ key: "admin-prediction-corrections", label: "Corregir Pronósticos", icon: Edit2 }] : []),
               ...(canManageUsers ? [{ key: "admin-companies", label: isCompanyAdminUser ? "Administrador Grupal" : "Empresas", icon: Tv }] : []),
               ...(isSuperAdminUser ? [{ key: "admin-matches", label: "Partidos Admin", icon: Calendar }] : []),
               ...(isSuperAdminUser || isCompanyAdminUser ? [{ key: "admin-announcements", label: "Comunicados", icon: Megaphone }] : []),
@@ -4752,6 +4766,14 @@ export default function App() {
                         <Users className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         {t("admin_users", "Gestión de Usuarios")}
                       </button>
+
+                      {isSuperAdminUser && <button
+                        onClick={() => navigateToMenuItem("admin-prediction-corrections")}
+                        className={`hidden md:flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "admin-prediction-corrections" ? "bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                      >
+                        <Edit2 className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        Corregir Pronósticos
+                      </button>}
 
                       <button
                         onClick={() => navigateToMenuItem("admin-companies")}
@@ -7061,6 +7083,42 @@ export default function App() {
                   </div>
 
                   {isSuperAdminUser && (
+                    <div className={`rounded-2xl border p-4 md:p-5 space-y-3 ${
+                      predictionCorrectionMode
+                        ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
+                        : "border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800"
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-xl bg-slate-950 text-amber-300 shrink-0">
+                          <Edit2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black text-slate-950 dark:text-white">Corregir pronósticos cerrados</h3>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                            Selecciona un participante. Podrás crear marcadores donde figure SIN PRONÓSTICO o corregir uno existente.
+                            Cada guardado recalcula inmediatamente sus puntos y la tabla de posiciones.
+                          </p>
+                        </div>
+                      </div>
+                      <select
+                        value={selectedUserForPredictions?.id || ""}
+                        onChange={(event) => {
+                          const user = adminUsers.find((candidate) => candidate.id === event.target.value);
+                          if (user) void handleLoadUserPredictions(user);
+                        }}
+                        className="w-full min-h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold dark:bg-slate-950 dark:border-slate-700"
+                      >
+                        <option value="">Selecciona el usuario que deseas corregir</option>
+                        {adminUsers
+                          .filter((user) => !isSuperAdminUser || (user.role !== "admin" && user.role !== "superadmin"))
+                          .map((user) => (
+                            <option key={user.id} value={user.id}>{user.name} · {user.email}</option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {isSuperAdminUser && (
                     <form onSubmit={handleSaveCompany} className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-slate-50 border rounded-xl text-xs">
                       <input className="min-h-11 px-3 rounded-lg border" placeholder="Nombre empresa" value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} required />
                       <input className="min-h-11 px-3 rounded-lg border" placeholder="slug-opcional" value={companyForm.slug} onChange={(e) => setCompanyForm({ ...companyForm, slug: e.target.value })} />
@@ -7602,7 +7660,7 @@ export default function App() {
 
                   {/* History predictions audit viewer popup */}
                   {selectedUserForPredictions && (
-                    <div className="p-4 bg-slate-100 border border-slate-300 rounded-2xl relative">
+                    <div id="superadmin-prediction-editor" className="p-4 bg-slate-100 border border-slate-300 rounded-2xl relative scroll-mt-4">
                       <button
                         onClick={() => setSelectedUserForPredictions(null)}
                         className="absolute top-2 right-2 px-2 py-0.5 bg-slate-300 hover:bg-slate-400 text-xs rounded"
