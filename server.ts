@@ -151,6 +151,10 @@ interface Ranking {
   exactCount: number;
   drawCount: number;
   predictCount: number;
+  participationPoints?: number;
+  outcomePoints?: number;
+  exactScorePoints?: number;
+  exactDrawBonusPoints?: number;
   position: number;
   prevPosition: number;
   shift: "up" | "down" | "equal";
@@ -2274,6 +2278,10 @@ function recalculateScoresAndRankings() {
     let exactHits = 0;
     let drawHits = 0;
     let totalPredicted = 0;
+    let participationPoints = 0;
+    let outcomePoints = 0;
+    let exactScorePoints = 0;
+    let exactDrawBonusPoints = 0;
     const history: number[] = [0];
 
     // Sort predictions by match ID to compute chronological history
@@ -2300,6 +2308,11 @@ function recalculateScoresAndRankings() {
         } else if (score.outcomeHit) {
           drawHits++;
         }
+
+        participationPoints += PARTICIPATION_POINTS;
+        if (score.outcomeHit) outcomePoints += OUTCOME_POINTS;
+        if (score.exactHit) exactScorePoints += EXACT_SCORE_POINTS;
+        if (score.exactDrawHit) exactDrawBonusPoints += EXACT_DRAW_BONUS_POINTS;
 
         p.pointsEarned = pts;
         p.reason = reason;
@@ -2398,6 +2411,10 @@ function recalculateScoresAndRankings() {
       exactCount: exactHits,
       drawCount: drawHits,
       predictCount: totalPredicted,
+      participationPoints,
+      outcomePoints,
+      exactScorePoints,
+      exactDrawBonusPoints,
       groupPoints,
       knockoutPoints,
       finalistPoints,
@@ -2469,6 +2486,10 @@ function recalculateScoresAndRankings() {
       exactCount: ru.exactCount,
       drawCount: ru.drawCount,
       predictCount: ru.predictCount,
+      participationPoints: ru.participationPoints,
+      outcomePoints: ru.outcomePoints,
+      exactScorePoints: ru.exactScorePoints,
+      exactDrawBonusPoints: ru.exactDrawBonusPoints,
       position: newPos,
       prevPosition: oldPos,
       shift,

@@ -273,7 +273,7 @@ Criterio de cierre:
 2. MUY IMPORTANTE - PENDIENTE: recuperar contrasena de forma segura con hash, token temporal y envio real por correo.
 3. Limpieza definitiva de datos demo antes de abrir inscripciones reales.
 4. Pruebas del motor de puntuacion.
-5. Pulido mobile pendiente: ranking en cards y pronostico rapido de proximos partidos.
+5. Pulido mobile pendiente: pronostico rapido de proximos partidos.
 6. Auditoria admin y exportes de operacion.
 
 ## Riesgos a Vigilar
@@ -291,6 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-15: renombrada la tabla de clasificacion como PolloRanking y reemplazada en mobile por tarjetas legibles con desglose acumulado de puntos por participar, acertar 1X2, marcador exacto, bono de empate exacto y Favoritos; el mismo desglose queda disponible en escritorio y exportacion CSV.
 - 2026-06-15: agregada Trivia Mundialista recreativa con 25 preguntas, respuesta explicada, barra de progreso animada con gallo, resultado final, mejor marca local y celebracion especial 25/25 con confeti CSS, trofeo y distintivo de campeon; no modifica puntos, premios ni ranking.
 - 2026-06-13: habilitada correccion excepcional de pronosticos exclusivamente para SuperAdmin, ahora con acceso directo "Corregir Pronosticos" en mobile y desktop, selector visible de participante, partidos con "Sin pronostico", edicion de marcadores cerrados, auditoria y refresco inmediato de puntajes y ranking.
 - 2026-06-12: ampliado el modulo de correos finales del SuperAdmin: permite elegir desde Assets un poster distinto para cada puesto, previsualizarlo dentro del mensaje y enviar manualmente cada correo real despues del cierre validado de la final; el servidor verifica ganador, premio e imagen antes del envio.

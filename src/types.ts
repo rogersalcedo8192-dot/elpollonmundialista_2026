@@ -165,6 +165,10 @@ export interface Ranking {
   exactCount: number;
   drawCount: number;
   predictCount: number;
+  participationPoints?: number;
+  outcomePoints?: number;
+  exactScorePoints?: number;
+  exactDrawBonusPoints?: number;
   position: number;
   prevPosition: number;
   shift: "up" | "down" | "equal";

@@ -801,7 +801,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     menu_user: "Menú Usuario",
     tab_dashboard: "Mi Resumen & Estadísticas",
     tab_predictions: "Calendario & Pronósticos",
-    tab_ranking: "Tabla de Clasificación",
+    tab_ranking: "PolloRanking",
     tab_rules: "Reglas y Premiaciones",
     admin_title: "ADMINISTRACIÓN",
     admin_stats: "Dashboard & Métricas",
@@ -2886,9 +2886,9 @@ export default function App() {
   const handleExportRankingCSV = () => {
     try {
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "Posicion,Nombre,Pais,Puntos,Marcadores exactos,Resultados 1X2,Partidos Predichos\n";
+      csvContent += "Posicion,Nombre,Pais,Puntos Totales,Puntos por Participar,Puntos por Resultado 1X2,Puntos por Marcador Exacto,Bono Empate Exacto,Puntos Favoritos,Partidos Predichos\n";
       rankings.forEach((r) => {
-        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.exactCount},${r.drawCount},${r.predictCount}\n`;
+        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.participationPoints || 0},${r.outcomePoints || 0},${r.exactScorePoints || 0},${r.exactDrawBonusPoints || 0},${r.totalBonusPoints || 0},${r.predictCount}\n`;
       });
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -2907,7 +2907,7 @@ export default function App() {
     const position = currentRanking?.position ? `#${currentRanking.position}` : "sin posición asignada";
     const exactCount = currentRanking?.exactCount ?? currentUser?.exactCount ?? 0;
     const points = currentRanking?.points ?? currentUser?.points ?? 0;
-    return `Estoy en el puesto ${position} de ${rankingTitle} en El Pollón Mundialista FIFA 2026, con ${points} puntos y ${exactCount} marcadores exactos. ¿Puedes superarme?`;
+    return `Estoy en el puesto ${position} del PolloRanking de ${rankingTitle.toLowerCase()} en El Pollón Mundialista FIFA 2026, con ${points} puntos y ${exactCount} marcadores exactos. ¿Puedes superarme?`;
   };
 
   const loadShareImage = (src: string) =>
@@ -3702,10 +3702,10 @@ export default function App() {
     (currentUser.paymentProvider || currentUser.paymentReference || currentUser.paymentTransactionId || currentUser.stripeCheckoutSessionId || currentUser.stripePaymentIntentId)
   );
   const rankingTitle = hasRealPrizeAccess || isSuperAdminUser
-    ? "Ranking general de usuarios pagos"
+    ? "Usuarios pagos"
     : currentUser?.companyId
-      ? "Ranking gratuito de tu empresa"
-      : "Ranking de usuarios gratuitos";
+      ? "Tu empresa"
+      : "Usuarios gratuitos";
   const rankingDescription = hasRealPrizeAccess || isSuperAdminUser
     ? "Incluye únicamente participantes con pago real confirmado, aunque pertenezcan a una empresa."
     : currentUser?.companyId
@@ -4346,7 +4346,7 @@ export default function App() {
               ...(canCreateGroupPool ? [{ key: "group-pool", label: "Crear Polla Grupal", icon: Users }] : []),
               { key: "favorites", label: "Favoritos", icon: Trophy },
               { key: "participate", label: "Partidos", icon: CreditCard },
-              { key: "ranking", label: "Clasificación", icon: Trophy },
+              { key: "ranking", label: "PolloRanking", icon: Trophy },
               { key: "trivia", label: "Trivia", icon: CircleHelp },
               { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
               { key: "rules-prizes", label: "Premios", icon: Info },
@@ -4726,8 +4726,8 @@ export default function App() {
                   >
                     <span className="md:hidden" aria-hidden="true">🏆</span>
                     <Trophy className="hidden md:block w-4 h-4 shrink-0" />
-                    <span className="md:hidden">Clasificación</span>
-                    <span className="hidden md:inline">{t("tab_ranking", "Tabla de Clasificación")}</span>
+                    <span className="md:hidden">PolloRanking</span>
+                    <span className="hidden md:inline">{t("tab_ranking", "PolloRanking")}</span>
                   </button>
 
                   <button
@@ -6271,9 +6271,9 @@ export default function App() {
                   <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Trophy className="text-emerald-600 w-5 h-5" id="user_ranking_sidebar_trophy" /> {rankingTitle}
+                        <Trophy className="text-emerald-600 w-5 h-5" id="user_ranking_sidebar_trophy" /> PolloRanking
                       </h2>
-                      <p className="text-xs text-slate-500 mt-1">{rankingDescription}</p>
+                      <p className="text-xs text-slate-500 mt-1"><strong>{rankingTitle}:</strong> {rankingDescription}</p>
                     </div>
 
                     <button
@@ -6334,8 +6334,95 @@ export default function App() {
                     </div>
                   </div>
 
+                  <div className="md:hidden space-y-3">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Cada tarjeta muestra de dónde salen los puntos. Los valores son acumulados y suman el total.
+                    </p>
+                    {rankings.map((r) => {
+                      const isSelf = r.userId === currentUser.id;
+                      const isTopThree = r.position <= 3;
+                      const matchPoints =
+                        (r.participationPoints || 0) +
+                        (r.outcomePoints || 0) +
+                        (r.exactScorePoints || 0) +
+                        (r.exactDrawBonusPoints || 0);
+
+                      return (
+                        <article
+                          key={r.userId}
+                          className={`rounded-2xl border p-4 shadow-sm ${
+                            isSelf
+                              ? "border-emerald-400 bg-emerald-50/80 dark:border-emerald-700 dark:bg-emerald-950/30"
+                              : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                              r.position === 1 ? "bg-amber-400 text-amber-950" :
+                              r.position === 2 ? "bg-slate-300 text-slate-900" :
+                              r.position === 3 ? "bg-amber-700 text-white" :
+                              "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            }`}>
+                              #{r.position}
+                            </span>
+                            <img src={r.userAvatar} alt="" className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700" referrerPolicy="no-referrer" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="truncate text-sm font-black text-slate-950 dark:text-white">{r.userName}</h3>
+                                {isSelf && <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black text-white">TÚ</span>}
+                              </div>
+                              <p className="text-[10px] font-bold text-slate-500">
+                                {getCountryFlag(r.userCountry)} {normalizeCountryName(r.userCountry)} · {r.predictCount} partidos
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <span className="block text-2xl font-black text-emerald-700 dark:text-emerald-400">{r.points}</span>
+                              <span className="text-[9px] font-black uppercase text-slate-500">Puntos totales</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            {[
+                              ["Por participar", r.participationPoints || 0, "text-sky-700 dark:text-sky-300"],
+                              ["Por ganar 1X2", r.outcomePoints || 0, "text-indigo-700 dark:text-indigo-300"],
+                              ["Marcador exacto", r.exactScorePoints || 0, "text-emerald-700 dark:text-emerald-300"],
+                              ["Exacto en empate", r.exactDrawBonusPoints || 0, "text-amber-700 dark:text-amber-300"],
+                            ].map(([label, value, color]) => (
+                              <div key={String(label)} className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
+                                <span className="block text-[9px] font-black uppercase leading-tight text-slate-500">{label}</span>
+                                <span className={`mt-1 block text-base font-black ${color}`}>+{value}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-between rounded-xl border border-dashed border-slate-200 px-3 py-2 text-[10px] dark:border-slate-700">
+                            <span className="font-bold text-slate-500">Partidos: {matchPoints} pts · Favoritos: {r.totalBonusPoints || 0} pts</span>
+                            <span className={`font-black ${
+                              r.shift === "up" ? "text-emerald-600" :
+                              r.shift === "down" ? "text-rose-500" :
+                              "text-slate-400"
+                            }`}>
+                              {r.shift === "up" ? "▲ Subió" : r.shift === "down" ? "▼ Bajó" : "═ Igual"}
+                            </span>
+                          </div>
+
+                          {isTopThree && (
+                            <button
+                              type="button"
+                              onClick={() => setWinnerCertificate(r)}
+                              disabled={!certificatesEnabled}
+                              className="mt-3 min-h-11 w-full rounded-xl border border-amber-200 bg-amber-50 text-[11px] font-black text-amber-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                            >
+                              <FileText className="mr-1.5 inline h-4 w-4" /> Ver certificado
+                            </button>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+
                   {/* Leaderboard Table Grid */}
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                  <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs">
                         <thead className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
@@ -6343,9 +6430,12 @@ export default function App() {
                             <th className="py-2.5 px-3 w-12 text-center">{t("rank_col_pos", "Pos")}</th>
                             <th className="py-2.5 px-3">{t("rank_col_name", "Nombre")}</th>
                             <th className="py-2.5 px-3 hidden md:table-cell">País</th>
+                            <th className="py-2.5 px-3 text-center">Participar</th>
+                            <th className="py-2.5 px-3 text-center">1X2</th>
+                            <th className="py-2.5 px-3 text-center">Exacto</th>
+                            <th className="py-2.5 px-3 text-center">Empate exacto</th>
+                            <th className="py-2.5 px-3 text-center">Favoritos</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_pts", "Pts Totales")}</th>
-                            <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_exact", "Marcadores exactos")}</th>
-                            <th className="py-2.5 px-3 text-center hidden sm:table-cell">{t("rank_col_draw", "Resultados 1X2")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_matches", "Partidos")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_trend", "Tendencia")}</th>
                             <th className="py-2.5 px-3 text-center">Certificado</th>
@@ -6385,9 +6475,12 @@ export default function App() {
                                     <span title={normalizeCountryName(r.userCountry)}>{getCountryShortCode(r.userCountry)}</span>
                                   </span>
                                 </td>
+                                <td className="py-2.5 px-3 text-center text-sky-700 dark:text-sky-400">{r.participationPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">{r.points}</td>
-                                <td className="py-2.5 px-3 text-center hidden sm:table-cell text-emerald-700 dark:text-emerald-400">{r.exactCount}</td>
-                                <td className="py-2.5 px-3 text-center hidden sm:table-cell text-indigo-700 dark:text-indigo-400">{r.drawCount}</td>
                                 <td className="py-2.5 px-3 text-center text-slate-500 dark:text-slate-400">{r.predictCount}</td>
                                 <td className="py-2.5 px-3 text-center">
                                   {r.shift === "up" && (
