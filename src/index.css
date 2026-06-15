@@ -112,11 +112,14 @@
   will-change: transform;
 }
 
-.match-ticker.is-paused .match-ticker-track,
-.match-ticker:hover .match-ticker-track,
-.match-ticker:focus-within .match-ticker-track,
-.match-ticker:active .match-ticker-track {
+.match-ticker.is-paused .match-ticker-track {
   animation-play-state: paused;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .match-ticker-viewport:hover .match-ticker-track {
+    animation-play-state: paused;
+  }
 }
 
 .match-ticker-group {
