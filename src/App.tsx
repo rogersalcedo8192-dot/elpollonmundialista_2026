@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Trophy,
+  Star,
   Award,
   Users,
   Calendar,
@@ -4344,7 +4345,7 @@ export default function App() {
               { key: "dashboard", label: "Resumen", icon: BarChart3 },
               { key: "predictions", label: "Mis Pronósticos", icon: Calendar },
               ...(canCreateGroupPool ? [{ key: "group-pool", label: "Crear Polla Grupal", icon: Users }] : []),
-              { key: "favorites", label: "Favoritos", icon: Trophy },
+              { key: "favorites", label: "Favoritos", icon: Star },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "PolloRanking", icon: Trophy },
               { key: "trivia", label: "Trivia", icon: CircleHelp },
@@ -4703,7 +4704,7 @@ export default function App() {
                     className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "favorites" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     <span className="md:hidden" aria-hidden="true">★</span>
-                    <Trophy className="hidden md:block w-4 h-4 shrink-0" />
+                    <Star className="hidden md:block w-4 h-4 shrink-0" />
                     <span>Favoritos del Torneo</span>
                   </button>
 
@@ -5875,7 +5876,7 @@ export default function App() {
                           : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                       }`}
                     >
-                      <Trophy className="w-3.5 h-3.5" />
+                      <Star className="w-3.5 h-3.5" />
                       {t("mode_tournament_favorites", "Favoritos del Torneo")}
                     </button>
                   </div>
