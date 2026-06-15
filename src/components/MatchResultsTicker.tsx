@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { Pause, Play } from "lucide-react";
 import type { Match } from "../types";
 
 interface MatchResultsTickerProps {
@@ -20,6 +21,7 @@ const formatTickerDate = (date: string) => {
 };
 
 export function MatchResultsTicker({ matches, getTeamFlag }: MatchResultsTickerProps) {
+  const [paused, setPaused] = useState(false);
   const tickerMatches = useMemo(() => {
     const now = Date.now();
     const live = matches
@@ -35,12 +37,14 @@ export function MatchResultsTicker({ matches, getTeamFlag }: MatchResultsTickerP
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 12);
 
-    const selected = [...finished, ...live, ...upcoming];
+    const selected = [...live, ...finished, ...upcoming];
     const unique = new Map(selected.map((match) => [match.id, match]));
     return Array.from(unique.values());
   }, [matches]);
 
   if (!tickerMatches.length) return null;
+
+  const hasLiveMatches = tickerMatches.some((match) => match.status === "in_progress");
 
   const renderItems = (duplicate = false) => tickerMatches.map((match) => {
     const isFinished = match.status === "finished";
@@ -50,12 +54,16 @@ export function MatchResultsTicker({ matches, getTeamFlag }: MatchResultsTickerP
     return (
       <article
         key={`${duplicate ? "copy" : "original"}-${match.id}`}
-        className="match-ticker-card"
+        className={`match-ticker-card ${isLive ? "is-live" : isFinished ? "is-finished" : "is-upcoming"}`}
         aria-hidden={duplicate || undefined}
+        title={`${match.stage}: ${match.local} vs ${match.visitor}`}
       >
-        <span className={`match-ticker-status ${isLive ? "is-live" : isFinished ? "is-finished" : "is-upcoming"}`}>
-          {isLive ? "En curso" : isFinished ? "Final" : formatTickerDate(match.date)}
-        </span>
+        <div className="match-ticker-meta">
+          <span className={`match-ticker-status ${isLive ? "is-live" : isFinished ? "is-finished" : "is-upcoming"}`}>
+            {isLive ? "En vivo" : isFinished ? "Final" : formatTickerDate(match.date)}
+          </span>
+          <span className="match-ticker-stage">{match.stage}</span>
+        </div>
         <div className="match-ticker-team">
           <span className="match-ticker-flag">{getTeamFlag(match.local)}</span>
           <span className="match-ticker-name">{match.local}</span>
@@ -74,13 +82,22 @@ export function MatchResultsTicker({ matches, getTeamFlag }: MatchResultsTickerP
   const durationSeconds = Math.max(32, tickerMatches.length * 6);
 
   return (
-    <section className="match-ticker" aria-label="Resultados y próximos partidos del Mundial 2026">
+    <section className={`match-ticker ${paused ? "is-paused" : ""}`} aria-label="Resultados y próximos partidos del Mundial 2026">
       <div className="match-ticker-heading">
-        <span className="match-ticker-live-dot" aria-hidden="true" />
-        <span>Resultados</span>
-        <small>y próximos</small>
+        <span className={`match-ticker-live-dot ${hasLiveMatches ? "is-live" : ""}`} aria-hidden="true" />
+        <span>{hasLiveMatches ? "En vivo" : "Mundial"}</span>
+        <small>{hasLiveMatches ? "ahora" : "resultados"}</small>
+        <button
+          type="button"
+          className="match-ticker-toggle"
+          onClick={() => setPaused((current) => !current)}
+          aria-label={paused ? "Reanudar ticker de partidos" : "Pausar ticker de partidos"}
+          title={paused ? "Reanudar" : "Pausar"}
+        >
+          {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+        </button>
       </div>
-      <div className="match-ticker-viewport">
+      <div className="match-ticker-viewport" aria-live="off">
         <div
           className="match-ticker-track"
           style={{ "--ticker-duration": `${durationSeconds}s` } as React.CSSProperties}
