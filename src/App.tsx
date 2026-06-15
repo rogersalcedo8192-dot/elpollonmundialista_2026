@@ -6339,18 +6339,19 @@ export default function App() {
                       Desliza la tabla para consultar el detalle. Tu posición permanece resaltada.
                     </p>
                     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                      <table className="min-w-[790px] border-collapse text-left text-[10px]">
+                      <table className="min-w-[760px] border-collapse text-left text-[10px]">
                         <thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                           <tr>
-                            <th className="sticky left-0 z-20 w-12 bg-slate-50 px-2 py-3 text-center dark:bg-slate-800">Pos</th>
-                            <th className="sticky left-12 z-20 min-w-40 bg-slate-50 px-2 py-3 dark:bg-slate-800">Usuario</th>
-                            <th className="px-3 py-3 text-center text-slate-900 dark:text-white">Total</th>
-                            <th className="px-3 py-3 text-center">Participar</th>
-                            <th className="px-3 py-3 text-center">1X2</th>
-                            <th className="px-3 py-3 text-center">Exacto</th>
-                            <th className="px-3 py-3 text-center">Empate exacto</th>
-                            <th className="px-3 py-3 text-center">Favoritos</th>
-                            <th className="px-3 py-3 text-center">Partidos</th>
+                            <th className="sticky left-0 z-20 w-10 bg-slate-50 px-1.5 py-3 text-center dark:bg-slate-800">Pos</th>
+                            <th className="sticky left-10 z-20 w-28 bg-slate-50 px-1.5 py-3 shadow-[5px_0_8px_-7px_rgba(15,23,42,0.8)] dark:bg-slate-800">Usuario</th>
+                            <th className="w-14 px-2 py-3 text-center text-slate-900 dark:text-white">Total</th>
+                            <th className="w-16 px-2 py-3 text-center">Participar</th>
+                            <th className="w-12 px-2 py-3 text-center">1X2</th>
+                            <th className="w-14 px-2 py-3 text-center">Exacto</th>
+                            <th className="w-20 px-2 py-3 text-center">Empate exacto</th>
+                            <th className="w-16 px-2 py-3 text-center">Favoritos</th>
+                            <th className="w-14 px-2 py-3 text-center">Partidos</th>
+                            <th className="w-24 px-2 py-3 text-center">Certificado ganador</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -6365,7 +6366,7 @@ export default function App() {
                                 key={r.userId}
                                 className={isSelf ? "bg-emerald-50 font-bold text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100" : ""}
                               >
-                                <td className={`sticky left-0 z-10 px-2 py-3 text-center font-black ${stickyCellClass}`}>
+                                <td className={`sticky left-0 z-10 w-10 px-1.5 py-3 text-center font-black ${stickyCellClass}`}>
                                   <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 ${
                                     r.position === 1 ? "bg-amber-400 text-amber-950" :
                                     r.position === 2 ? "bg-slate-300 text-slate-900" :
@@ -6375,29 +6376,61 @@ export default function App() {
                                     {r.position}
                                   </span>
                                 </td>
-                                <td className={`sticky left-12 z-10 px-2 py-2.5 ${stickyCellClass}`}>
-                                  <div className="flex items-center gap-2">
+                                <td className={`sticky left-10 z-10 w-28 px-1.5 py-2.5 shadow-[5px_0_8px_-7px_rgba(15,23,42,0.8)] ${stickyCellClass}`}>
+                                  <div className="flex items-center gap-1.5">
                                     <img
                                       src={r.userAvatar}
                                       alt=""
-                                      className="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
+                                      className="h-6 w-6 shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
                                       referrerPolicy="no-referrer"
                                     />
                                     <div className="min-w-0">
-                                      <span className="block max-w-28 truncate font-black text-slate-950 dark:text-white">{r.userName}</span>
-                                      <span className="block text-[8px] font-bold text-slate-400">
-                                        {getCountryFlag(r.userCountry)} {isSelf ? "TÚ" : getCountryShortCode(r.userCountry)}
+                                      <span className="block max-w-20 truncate font-black text-slate-950 dark:text-white">{r.userName}</span>
+                                      <span className="flex max-w-20 items-center gap-1 overflow-hidden whitespace-nowrap text-[8px] font-bold text-slate-400">
+                                        <span>{getCountryFlag(r.userCountry)} {isSelf ? "TÚ" : getCountryShortCode(r.userCountry)}</span>
+                                        <span
+                                          className={
+                                            r.shift === "up"
+                                              ? "text-emerald-600 dark:text-emerald-400"
+                                              : r.shift === "down"
+                                                ? "text-rose-500"
+                                                : "text-slate-400"
+                                          }
+                                          title={r.shift === "up" ? "Subió de posición" : r.shift === "down" ? "Bajó de posición" : "Mantuvo su posición"}
+                                        >
+                                          {r.shift === "up" ? "▲ Subió" : r.shift === "down" ? "▼ Bajó" : "═ Igual"}
+                                        </span>
                                       </span>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-3 py-3 text-center text-sm font-black text-emerald-700 dark:text-emerald-400">{r.points}</td>
-                                <td className="px-3 py-3 text-center font-bold text-sky-700 dark:text-sky-400">{r.participationPoints || 0}</td>
-                                <td className="px-3 py-3 text-center font-bold text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
-                                <td className="px-3 py-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
-                                <td className="px-3 py-3 text-center font-bold text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
-                                <td className="px-3 py-3 text-center font-bold text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
-                                <td className="px-3 py-3 text-center font-bold text-slate-500 dark:text-slate-400">{r.predictCount}</td>
+                                <td className="px-2 py-3 text-center text-sm font-black text-emerald-700 dark:text-emerald-400">{r.points}</td>
+                                <td className="px-2 py-3 text-center font-bold text-sky-700 dark:text-sky-400">{r.participationPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-slate-500 dark:text-slate-400">{r.predictCount}</td>
+                                <td className="px-2 py-2 text-center">
+                                  {r.position <= 3 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setWinnerCertificate(r)}
+                                      disabled={!certificatesEnabled}
+                                      title={certificatesEnabled ? "Ver certificado de ganador" : "Disponible 60 segundos después de finalizar la gran final"}
+                                      className={`inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[8px] font-black ${
+                                        certificatesEnabled
+                                          ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                                          : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800"
+                                      }`}
+                                    >
+                                      <FileText className="h-3.5 w-3.5" />
+                                      Certificado
+                                    </button>
+                                  ) : (
+                                    <span className="text-slate-300 dark:text-slate-600">-</span>
+                                  )}
+                                </td>
                               </tr>
                             );
                           })}

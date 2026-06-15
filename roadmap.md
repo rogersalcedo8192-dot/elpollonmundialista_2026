@@ -291,7 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
-- 2026-06-15: renombrada la tabla de clasificacion como PolloRanking y optimizada en mobile como tabla horizontal con posicion y usuario fijos, fila propia resaltada y desglose acumulado de puntos por participar, acertar 1X2, marcador exacto, bono de empate exacto y Favoritos; conserva separados los rankings pago, gratuito y empresarial.
+- 2026-06-15: renombrada la tabla de clasificacion como PolloRanking y optimizada en mobile como tabla horizontal compacta: posicion y usuario fijos ocupan menos ancho, total queda visible desde el primer pantallazo, la tendencia subio/bajo/igual aparece junto al pais y se restauro Certificado ganador para el top 3; conserva la fila propia resaltada, el desglose de puntos y los rankings pago, gratuito y empresarial separados.
 - 2026-06-15: agregada Trivia Mundialista recreativa con 25 preguntas, respuesta explicada, barra de progreso animada con gallo, resultado final, mejor marca local y celebracion especial 25/25 con confeti CSS, trofeo y distintivo de campeon; no modifica puntos, premios ni ranking.
 - 2026-06-13: habilitada correccion excepcional de pronosticos exclusivamente para SuperAdmin, ahora con acceso directo "Corregir Pronosticos" en mobile y desktop, selector visible de participante, partidos con "Sin pronostico", edicion de marcadores cerrados, auditoria y refresco inmediato de puntajes y ranking.
 - 2026-06-12: ampliado el modulo de correos finales del SuperAdmin: permite elegir desde Assets un poster distinto para cada puesto, previsualizarlo dentro del mensaje y enviar manualmente cada correo real despues del cierre validado de la final; el servidor verifica ganador, premio e imagen antes del envio.
