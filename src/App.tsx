@@ -6334,91 +6334,76 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="md:hidden space-y-3">
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Cada tarjeta muestra de dónde salen los puntos. Los valores son acumulados y suman el total.
+                  <div className="md:hidden">
+                    <p className="mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      Desliza la tabla para consultar el detalle. Tu posición permanece resaltada.
                     </p>
-                    {rankings.map((r) => {
-                      const isSelf = r.userId === currentUser.id;
-                      const isTopThree = r.position <= 3;
-                      const matchPoints =
-                        (r.participationPoints || 0) +
-                        (r.outcomePoints || 0) +
-                        (r.exactScorePoints || 0) +
-                        (r.exactDrawBonusPoints || 0);
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                      <table className="min-w-[790px] border-collapse text-left text-[10px]">
+                        <thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+                          <tr>
+                            <th className="sticky left-0 z-20 w-12 bg-slate-50 px-2 py-3 text-center dark:bg-slate-800">Pos</th>
+                            <th className="sticky left-12 z-20 min-w-40 bg-slate-50 px-2 py-3 dark:bg-slate-800">Usuario</th>
+                            <th className="px-3 py-3 text-center text-slate-900 dark:text-white">Total</th>
+                            <th className="px-3 py-3 text-center">Participar</th>
+                            <th className="px-3 py-3 text-center">1X2</th>
+                            <th className="px-3 py-3 text-center">Exacto</th>
+                            <th className="px-3 py-3 text-center">Empate exacto</th>
+                            <th className="px-3 py-3 text-center">Favoritos</th>
+                            <th className="px-3 py-3 text-center">Partidos</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {rankings.map((r) => {
+                            const isSelf = r.userId === currentUser.id;
+                            const stickyCellClass = isSelf
+                              ? "bg-emerald-50 dark:bg-emerald-950"
+                              : "bg-white dark:bg-slate-900";
 
-                      return (
-                        <article
-                          key={r.userId}
-                          className={`rounded-2xl border p-4 shadow-sm ${
-                            isSelf
-                              ? "border-emerald-400 bg-emerald-50/80 dark:border-emerald-700 dark:bg-emerald-950/30"
-                              : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
-                              r.position === 1 ? "bg-amber-400 text-amber-950" :
-                              r.position === 2 ? "bg-slate-300 text-slate-900" :
-                              r.position === 3 ? "bg-amber-700 text-white" :
-                              "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                            }`}>
-                              #{r.position}
-                            </span>
-                            <img src={r.userAvatar} alt="" className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700" referrerPolicy="no-referrer" />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="truncate text-sm font-black text-slate-950 dark:text-white">{r.userName}</h3>
-                                {isSelf && <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black text-white">TÚ</span>}
-                              </div>
-                              <p className="text-[10px] font-bold text-slate-500">
-                                {getCountryFlag(r.userCountry)} {normalizeCountryName(r.userCountry)} · {r.predictCount} partidos
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <span className="block text-2xl font-black text-emerald-700 dark:text-emerald-400">{r.points}</span>
-                              <span className="text-[9px] font-black uppercase text-slate-500">Puntos totales</span>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-2 gap-2">
-                            {[
-                              ["Por participar", r.participationPoints || 0, "text-sky-700 dark:text-sky-300"],
-                              ["Por ganar 1X2", r.outcomePoints || 0, "text-indigo-700 dark:text-indigo-300"],
-                              ["Marcador exacto", r.exactScorePoints || 0, "text-emerald-700 dark:text-emerald-300"],
-                              ["Exacto en empate", r.exactDrawBonusPoints || 0, "text-amber-700 dark:text-amber-300"],
-                            ].map(([label, value, color]) => (
-                              <div key={String(label)} className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
-                                <span className="block text-[9px] font-black uppercase leading-tight text-slate-500">{label}</span>
-                                <span className={`mt-1 block text-base font-black ${color}`}>+{value}</span>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="mt-2 flex items-center justify-between rounded-xl border border-dashed border-slate-200 px-3 py-2 text-[10px] dark:border-slate-700">
-                            <span className="font-bold text-slate-500">Partidos: {matchPoints} pts · Favoritos: {r.totalBonusPoints || 0} pts</span>
-                            <span className={`font-black ${
-                              r.shift === "up" ? "text-emerald-600" :
-                              r.shift === "down" ? "text-rose-500" :
-                              "text-slate-400"
-                            }`}>
-                              {r.shift === "up" ? "▲ Subió" : r.shift === "down" ? "▼ Bajó" : "═ Igual"}
-                            </span>
-                          </div>
-
-                          {isTopThree && (
-                            <button
-                              type="button"
-                              onClick={() => setWinnerCertificate(r)}
-                              disabled={!certificatesEnabled}
-                              className="mt-3 min-h-11 w-full rounded-xl border border-amber-200 bg-amber-50 text-[11px] font-black text-amber-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
-                            >
-                              <FileText className="mr-1.5 inline h-4 w-4" /> Ver certificado
-                            </button>
-                          )}
-                        </article>
-                      );
-                    })}
+                            return (
+                              <tr
+                                key={r.userId}
+                                className={isSelf ? "bg-emerald-50 font-bold text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100" : ""}
+                              >
+                                <td className={`sticky left-0 z-10 px-2 py-3 text-center font-black ${stickyCellClass}`}>
+                                  <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 ${
+                                    r.position === 1 ? "bg-amber-400 text-amber-950" :
+                                    r.position === 2 ? "bg-slate-300 text-slate-900" :
+                                    r.position === 3 ? "bg-amber-700 text-white" :
+                                    "text-slate-700 dark:text-slate-200"
+                                  }`}>
+                                    {r.position}
+                                  </span>
+                                </td>
+                                <td className={`sticky left-12 z-10 px-2 py-2.5 ${stickyCellClass}`}>
+                                  <div className="flex items-center gap-2">
+                                    <img
+                                      src={r.userAvatar}
+                                      alt=""
+                                      className="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <div className="min-w-0">
+                                      <span className="block max-w-28 truncate font-black text-slate-950 dark:text-white">{r.userName}</span>
+                                      <span className="block text-[8px] font-bold text-slate-400">
+                                        {getCountryFlag(r.userCountry)} {isSelf ? "TÚ" : getCountryShortCode(r.userCountry)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3 text-center text-sm font-black text-emerald-700 dark:text-emerald-400">{r.points}</td>
+                                <td className="px-3 py-3 text-center font-bold text-sky-700 dark:text-sky-400">{r.participationPoints || 0}</td>
+                                <td className="px-3 py-3 text-center font-bold text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
+                                <td className="px-3 py-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
+                                <td className="px-3 py-3 text-center font-bold text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
+                                <td className="px-3 py-3 text-center font-bold text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
+                                <td className="px-3 py-3 text-center font-bold text-slate-500 dark:text-slate-400">{r.predictCount}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {/* Leaderboard Table Grid */}
