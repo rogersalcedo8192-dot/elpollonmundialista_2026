@@ -126,13 +126,13 @@ Criterio de cierre:
 
 Objetivo: operar el Mundial con datos consistentes y actualizables.
 
-- Mantener fase de grupos desde API externa como fuente principal.
-- Confirmar proveedor definitivo de API para resultados en vivo/oficiales.
-- Agregar proceso seguro de actualizacion de resultados oficiales.
+- COMPLETADO: mantener fase de grupos y eliminatorias desde football-data.org como fuente principal.
+- COMPLETADO: proveedor definitivo de calendario, estados y resultados en vivo/oficiales confirmado con plan pago de football-data.org.
+- COMPLETADO: actualizar automaticamente resultados oficiales de Favoritos solo al cerrar cada grupo o fase; los valores manuales del SuperAdmin permanecen como respaldo prioritario.
 - Evitar duplicados al sincronizar.
 - Registrar auditoria de sincronizaciones API.
-- Mantener eliminacion directa como fixture separado hasta que los cruces esten definidos.
-- Cuando avance el torneo, transformar los cruces de eliminacion directa en partidos reales pronosticables.
+- COMPLETADO: mantener la lista historica de 16 equipos como clasificados a Octavos; no se crean puntos retroactivos por los 32 clasificados a 16avos porque esa prediccion nunca fue solicitada.
+- COMPLETADO: incorporar automaticamente los cruces reales de 16avos, Octavos, Cuartos, Semifinales, Tercer Puesto y Final cuando la API confirme ambos equipos; quedan pronosticables con marcador y cierre normal de cinco minutos.
 
 Criterio de cierre:
 
@@ -162,7 +162,7 @@ Objetivo: que participar sea rapido, claro y usable desde celular.
 - Destacar partidos pendientes de pronostico y proximos cierres.
 - COMPLETADO: filtros por grupo/etapa, fase/fecha, equipo/estadio/texto y estado en vista mobile.
 - COMPLETADO: filtro fase/fecha usa la logica futbolera del torneo: Fecha 1, Fecha 2 y Fecha 3 para grupos, luego 16avos, octavos, cuartos, semifinales, tercer puesto y final.
-- Pendiente: convertir ranking mobile a tarjetas para evitar lectura tipo tabla en pantallas pequenas.
+- COMPLETADO: PolloRanking mobile usa tabla horizontal compacta con posicion y usuario fijos.
 - Mostrar resumen de pronosticos guardados.
 - Permitir descargar o compartir resumen de predicciones.
 - PROXIMA VERSION - MUY IMPORTANTE: reemplazar la seleccion independiente de equipos por ronda en Favoritos por una llave eliminatoria tradicional e interactiva.
@@ -291,6 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-15: automatizados Favoritos y eliminatorias con football-data.org: ganadores de grupo se confirman al terminar los seis partidos del grupo; la lista existente de 16 equipos se conserva justamente como clasificados a Octavos; las rondas siguientes, finalistas, subcampeon y campeon se completan al cerrar cada fase. Los partidos eliminatorios reales aparecen en la lista pronosticable cuando la API confirma los equipos, con cierre a cinco minutos, refresco periodico y panel manual SuperAdmin intacto como respaldo prioritario.
 - 2026-06-15: renombrada la tabla de clasificacion como PolloRanking y optimizada en mobile como tabla horizontal compacta: posicion y usuario fijos ocupan menos ancho, total queda visible desde el primer pantallazo, la tendencia subio/bajo/igual aparece junto al pais y se restauro Certificado ganador para el top 3; conserva la fila propia resaltada, el desglose de puntos y los rankings pago, gratuito y empresarial separados.
 - 2026-06-15: agregada Trivia Mundialista recreativa con 25 preguntas, respuesta explicada, barra de progreso animada con gallo, resultado final, mejor marca local y celebracion especial 25/25 con confeti CSS, trofeo y distintivo de campeon; no modifica puntos, premios ni ranking.
 - 2026-06-13: habilitada correccion excepcional de pronosticos exclusivamente para SuperAdmin, ahora con acceso directo "Corregir Pronosticos" en mobile y desktop, selector visible de participante, partidos con "Sin pronostico", edicion de marcadores cerrados, auditoria y refresco inmediato de puntajes y ranking.

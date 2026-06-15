@@ -1005,6 +1005,171 @@ function getFootballDataScore(match: any) {
   };
 }
 
+function getFootballDataMatchWinner(match: any) {
+  const winner = match?.score?.winner;
+  if (winner === "HOME_TEAM") return normalizeExternalTeamName(match?.homeTeam?.name);
+  if (winner === "AWAY_TEAM") return normalizeExternalTeamName(match?.awayTeam?.name);
+
+  const scores = getFootballDataScore(match);
+  if (scores.localScore === null || scores.visitorScore === null || scores.localScore === scores.visitorScore) {
+    return "";
+  }
+  return scores.localScore > scores.visitorScore
+    ? normalizeExternalTeamName(match?.homeTeam?.name)
+    : normalizeExternalTeamName(match?.awayTeam?.name);
+}
+
+function getFootballDataMatchLoser(match: any) {
+  const winner = getFootballDataMatchWinner(match);
+  const home = normalizeExternalTeamName(match?.homeTeam?.name);
+  const away = normalizeExternalTeamName(match?.awayTeam?.name);
+  if (!winner || home === "Por definir" || away === "Por definir") return "";
+  return normalizeFixtureTeamName(winner) === normalizeFixtureTeamName(home) ? away : home;
+}
+
+function getFinishedStageWinners(apiMatches: any[], stages: string[], expectedMatches: number) {
+  const finishedMatches = apiMatches.filter((match) =>
+    stages.includes(String(match?.stage || "")) &&
+    match?.status === "FINISHED"
+  );
+  if (finishedMatches.length !== expectedMatches) return [];
+
+  const winners = finishedMatches.map(getFootballDataMatchWinner).filter(Boolean);
+  return winners.length === expectedMatches ? winners : [];
+}
+
+function getCompletedGroupWinners(apiMatches: any[], standingsPayload: any) {
+  const winners: Record<string, string> = {};
+  const standings = Array.isArray(standingsPayload?.standings) ? standingsPayload.standings : [];
+
+  for (const groupLetter of "ABCDEFGHIJKL") {
+    const groupKey = `GROUP_${groupLetter}`;
+    const finishedGroupMatches = apiMatches.filter((match) =>
+      match?.stage === "GROUP_STAGE" &&
+      match?.group === groupKey &&
+      match?.status === "FINISHED"
+    );
+    if (finishedGroupMatches.length !== 6) continue;
+
+    const groupStanding = standings.find((standing: any) =>
+      standing?.type === "TOTAL" &&
+      (standing?.group === groupKey || standing?.group === `Group ${groupLetter}`)
+    );
+    const winnerName = normalizeExternalTeamName(groupStanding?.table?.[0]?.team?.name);
+    if (winnerName !== "Por definir") winners[groupLetter] = winnerName;
+  }
+
+  return winners;
+}
+
+function applyAutomaticTournamentOutcomes(
+  db: DatabaseSchema,
+  apiMatches: any[],
+  standingsPayload: any
+) {
+  const outcomes = db.tournamentOutcomes || {
+    groupWinners: {},
+    octavosTeams: [],
+    cuartosTeams: [],
+    semifinalTeams: [],
+    finalists: [],
+    subchampion: "",
+    champion: ""
+  };
+  let changed = false;
+
+  const groupWinners = getCompletedGroupWinners(apiMatches, standingsPayload);
+  Object.entries(groupWinners).forEach(([group, team]) => {
+    if (outcomes.groupWinners[group]) return;
+    outcomes.groupWinners[group] = team;
+    changed = true;
+  });
+
+  const octavosTeams = getFinishedStageWinners(apiMatches, ["LAST_32", "ROUND_OF_32"], 16);
+  if (!outcomes.octavosTeams.length && octavosTeams.length === 16) {
+    outcomes.octavosTeams = octavosTeams;
+    changed = true;
+  }
+
+  const cuartosTeams = getFinishedStageWinners(apiMatches, ["ROUND_OF_16", "LAST_16"], 8);
+  if (!outcomes.cuartosTeams.length && cuartosTeams.length === 8) {
+    outcomes.cuartosTeams = cuartosTeams;
+    changed = true;
+  }
+
+  const semifinalTeams = getFinishedStageWinners(apiMatches, ["QUARTER_FINALS"], 4);
+  if (!outcomes.semifinalTeams.length && semifinalTeams.length === 4) {
+    outcomes.semifinalTeams = semifinalTeams;
+    changed = true;
+  }
+
+  const finalists = getFinishedStageWinners(apiMatches, ["SEMI_FINALS"], 2);
+  if (!outcomes.finalists.length && finalists.length === 2) {
+    outcomes.finalists = finalists;
+    changed = true;
+  }
+
+  const finalMatch = apiMatches.find((match) => match?.stage === "FINAL" && match?.status === "FINISHED");
+  if (finalMatch) {
+    const champion = getFootballDataMatchWinner(finalMatch);
+    const subchampion = getFootballDataMatchLoser(finalMatch);
+    if (!outcomes.champion && champion) {
+      outcomes.champion = champion;
+      changed = true;
+    }
+    if (!outcomes.subchampion && subchampion) {
+      outcomes.subchampion = subchampion;
+      changed = true;
+    }
+  }
+
+  db.tournamentOutcomes = outcomes;
+  return changed;
+}
+
+function validateFootballDataTournamentAutomation() {
+  const roundOf32 = Array.from({ length: 16 }, (_, index) => ({
+    stage: "LAST_32",
+    status: "FINISHED",
+    homeTeam: { name: `Ganador ${index + 1}` },
+    awayTeam: { name: `Perdedor ${index + 1}` },
+    score: { winner: "HOME_TEAM", fullTime: { home: 1, away: 0 } }
+  }));
+  const winners = getFinishedStageWinners(roundOf32, ["LAST_32", "ROUND_OF_32"], 16);
+  if (winners.length !== 16 || getFinishedStageWinners(roundOf32.slice(0, 15), ["LAST_32"], 16).length) {
+    throw new Error("Validacion invalida: la automatizacion de 16avos no respeta el cierre completo de la fase.");
+  }
+
+  const groupMatches = Array.from({ length: 6 }, () => ({
+    stage: "GROUP_STAGE",
+    group: "GROUP_A",
+    status: "FINISHED"
+  }));
+  const groupWinners = getCompletedGroupWinners(groupMatches, {
+    standings: [{ type: "TOTAL", group: "GROUP_A", table: [{ team: { name: "México" } }] }]
+  });
+  if (groupWinners.A !== "México") {
+    throw new Error("Validacion invalida: no se reconocio el ganador de un grupo completo.");
+  }
+
+  const manualOctavos = ["Correccion manual"];
+  const mockDb = {
+    tournamentOutcomes: {
+      groupWinners: {},
+      octavosTeams: [...manualOctavos],
+      cuartosTeams: [],
+      semifinalTeams: [],
+      finalists: [],
+      subchampion: "",
+      champion: ""
+    }
+  } as DatabaseSchema;
+  applyAutomaticTournamentOutcomes(mockDb, roundOf32, null);
+  if (mockDb.tournamentOutcomes?.octavosTeams[0] !== manualOctavos[0]) {
+    throw new Error("Validacion invalida: la automatizacion sobrescribio un resultado manual.");
+  }
+}
+
 function isSameFixtureCandidate(existing: Match, incoming: Match) {
   const existingDate = new Date(existing.date).getTime();
   const incomingDate = new Date(incoming.date).getTime();
@@ -4048,6 +4213,33 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
 
   const apiMatches = Array.isArray(payload.matches) ? payload.matches : [];
   const db = loadDb();
+  let standingsPayload: any = null;
+  const missingGroupWinners = Array.from("ABCDEFGHIJKL").some(
+    (group) => !db.tournamentOutcomes?.groupWinners?.[group]
+  );
+  if (missingGroupWinners) {
+    const standingsUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/standings`);
+    standingsUrl.searchParams.set("season", season);
+    try {
+      const standingsRes = await fetch(standingsUrl, {
+        headers: {
+          "X-Auth-Token": token,
+          "Accept": "application/json"
+        }
+      });
+      if (standingsRes.ok) {
+        standingsPayload = await standingsRes.json();
+      } else {
+        const standingsError = await standingsRes.json().catch(() => ({}));
+        console.warn(
+          `Football-data standings unavailable (${standingsRes.status}): ${standingsError.message || standingsError.error || "sin detalle"}`
+        );
+      }
+    } catch (err) {
+      console.warn("Football-data standings request failed; match synchronization will continue.", err);
+    }
+  }
+
   let created = 0;
   let updated = 0;
   let ignored = 0;
@@ -4121,8 +4313,11 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
   const apiOnlyCleanup = apiOnly
     ? { pruned: strictApiReplacement?.removed || 0, predictionsRemoved: strictApiReplacement?.predictionsRemoved || 0 }
     : { pruned: 0, predictionsRemoved: 0 };
+  const tournamentOutcomesChanged = applyAutomaticTournamentOutcomes(db, apiMatches, standingsPayload);
   saveDb(db);
-  if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0) recalculateScoresAndRankings();
+  if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0 || tournamentOutcomesChanged) {
+    recalculateScoresAndRankings();
+  }
 
   return {
     message: apiOnly
@@ -4135,7 +4330,8 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     pruned: apiOnlyCleanup.pruned,
     predictionsRemoved: apiOnlyCleanup.predictionsRemoved,
     finalCount: strictApiReplacement?.finalCount ?? db.matches.length,
-    recalculated: resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0
+    tournamentOutcomesChanged,
+    recalculated: resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0 || tournamentOutcomesChanged
   };
 }
 
@@ -5043,6 +5239,7 @@ setInterval(() => {
 // Set up server listening and Vite configuration
 async function startServer() {
   validateMatchScoringRules();
+  validateFootballDataTournamentAutomation();
   await initializeDb();
   applyKnownOfficialResultCorrections(loadDb());
   recalculateScoresAndRankings();

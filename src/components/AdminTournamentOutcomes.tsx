@@ -88,8 +88,8 @@ export const AdminTournamentOutcomes: React.FC<Props> = ({ currentOutcomes, onSa
       <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
         <ShieldAlert className="text-amber-500 w-5 h-5 shrink-0" />
         <div>
-          <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-100">Cargar Resultados Oficiales de Favoritos (Admin)</h3>
-          <p className="text-[11px] text-slate-500">Únicamente tú puedes cargar qué selecciones avanzaron oficialmente en cada fase. Una vez cargado registrará los bonus de cada participante.</p>
+          <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-100">Respaldo Manual de Resultados de Favoritos (Admin)</h3>
+          <p className="text-[11px] text-slate-500">football-data.org completa automáticamente cada fase cuando queda oficialmente cerrada. Usa este formulario solo para corregir o completar datos de emergencia; cualquier valor manual guardado tendrá prioridad.</p>
         </div>
       </div>
 
