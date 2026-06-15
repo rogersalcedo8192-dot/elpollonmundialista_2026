@@ -6341,11 +6341,23 @@ export default function App() {
                           <tr>
                             <th className="sticky left-0 z-20 w-10 bg-slate-50 px-1.5 py-3 text-center dark:bg-slate-800">Pos</th>
                             <th className="sticky left-10 z-20 w-28 bg-slate-50 px-1.5 py-3 shadow-[5px_0_8px_-7px_rgba(15,23,42,0.8)] dark:bg-slate-800">Usuario</th>
-                            <th className="w-14 px-2 py-3 text-center text-slate-900 dark:text-white">Total</th>
-                            <th className="w-16 px-2 py-3 text-center">Participar</th>
+                            <th className="w-14 px-2 py-3 text-center text-slate-900 dark:text-white">
+                              <span className="block">Total</span>
+                              <span className="block">PTS</span>
+                            </th>
+                            <th className="w-16 px-2 py-3 text-center">
+                              <span className="block">PTS X</span>
+                              <span className="block">Participar</span>
+                            </th>
                             <th className="w-12 px-2 py-3 text-center">1X2</th>
-                            <th className="w-14 px-2 py-3 text-center">Exacto</th>
-                            <th className="w-20 px-2 py-3 text-center">Empate exacto</th>
+                            <th className="w-20 px-2 py-3 text-center">
+                              <span className="block">PTS X marcador</span>
+                              <span className="block">exacto (L o V)</span>
+                            </th>
+                            <th className="w-24 px-2 py-3 text-center">
+                              <span className="block">PTS X marcador</span>
+                              <span className="block">exacto empate</span>
+                            </th>
                             <th className="w-16 px-2 py-3 text-center">Favoritos</th>
                             <th className="w-14 px-2 py-3 text-center">Partidos</th>
                             <th className="w-24 px-2 py-3 text-center">Certificado ganador</th>
@@ -6393,9 +6405,9 @@ export default function App() {
                                                 ? "text-rose-500"
                                                 : "text-slate-400"
                                           }
-                                          title={r.shift === "up" ? "Subió de posición" : r.shift === "down" ? "Bajó de posición" : "Mantuvo su posición"}
+                                          title={r.shift === "up" ? "Subió de posición" : r.shift === "down" ? "Bajó de posición" : "Sin cambio de posición"}
                                         >
-                                          {r.shift === "up" ? "▲ Subió" : r.shift === "down" ? "▼ Bajó" : "═ Igual"}
+                                          {r.shift === "up" ? "▲ Subió" : r.shift === "down" ? "▼ Bajó" : "═ Sin cambio"}
                                         </span>
                                       </span>
                                     </div>
@@ -6445,12 +6457,12 @@ export default function App() {
                             <th className="py-2.5 px-3 w-12 text-center">{t("rank_col_pos", "Pos")}</th>
                             <th className="py-2.5 px-3">{t("rank_col_name", "Nombre")}</th>
                             <th className="py-2.5 px-3 hidden md:table-cell">País</th>
-                            <th className="py-2.5 px-3 text-center">Participar</th>
+                            <th className="py-2.5 px-3 text-center">PTS X participar</th>
                             <th className="py-2.5 px-3 text-center">1X2</th>
-                            <th className="py-2.5 px-3 text-center">Exacto</th>
-                            <th className="py-2.5 px-3 text-center">Empate exacto</th>
+                            <th className="py-2.5 px-3 text-center">PTS X marcador exacto (L o V)</th>
+                            <th className="py-2.5 px-3 text-center">PTS X marcador exacto empate</th>
                             <th className="py-2.5 px-3 text-center">Favoritos</th>
-                            <th className="py-2.5 px-3 text-center">{t("rank_col_pts", "Pts Totales")}</th>
+                            <th className="py-2.5 px-3 text-center">Total PTS</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_matches", "Partidos")}</th>
                             <th className="py-2.5 px-3 text-center">{t("rank_col_trend", "Tendencia")}</th>
                             <th className="py-2.5 px-3 text-center">Certificado</th>
@@ -6511,7 +6523,7 @@ export default function App() {
                                     </span>
                                   )}
                                   {r.shift === "equal" && (
-                                    <span className="text-slate-400 font-bold" title="Igual">═ {t("rank_status_equal", "Mantener")}</span>
+                                    <span className="text-slate-400 font-bold" title="Sin cambio de posición">═ Se mantuvo igual</span>
                                   )}
                                 </td>
                                 <td className="py-2.5 px-3 text-center">
