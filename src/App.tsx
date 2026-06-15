@@ -4434,8 +4434,8 @@ export default function App() {
               { key: "favorites", label: "Favoritos", icon: Star },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "PolloRanking", icon: Trophy },
-              { key: "world-cup-overview", label: "Así va el Mundial", icon: Globe },
-              { key: "trivia", label: "Trivia", icon: CircleHelp },
+              { key: "world-cup-overview", label: "Así va el Mundial", icon: Globe, isNew: true },
+              { key: "trivia", label: "Trivia", icon: CircleHelp, isNew: true },
               { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(isSuperAdminUser ? [{ key: "admin-stats", label: "Métricas", icon: BarChart3 }] : []),
@@ -4462,7 +4462,12 @@ export default function App() {
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {"isNew" in item && item.isNew && (
+                    <span className="ml-auto shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-amber-950">
+                      NUEVO
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -4825,6 +4830,9 @@ export default function App() {
                   >
                     <Globe className="w-4 h-4 shrink-0" />
                     <span>Así va el Mundial</span>
+                    <span className="ml-auto shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-amber-950">
+                      NUEVO
+                    </span>
                   </button>
 
                   <button
@@ -4834,6 +4842,9 @@ export default function App() {
                   >
                     <CircleHelp className="w-4 h-4 shrink-0" />
                     <span>Trivia Mundialista</span>
+                    <span className="ml-auto shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-amber-950">
+                      NUEVO
+                    </span>
                   </button>
 
                   <button
