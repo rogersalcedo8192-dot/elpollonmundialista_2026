@@ -4152,6 +4152,196 @@ app.get("/api/matches", (req, res) => {
   res.json(db.matches);
 });
 
+let worldCupOverviewCache: { expiresAt: number; data: any } | null = null;
+
+function buildLocalGroupStandings(matches: Match[]) {
+  return Array.from("ABCDEFGHIJKL").flatMap((groupLetter) => {
+    const groupMatches = matches.filter((match) => match.stage === `Grupo ${groupLetter}`);
+    if (!groupMatches.length) return [];
+
+    const rows = new Map<string, {
+      team: string;
+      playedGames: number;
+      won: number;
+      draw: number;
+      lost: number;
+      points: number;
+      goalsFor: number;
+      goalsAgainst: number;
+      goalDifference: number;
+    }>();
+    const ensureTeam = (team: string) => {
+      if (!rows.has(team)) {
+        rows.set(team, {
+          team,
+          playedGames: 0,
+          won: 0,
+          draw: 0,
+          lost: 0,
+          points: 0,
+          goalsFor: 0,
+          goalsAgainst: 0,
+          goalDifference: 0
+        });
+      }
+      return rows.get(team)!;
+    };
+
+    groupMatches.forEach((match) => {
+      const home = ensureTeam(match.local);
+      const away = ensureTeam(match.visitor);
+      if (match.status !== "finished" || match.localScore === null || match.visitorScore === null) return;
+
+      home.playedGames += 1;
+      away.playedGames += 1;
+      home.goalsFor += match.localScore;
+      home.goalsAgainst += match.visitorScore;
+      away.goalsFor += match.visitorScore;
+      away.goalsAgainst += match.localScore;
+      if (match.localScore > match.visitorScore) {
+        home.won += 1;
+        home.points += 3;
+        away.lost += 1;
+      } else if (match.localScore < match.visitorScore) {
+        away.won += 1;
+        away.points += 3;
+        home.lost += 1;
+      } else {
+        home.draw += 1;
+        away.draw += 1;
+        home.points += 1;
+        away.points += 1;
+      }
+    });
+
+    const table = Array.from(rows.values())
+      .map((row) => ({ ...row, goalDifference: row.goalsFor - row.goalsAgainst, crest: "" }))
+      .sort((a, b) =>
+        b.points - a.points ||
+        b.goalDifference - a.goalDifference ||
+        b.goalsFor - a.goalsFor ||
+        a.team.localeCompare(b.team)
+      )
+      .map((row, index) => ({ ...row, position: index + 1 }));
+
+    return [{ group: groupLetter, table }];
+  });
+}
+
+app.get("/api/world-cup-overview", async (_req, res) => {
+  const now = Date.now();
+  if (worldCupOverviewCache && worldCupOverviewCache.expiresAt > now) {
+    return res.json(worldCupOverviewCache.data);
+  }
+
+  const db = loadDb();
+  const token = process.env.FOOTBALL_DATA_API_TOKEN;
+  const competitionCode = process.env.FOOTBALL_DATA_COMPETITION || "WC";
+  const season = process.env.FOOTBALL_DATA_SEASON || "2026";
+  const warnings: string[] = [];
+  let standingsPayload: any = null;
+  let scorersPayload: any = null;
+
+  if (token) {
+    const headers = { "X-Auth-Token": token, "Accept": "application/json" };
+    const standingsUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/standings`);
+    standingsUrl.searchParams.set("season", season);
+    const scorersUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/scorers`);
+    scorersUrl.searchParams.set("season", season);
+    scorersUrl.searchParams.set("limit", "10");
+
+    const [standingsResult, scorersResult] = await Promise.allSettled([
+      fetch(standingsUrl, { headers }),
+      fetch(scorersUrl, { headers })
+    ]);
+
+    if (standingsResult.status === "fulfilled" && standingsResult.value.ok) {
+      standingsPayload = await standingsResult.value.json();
+    } else {
+      warnings.push("La tabla oficial de grupos no está disponible temporalmente.");
+    }
+
+    if (scorersResult.status === "fulfilled" && scorersResult.value.ok) {
+      scorersPayload = await scorersResult.value.json();
+    } else {
+      warnings.push("La tabla de goleadores todavía no está disponible para esta competición.");
+    }
+  } else {
+    warnings.push("Football-data.org no está configurado; se muestran únicamente los partidos sincronizados.");
+  }
+
+  let groups = (Array.isArray(standingsPayload?.standings) ? standingsPayload.standings : [])
+    .filter((standing: any) => standing?.type === "TOTAL" && standing?.group)
+    .map((standing: any) => {
+      const groupLetter = String(standing.group).match(/(?:GROUP_|Group )([A-L])/i)?.[1]?.toUpperCase() || "";
+      return {
+        group: groupLetter,
+        table: (Array.isArray(standing.table) ? standing.table : []).map((row: any) => ({
+          position: Number(row.position) || 0,
+          team: normalizeExternalTeamName(row?.team?.name),
+          crest: row?.team?.crest || "",
+          playedGames: Number(row.playedGames) || 0,
+          won: Number(row.won) || 0,
+          draw: Number(row.draw) || 0,
+          lost: Number(row.lost) || 0,
+          points: Number(row.points) || 0,
+          goalsFor: Number(row.goalsFor) || 0,
+          goalsAgainst: Number(row.goalsAgainst) || 0,
+          goalDifference: Number(row.goalDifference) || 0
+        }))
+      };
+    })
+    .filter((group: any) => group.group)
+    .sort((a: any, b: any) => a.group.localeCompare(b.group));
+  if (!groups.length) {
+    groups = buildLocalGroupStandings(db.matches);
+    if (groups.length) warnings.push("Posiciones calculadas provisionalmente con los resultados sincronizados.");
+  }
+
+  const scorers = (Array.isArray(scorersPayload?.scorers) ? scorersPayload.scorers : []).map((entry: any, index: number) => ({
+    position: index + 1,
+    player: entry?.player?.name || "Jugador por definir",
+    team: normalizeExternalTeamName(entry?.team?.name),
+    teamCrest: entry?.team?.crest || "",
+    goals: Number(entry?.goals) || 0,
+    assists: typeof entry?.assists === "number" ? entry.assists : null,
+    penalties: typeof entry?.penalties === "number" ? entry.penalties : null
+  }));
+
+  const sortedMatches = [...db.matches].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id
+  );
+  const finishedMatches = sortedMatches.filter((match) => match.status === "finished");
+  const liveMatches = sortedMatches.filter((match) => match.status === "in_progress");
+  const upcomingMatches = sortedMatches.filter((match) => match.status === "pending");
+  const totalGoals = finishedMatches.reduce(
+    (sum, match) => sum + (match.localScore || 0) + (match.visitorScore || 0),
+    0
+  );
+
+  const data = {
+    source: FOOTBALL_DATA_SOURCE,
+    updatedAt: new Date().toISOString(),
+    warnings,
+    summary: {
+      totalMatches: sortedMatches.length,
+      finishedMatches: finishedMatches.length,
+      liveMatches: liveMatches.length,
+      upcomingMatches: upcomingMatches.length,
+      totalGoals
+    },
+    groups,
+    scorers,
+    liveMatches,
+    recentResults: finishedMatches.slice(-8).reverse(),
+    upcomingMatches: upcomingMatches.slice(0, 8),
+    knockoutMatches: sortedMatches.filter((match) => !match.stage.startsWith("Grupo "))
+  };
+
+  worldCupOverviewCache = { expiresAt: now + 60_000, data };
+  return res.json(data);
+});
+
 app.get("/api/knockout-fixtures", (req, res) => {
   res.json(KNOCKOUT_FIXTURES);
 });

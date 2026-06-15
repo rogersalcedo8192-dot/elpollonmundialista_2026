@@ -15,6 +15,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Normalizacion de paises/codigos, por ejemplo `CO` -> `Colombia`.
 - Multilenguaje parcial con mejoras en autenticacion, calendario, pronosticos y ranking.
 - Calendario de fase de grupos sincronizado con API externa.
+- Modulo publico "Asi va el Mundial" con tablas oficiales de grupos A-L, resumen de partidos y goles, resultados recientes, proximos encuentros, partidos en vivo y goleadores cuando football-data.org los publica.
 - Fixture de eliminacion directa separado de los partidos reales de API.
 - Pronosticos por marcador con guardar, actualizar y limpiar.
 - Cuenta regresiva dinámica por evento hasta el cierre de pronósticos.
@@ -291,6 +292,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-15: agregado modulo publico "Asi va el Mundial", alimentado en modo solo lectura por football-data.org y los partidos ya sincronizados; muestra resumen del torneo, grupos A-L con PJ/G/E/P/GF/GC/DG/Pts, partidos en vivo, resultados, proximos encuentros y goleadores, con cache temporal y degradacion segura si una seccion de la API no esta disponible. No agrega migraciones ni escrituras en DB.
 - 2026-06-15: automatizados Favoritos y eliminatorias con football-data.org: ganadores de grupo se confirman al terminar los seis partidos del grupo; la lista existente de 16 equipos se conserva justamente como clasificados a Octavos; las rondas siguientes, finalistas, subcampeon y campeon se completan al cerrar cada fase. Los partidos eliminatorios reales aparecen en la lista pronosticable cuando la API confirma los equipos, con cierre a cinco minutos, refresco periodico y panel manual SuperAdmin intacto como respaldo prioritario.
 - 2026-06-15: renombrada la tabla de clasificacion como PolloRanking y optimizada en mobile como tabla horizontal compacta: posicion y usuario fijos ocupan menos ancho, total queda visible desde el primer pantallazo, la tendencia subio/bajo/igual aparece junto al pais y se restauro Certificado ganador para el top 3; conserva la fila propia resaltada, el desglose de puntos y los rankings pago, gratuito y empresarial separados.
 - 2026-06-15: agregada Trivia Mundialista recreativa con 25 preguntas, respuesta explicada, barra de progreso animada con gallo, resultado final, mejor marca local y celebracion especial 25/25 con confeti CSS, trofeo y distintivo de campeon; no modifica puntos, premios ni ranking.

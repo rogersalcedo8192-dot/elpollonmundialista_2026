@@ -156,6 +156,50 @@ export interface PublicPredictionMatch {
   predictions: PublicPredictionEntry[];
 }
 
+export interface WorldCupStandingRow {
+  position: number;
+  team: string;
+  crest?: string;
+  playedGames: number;
+  won: number;
+  draw: number;
+  lost: number;
+  points: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+}
+
+export interface WorldCupOverview {
+  source: string;
+  updatedAt: string;
+  warnings: string[];
+  summary: {
+    totalMatches: number;
+    finishedMatches: number;
+    liveMatches: number;
+    upcomingMatches: number;
+    totalGoals: number;
+  };
+  groups: Array<{
+    group: string;
+    table: WorldCupStandingRow[];
+  }>;
+  scorers: Array<{
+    position: number;
+    player: string;
+    team: string;
+    teamCrest?: string;
+    goals: number;
+    assists: number | null;
+    penalties: number | null;
+  }>;
+  liveMatches: Match[];
+  recentResults: Match[];
+  upcomingMatches: Match[];
+  knockoutMatches: Match[];
+}
+
 export interface Ranking {
   userId: string;
   userName: string;

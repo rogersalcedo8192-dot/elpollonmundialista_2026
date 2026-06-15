@@ -53,6 +53,7 @@ import { TournamentPredictionsView } from "./components/TournamentPredictionsVie
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 import { MatchResultsTicker } from "./components/MatchResultsTicker";
 import { WorldCupTrivia } from "./components/WorldCupTrivia";
+import { WorldCupOverviewView } from "./components/WorldCupOverviewView";
 
 const createEmojiAvatar = (emoji: string, background: string) => {
   const svg = `
@@ -4355,6 +4356,7 @@ export default function App() {
               { key: "favorites", label: "Favoritos", icon: Star },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "PolloRanking", icon: Trophy },
+              { key: "world-cup-overview", label: "Así va el Mundial", icon: Globe },
               { key: "trivia", label: "Trivia", icon: CircleHelp },
               { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
               { key: "rules-prizes", label: "Premios", icon: Info },
@@ -4736,6 +4738,15 @@ export default function App() {
                     <Trophy className="hidden md:block w-4 h-4 shrink-0" />
                     <span className="md:hidden">PolloRanking</span>
                     <span className="hidden md:inline">{t("tab_ranking", "PolloRanking")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateToMenuItem("world-cup-overview")}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "world-cup-overview" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <Globe className="w-4 h-4 shrink-0" />
+                    <span>Así va el Mundial</span>
                   </button>
 
                   <button
@@ -6605,6 +6616,10 @@ export default function App() {
 
               {activeTab === "trivia" && (
                 <WorldCupTrivia />
+              )}
+
+              {activeTab === "world-cup-overview" && (
+                <WorldCupOverviewView getTeamFlag={getTeamFlag} />
               )}
 
               {/* 4. MÓDULO USER: PRONÓSTICOS PÚBLICOS */}
