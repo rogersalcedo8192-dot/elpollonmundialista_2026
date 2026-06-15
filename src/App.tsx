@@ -73,6 +73,83 @@ const hasManagedPopupContent = (torneo?: TorneoConfig | null) => {
   return true;
 };
 
+type RankingColumnHelpKey =
+  | "position"
+  | "user"
+  | "country"
+  | "participation"
+  | "outcome"
+  | "exactScore"
+  | "exactDraw"
+  | "favorites"
+  | "total"
+  | "matches"
+  | "trend"
+  | "certificate";
+
+const RANKING_COLUMN_HELP: Record<RankingColumnHelpKey, { title: string; description: string; example: string }> = {
+  position: {
+    title: "Posición",
+    description: "Lugar que ocupa el participante en el PolloRanking según su puntaje total.",
+    example: "Ejemplo: #1 corresponde al participante que lidera la clasificación."
+  },
+  user: {
+    title: "Usuario",
+    description: "Nombre público y avatar con los que el participante aparece en el PolloRanking.",
+    example: "Ejemplo: tu propia fila aparece resaltada e identificada como tu cuenta."
+  },
+  country: {
+    title: "País",
+    description: "País seleccionado por el participante para mostrarse públicamente en el ranking.",
+    example: "Ejemplo: Colombia se muestra con su bandera y el código COL."
+  },
+  participation: {
+    title: "PTS X participar",
+    description: "Acumula 5 puntos por cada partido en el que enviaste un marcador, aunque no aciertes el resultado.",
+    example: "Ejemplo: pronosticas 1-0 y termina 0-2: sumas 5 PTS por participar."
+  },
+  outcome: {
+    title: "PTS Resultado 1X2",
+    description: "Acumula 10 puntos adicionales cuando aciertas si gana el local, hay empate o gana el visitante.",
+    example: "Ejemplo: pronosticas 2-1 y termina 1-0: sumas 10 PTS aquí + 5 PTS por participar = 15 PTS."
+  },
+  exactScore: {
+    title: "PTS X marcador exacto (L o V)",
+    description: "Acumula 10 puntos adicionales cuando aciertas el marcador exacto de un partido con ganador local o visitante.",
+    example: "Ejemplo: pronosticas 2-0 y termina 2-0: 10 PTS aquí + 10 PTS 1X2 + 5 PTS por participar = 25 PTS."
+  },
+  exactDraw: {
+    title: "PTS X marcador exacto empate",
+    description: "Acumula un bono adicional de 10 puntos cuando aciertas exactamente un empate.",
+    example: "Ejemplo: pronosticas 0-0 y termina 0-0: 10 PTS de bono + 10 PTS exacto + 10 PTS 1X2 + 5 PTS = 35 PTS."
+  },
+  favorites: {
+    title: "Favoritos",
+    description: "Suma los puntos obtenidos por acertar favoritos de grupo, clasificados, finalistas, subcampeón y campeón.",
+    example: "Ejemplo: acertar al campeón suma 1.000 PTS, según el reglamento."
+  },
+  total: {
+    title: "Total PTS",
+    description: "Suma general de todos los puntos obtenidos en partidos y favoritos del torneo.",
+    example: "Ejemplo: participar + resultado 1X2 + marcador exacto + bonos + favoritos."
+  },
+  matches: {
+    title: "Partidos",
+    description: "Cantidad de partidos para los que el participante guardó un pronóstico.",
+    example: "Ejemplo: si enviaste marcadores para 12 partidos, esta columna muestra 12."
+  },
+  trend: {
+    title: "Tendencia",
+    description: "Indica si el participante subió, bajó o mantuvo su posición después del último recálculo.",
+    example: "Ejemplo: “Subió” significa que avanzó puestos frente a la clasificación anterior."
+  },
+  certificate: {
+    title: "Certificado",
+    description: "Acceso al certificado de ganador para quienes finalicen en el top 3 del PolloRanking.",
+    example: "Ejemplo: se habilita para los puestos 1, 2 y 3 después de finalizar y validar el torneo."
+  }
+};
+
 const AVATARS = [
   createEmojiAvatar("⚽", "#059669"),
   createEmojiAvatar("🏆", "#f59e0b"),
@@ -1624,6 +1701,7 @@ export default function App() {
   const [winnerEmailPosterByPosition, setWinnerEmailPosterByPosition] = useState<Record<1 | 2 | 3, string>>({ 1: "", 2: "", 3: "" });
   const [winnerEmailSendingPosition, setWinnerEmailSendingPosition] = useState<1 | 2 | 3 | null>(null);
   const [rankingShareBusy, setRankingShareBusy] = useState(false);
+  const [rankingColumnHelp, setRankingColumnHelp] = useState<RankingColumnHelpKey | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const [isUserLoading, setIsUserLoading] = useState(false);
@@ -6331,36 +6409,67 @@ export default function App() {
                     </div>
                   </div>
 
+                  {rankingColumnHelp && (
+                    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4 shadow-sm dark:border-indigo-900 dark:bg-indigo-950/25">
+                      <div className="flex items-start gap-3">
+                        <FileText className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">¿Qué significa esta columna?</p>
+                          <h3 className="mt-1 text-sm font-black text-slate-950 dark:text-white">{RANKING_COLUMN_HELP[rankingColumnHelp].title}</h3>
+                          <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">{RANKING_COLUMN_HELP[rankingColumnHelp].description}</p>
+                          <p className="mt-2 rounded-lg bg-white/80 px-3 py-2 text-xs font-semibold text-indigo-950 dark:bg-slate-900/70 dark:text-indigo-200">
+                            {RANKING_COLUMN_HELP[rankingColumnHelp].example}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRankingColumnHelp(null)}
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-white"
+                          title="Cerrar explicación"
+                          aria-label="Cerrar explicación de la columna"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="md:hidden">
                     <p className="mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      Desliza la tabla para consultar el detalle. Tu posición permanece resaltada.
+                      Desliza la tabla para consultar el detalle. Toca el icono de hoja de una columna para ver su explicación y ejemplo.
                     </p>
                     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                       <table className="min-w-[760px] border-collapse text-left text-[10px]">
                         <thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                           <tr>
-                            <th className="sticky left-0 z-20 w-10 bg-slate-50 px-1.5 py-3 text-center dark:bg-slate-800">Pos</th>
-                            <th className="sticky left-10 z-20 w-28 bg-slate-50 px-1.5 py-3 shadow-[5px_0_8px_-7px_rgba(15,23,42,0.8)] dark:bg-slate-800">Usuario</th>
-                            <th className="w-14 px-2 py-3 text-center text-slate-900 dark:text-white">
-                              <span className="block">Total</span>
-                              <span className="block">PTS</span>
-                            </th>
-                            <th className="w-16 px-2 py-3 text-center">
-                              <span className="block">PTS X</span>
-                              <span className="block">Participar</span>
-                            </th>
-                            <th className="w-12 px-2 py-3 text-center">1X2</th>
-                            <th className="w-20 px-2 py-3 text-center">
-                              <span className="block">PTS X marcador</span>
-                              <span className="block">exacto (L o V)</span>
-                            </th>
-                            <th className="w-24 px-2 py-3 text-center">
-                              <span className="block">PTS X marcador</span>
-                              <span className="block">exacto empate</span>
-                            </th>
-                            <th className="w-16 px-2 py-3 text-center">Favoritos</th>
-                            <th className="w-14 px-2 py-3 text-center">Partidos</th>
-                            <th className="w-24 px-2 py-3 text-center">Certificado ganador</th>
+                            {([
+                              ["position", <>Pos</>, "sticky left-0 z-20 w-10 bg-slate-50 dark:bg-slate-800"],
+                              ["user", <>Usuario</>, "sticky left-10 z-20 w-28 bg-slate-50 text-left shadow-[5px_0_8px_-7px_rgba(15,23,42,0.8)] dark:bg-slate-800"],
+                              ["total", <>Total<br />PTS</>, "w-14 text-slate-900 dark:text-white"],
+                              ["participation", <>PTS X<br />Participar</>, "w-16"],
+                              ["outcome", <>PTS Resultado<br />1X2</>, "w-20"],
+                              ["exactScore", <>PTS X marcador<br />exacto (L o V)</>, "w-20"],
+                              ["exactDraw", <>PTS X marcador<br />exacto empate</>, "w-24"],
+                              ["favorites", <>Favoritos</>, "w-16"],
+                              ["matches", <>Partidos</>, "w-14"],
+                              ["certificate", <>Certificado<br />ganador</>, "w-24"]
+                            ] as Array<[RankingColumnHelpKey, React.ReactNode, string]>).map(([key, label, extraClass]) => (
+                              <th key={key} className={`px-1.5 py-3 text-center ${extraClass}`}>
+                                <span className={`flex items-center justify-center gap-1 ${key === "user" ? "justify-start" : ""}`}>
+                                  <span>{label}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRankingColumnHelp(rankingColumnHelp === key ? null : key)}
+                                    className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-950 dark:hover:text-indigo-300 ${rankingColumnHelp === key ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300" : ""}`}
+                                    title={`Explicar ${RANKING_COLUMN_HELP[key].title}`}
+                                    aria-label={`Explicar columna ${RANKING_COLUMN_HELP[key].title}`}
+                                    aria-pressed={rankingColumnHelp === key}
+                                  >
+                                    <FileText className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -6454,18 +6563,36 @@ export default function App() {
                       <table className="w-full text-left border-collapse text-xs">
                         <thead className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                           <tr>
-                            <th className="py-2.5 px-3 w-12 text-center">{t("rank_col_pos", "Pos")}</th>
-                            <th className="py-2.5 px-3">{t("rank_col_name", "Nombre")}</th>
-                            <th className="py-2.5 px-3 hidden md:table-cell">País</th>
-                            <th className="py-2.5 px-3 text-center">PTS X participar</th>
-                            <th className="py-2.5 px-3 text-center">1X2</th>
-                            <th className="py-2.5 px-3 text-center">PTS X marcador exacto (L o V)</th>
-                            <th className="py-2.5 px-3 text-center">PTS X marcador exacto empate</th>
-                            <th className="py-2.5 px-3 text-center">Favoritos</th>
-                            <th className="py-2.5 px-3 text-center">Total PTS</th>
-                            <th className="py-2.5 px-3 text-center">{t("rank_col_matches", "Partidos")}</th>
-                            <th className="py-2.5 px-3 text-center">{t("rank_col_trend", "Tendencia")}</th>
-                            <th className="py-2.5 px-3 text-center">Certificado</th>
+                            {([
+                              ["position", t("rank_col_pos", "Pos"), "w-12 text-center"],
+                              ["user", t("rank_col_name", "Nombre"), ""],
+                              ["country", "País", "hidden md:table-cell"],
+                              ["participation", "PTS X participar", "text-center"],
+                              ["outcome", "PTS Resultado 1X2", "text-center"],
+                              ["exactScore", "PTS X marcador exacto (L o V)", "text-center"],
+                              ["exactDraw", "PTS X marcador exacto empate", "text-center"],
+                              ["favorites", "Favoritos", "text-center"],
+                              ["total", "Total PTS", "text-center"],
+                              ["matches", t("rank_col_matches", "Partidos"), "text-center"],
+                              ["trend", t("rank_col_trend", "Tendencia"), "text-center"],
+                              ["certificate", "Certificado", "text-center"]
+                            ] as Array<[RankingColumnHelpKey, string, string]>).map(([key, label, extraClass]) => (
+                              <th key={key} className={`py-2.5 px-3 ${extraClass}`}>
+                                <span className={`flex items-center gap-1 ${extraClass.includes("text-center") ? "justify-center" : ""}`}>
+                                  <span>{label}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRankingColumnHelp(rankingColumnHelp === key ? null : key)}
+                                    className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-950 dark:hover:text-indigo-300 ${rankingColumnHelp === key ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300" : ""}`}
+                                    title={`Explicar ${label}`}
+                                    aria-label={`Explicar columna ${label}`}
+                                    aria-pressed={rankingColumnHelp === key}
+                                  >
+                                    <FileText className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
