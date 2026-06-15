@@ -43,6 +43,7 @@ import {
   Share2,
   CreditCard,
   Eraser,
+  CircleHelp,
   Menu,
   X
 } from "lucide-react";
@@ -50,6 +51,7 @@ import { User, Match, Prediction, PublicPredictionMatch, Ranking, Announcement, 
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 import { MatchResultsTicker } from "./components/MatchResultsTicker";
+import { WorldCupTrivia } from "./components/WorldCupTrivia";
 
 const createEmojiAvatar = (emoji: string, background: string) => {
   const svg = `
@@ -4345,6 +4347,7 @@ export default function App() {
               { key: "favorites", label: "Favoritos", icon: Trophy },
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "Clasificación", icon: Trophy },
+              { key: "trivia", label: "Trivia", icon: CircleHelp },
               { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(isSuperAdminUser ? [{ key: "admin-stats", label: "Métricas", icon: BarChart3 }] : []),
@@ -4725,6 +4728,15 @@ export default function App() {
                     <Trophy className="hidden md:block w-4 h-4 shrink-0" />
                     <span className="md:hidden">Clasificación</span>
                     <span className="hidden md:inline">{t("tab_ranking", "Tabla de Clasificación")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateToMenuItem("trivia")}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "trivia" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <CircleHelp className="w-4 h-4 shrink-0" />
+                    <span>Trivia Mundialista</span>
                   </button>
 
                   <button
@@ -6492,6 +6504,10 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {activeTab === "trivia" && (
+                <WorldCupTrivia />
               )}
 
               {/* 4. MÓDULO USER: PRONÓSTICOS PÚBLICOS */}

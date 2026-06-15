@@ -185,3 +185,94 @@
     display: none;
   }
 }
+@keyframes trivia-confetti-fall {
+  0% { transform: translate3d(0, -15%, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate3d(35px, 680px, 0) rotate(760deg); opacity: 0; }
+}
+
+@keyframes trivia-perfect-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.2), 0 18px 50px rgba(5, 150, 105, 0.22); }
+  50% { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.42), 0 22px 70px rgba(251, 191, 36, 0.26); }
+}
+
+@keyframes trivia-trophy-pop {
+  0% { transform: scale(0.35) rotate(-14deg); opacity: 0; }
+  55% { transform: scale(1.22) rotate(7deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes trivia-badge-shine {
+  0%, 70%, 100% { background-position: 200% center; }
+  85% { background-position: -100% center; }
+}
+
+@keyframes trivia-rays-spin {
+  to { transform: rotate(360deg); }
+}
+
+.trivia-perfect-shell {
+  animation: trivia-perfect-glow 2.2s ease-in-out infinite;
+}
+
+.trivia-perfect-hero {
+  isolation: isolate;
+}
+
+.trivia-perfect-hero::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, transparent, rgba(251, 191, 36, 0.18), transparent 22%, rgba(16, 185, 129, 0.2), transparent 45%);
+  animation: trivia-rays-spin 10s linear infinite;
+}
+
+.trivia-confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.trivia-confetti span {
+  position: absolute;
+  top: -20px;
+  width: 8px;
+  height: 15px;
+  border-radius: 2px;
+  animation: trivia-confetti-fall 3s linear infinite;
+}
+
+.trivia-trophy-burst {
+  animation: trivia-trophy-pop 850ms cubic-bezier(.17, .89, .32, 1.35) both;
+  filter: drop-shadow(0 0 18px rgba(251, 191, 36, 0.7));
+}
+
+.trivia-champion-ring {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: #fcd34d;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .24em;
+}
+
+.trivia-champion-badge {
+  background-image: linear-gradient(110deg, rgba(251,191,36,.08) 30%, rgba(255,255,255,.38) 48%, rgba(251,191,36,.08) 65%);
+  background-size: 220% 100%;
+  animation: trivia-badge-shine 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trivia-perfect-shell,
+  .trivia-perfect-hero::before,
+  .trivia-confetti span,
+  .trivia-trophy-burst,
+  .trivia-champion-badge {
+    animation: none !important;
+  }
+}

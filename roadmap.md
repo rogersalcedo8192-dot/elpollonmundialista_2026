@@ -291,6 +291,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-15: agregada Trivia Mundialista recreativa con 25 preguntas, respuesta explicada, barra de progreso animada con gallo, resultado final, mejor marca local y celebracion especial 25/25 con confeti CSS, trofeo y distintivo de campeon; no modifica puntos, premios ni ranking.
 - 2026-06-13: habilitada correccion excepcional de pronosticos exclusivamente para SuperAdmin, ahora con acceso directo "Corregir Pronosticos" en mobile y desktop, selector visible de participante, partidos con "Sin pronostico", edicion de marcadores cerrados, auditoria y refresco inmediato de puntajes y ranking.
 - 2026-06-12: ampliado el modulo de correos finales del SuperAdmin: permite elegir desde Assets un poster distinto para cada puesto, previsualizarlo dentro del mensaje y enviar manualmente cada correo real despues del cierre validado de la final; el servidor verifica ganador, premio e imagen antes del envio.
 - 2026-06-12: documentado para la proxima version como pendiente prioritario el rediseño de Favoritos y rondas eliminatorias mediante una llave tradicional; la implementacion actual usa listas independientes y no comunica ni valida los cruces entre 16avos, octavos, cuartos, semifinal y final.
