@@ -132,8 +132,9 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {data.groups.map((group) => (
               <div key={group.group} className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                <h4 className="bg-slate-950 px-4 py-2.5 text-xs font-black uppercase text-white">Grupo {group.group}</h4>
-                <table className="w-full min-w-[520px] text-[10px]">
+                <div className="min-w-[520px]">
+                  <h4 className="bg-slate-950 px-4 py-2.5 text-xs font-black uppercase text-white">Grupo {group.group}</h4>
+                  <table className="w-full text-[10px]">
                   <thead className="bg-slate-50 font-black uppercase text-slate-400 dark:bg-slate-800/60">
                     <tr>
                       <th className="px-2 py-2 text-center">Pos</th><th className="px-2 py-2 text-left">Selección</th>
@@ -158,7 +159,8 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
             ))}
           </div>
