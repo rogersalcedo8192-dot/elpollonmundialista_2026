@@ -292,6 +292,8 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-16: "Asi va el Mundial" incorpora filtros futboleros colapsables para partidos sincronizados: grupo/etapa, Fecha 1/2/3, eliminatorias, estado, seleccion, estadio y busqueda tolerante a tildes.
+- 2026-06-16: "Asi va el Mundial" ahora muestra la fase actual del torneo y diferencia los 104 partidos oficiales del Mundial de los partidos sincronizados/publicados actualmente en la plataforma/API.
 - 2026-06-15: las opciones recientes "Asi va el Mundial" y "Trivia Mundialista" ahora muestran una insignia NUEVO en los menus mobile y desktop para facilitar su descubrimiento.
 - 2026-06-15: actualizados los encabezados de columnas del PolloRanking en mobile y escritorio para usar la nomenclatura PTS: Total PTS, PTS X participar, PTS Resultado 1X2, PTS X marcador exacto (L o V) y PTS X marcador exacto empate; cada columna incluye un icono de hoja que despliega su significado y un ejemplo basado en el reglamento, y el estado estable se muestra como Sin cambio o Se mantuvo igual segun el espacio disponible.
 - 2026-06-15: mejorado el ticker global de partidos sin nuevas consultas ni escrituras: prioriza encuentros en vivo, distingue visualmente vivo/final/proximo, muestra la fase, usa marcadores mas legibles, incorpora pausa/reanudacion tactil y conserva desplazamiento accesible con reduced motion.

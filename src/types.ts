@@ -176,9 +176,12 @@ export interface WorldCupOverview {
   warnings: string[];
   summary: {
     totalMatches: number;
+    syncedMatches: number;
     finishedMatches: number;
     liveMatches: number;
     upcomingMatches: number;
+    currentStage: string;
+    currentPhaseLabel: string;
     totalGoals: number;
   };
   groups: Array<{
@@ -194,6 +197,7 @@ export interface WorldCupOverview {
     assists: number | null;
     penalties: number | null;
   }>;
+  matches: Match[];
   liveMatches: Match[];
   recentResults: Match[];
   upcomingMatches: Match[];

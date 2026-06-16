@@ -246,6 +246,7 @@ const hasCloudinaryConfig = Boolean(
 );
 
 const FOOTBALL_DATA_SOURCE = "football-data.org";
+const WORLD_CUP_2026_TOTAL_MATCHES = 104;
 const FOOTBALL_DATA_SYNC_INTERVAL_MS = Math.max(
   60_000,
   Number(process.env.FOOTBALL_DATA_SYNC_INTERVAL_MS) || 5 * 60_000
@@ -4154,6 +4155,31 @@ app.get("/api/matches", (req, res) => {
 
 let worldCupOverviewCache: { expiresAt: number; data: any } | null = null;
 
+function getWorldCupPhaseLabel(stage?: string) {
+  if (!stage) return "Por iniciar";
+  if (stage.startsWith("Grupo ")) return "Fase de grupos";
+  if (stage === "16avos de Final") return "16avos de final";
+  if (stage === "Octavos de Final") return "Octavos de final";
+  if (stage === "Cuartos de Final") return "Cuartos de final";
+  if (stage === "Semifinal") return "Semifinales";
+  if (stage === "Tercer Puesto") return "Tercer puesto";
+  if (stage === "Final") return "Final";
+  return stage;
+}
+
+function getCurrentWorldCupStage(sortedMatches: Match[]) {
+  const liveMatch = sortedMatches.find((match) => match.status === "in_progress");
+  if (liveMatch) return liveMatch.stage;
+
+  const now = Date.now();
+  const nextMatch = sortedMatches.find((match) => match.status === "pending" && new Date(match.date).getTime() >= now)
+    || sortedMatches.find((match) => match.status === "pending");
+  if (nextMatch) return nextMatch.stage;
+
+  const lastFinishedMatch = [...sortedMatches].reverse().find((match) => match.status === "finished");
+  return lastFinishedMatch?.stage || "";
+}
+
 function buildLocalGroupStandings(matches: Match[]) {
   return Array.from("ABCDEFGHIJKL").flatMap((groupLetter) => {
     const groupMatches = matches.filter((match) => match.stage === `Grupo ${groupLetter}`);
@@ -4314,6 +4340,7 @@ app.get("/api/world-cup-overview", async (_req, res) => {
   const finishedMatches = sortedMatches.filter((match) => match.status === "finished");
   const liveMatches = sortedMatches.filter((match) => match.status === "in_progress");
   const upcomingMatches = sortedMatches.filter((match) => match.status === "pending");
+  const currentStage = getCurrentWorldCupStage(sortedMatches);
   const totalGoals = finishedMatches.reduce(
     (sum, match) => sum + (match.localScore || 0) + (match.visitorScore || 0),
     0
@@ -4324,14 +4351,18 @@ app.get("/api/world-cup-overview", async (_req, res) => {
     updatedAt: new Date().toISOString(),
     warnings,
     summary: {
-      totalMatches: sortedMatches.length,
+      totalMatches: WORLD_CUP_2026_TOTAL_MATCHES,
+      syncedMatches: sortedMatches.length,
       finishedMatches: finishedMatches.length,
       liveMatches: liveMatches.length,
       upcomingMatches: upcomingMatches.length,
+      currentStage,
+      currentPhaseLabel: getWorldCupPhaseLabel(currentStage),
       totalGoals
     },
     groups,
     scorers,
+    matches: sortedMatches,
     liveMatches,
     recentResults: finishedMatches.slice(-8).reverse(),
     upcomingMatches: upcomingMatches.slice(0, 8),

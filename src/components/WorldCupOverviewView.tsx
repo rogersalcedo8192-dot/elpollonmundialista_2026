@@ -1,10 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { BarChart3, Calendar, RefreshCw, Target, Trophy } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { BarChart3, Calendar, ChevronDown, ChevronUp, RefreshCw, Search, Target, Trophy } from "lucide-react";
 import { Match, WorldCupOverview } from "../types";
 
 interface Props {
   getTeamFlag: (team: string) => React.ReactNode;
 }
+
+type MatchPhaseOption = { key: string; label: string; detail: string; sortOrder: number };
+
+const STAGES = [
+  "Todos", "Eliminatorias",
+  "Grupo A", "Grupo B", "Grupo C", "Grupo D",
+  "Grupo E", "Grupo F", "Grupo G", "Grupo H",
+  "Grupo I", "Grupo J", "Grupo K", "Grupo L",
+  "16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal", "Tercer Puesto", "Final"
+];
+
+const GROUP_STAGE_NAMES = STAGES.filter((stage) => stage.startsWith("Grupo "));
+const KNOCKOUT_STAGE_ORDER = ["16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal", "Tercer Puesto", "Final"];
 
 const formatBogotaDate = (date: string) =>
   new Date(date).toLocaleString("es-CO", {
@@ -15,6 +28,25 @@ const formatBogotaDate = (date: string) =>
     minute: "2-digit",
     hour12: false
   });
+
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const getStageLabel = (stage: string) => {
+  if (stage === "Todos") return "Todos";
+  if (stage === "Eliminatorias") return "Eliminatorias";
+  return stage;
+};
+
+const getStatusLabel = (status: Match["status"]) => {
+  if (status === "finished") return "Finalizado";
+  if (status === "in_progress") return "En vivo";
+  return "Próximo";
+};
 
 const MatchRow = ({ match, getTeamFlag }: { key?: React.Key; match: Match; getTeamFlag: Props["getTeamFlag"] }) => (
   <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 last:border-0 dark:border-slate-800">
@@ -46,6 +78,11 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
   const [data, setData] = useState<WorldCupOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedStage, setSelectedStage] = useState("Todos");
+  const [selectedPhaseKey, setSelectedPhaseKey] = useState("Todas");
+  const [statusFilter, setStatusFilter] = useState<"all" | Match["status"]>("all");
+  const [teamSearch, setTeamSearch] = useState("");
 
   const loadOverview = async () => {
     setLoading(true);
@@ -67,6 +104,82 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
     const timer = window.setInterval(() => void loadOverview(), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const matchesForFilters = data?.matches || [];
+  const matchPhaseById = useMemo<Map<number, MatchPhaseOption>>(() => {
+    const phases = new Map<number, MatchPhaseOption>();
+
+    GROUP_STAGE_NAMES.forEach((stage) => {
+      const groupMatches = matchesForFilters
+        .filter((match) => match.stage === stage)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id);
+
+      groupMatches.forEach((match, index) => {
+        const groupDate = Math.min(Math.floor(index / 2) + 1, 3);
+        phases.set(match.id, {
+          key: `grupo-fecha-${groupDate}`,
+          label: `Fecha ${groupDate}`,
+          detail: "Fase de grupos",
+          sortOrder: groupDate
+        });
+      });
+    });
+
+    matchesForFilters.forEach((match) => {
+      if (phases.has(match.id)) return;
+      const knockoutIndex = KNOCKOUT_STAGE_ORDER.indexOf(match.stage);
+      phases.set(match.id, {
+        key: `fase-${normalizeSearchText(match.stage).replace(/\s+/g, "-")}`,
+        label: getStageLabel(match.stage),
+        detail: "Eliminatorias",
+        sortOrder: knockoutIndex >= 0 ? 10 + knockoutIndex : 99
+      });
+    });
+
+    return phases;
+  }, [matchesForFilters]);
+
+  const phaseOptions = useMemo(() => {
+    const unique = new Map<string, MatchPhaseOption>();
+    const phases = Array.from(matchPhaseById.values()) as MatchPhaseOption[];
+    phases
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .forEach((phase) => unique.set(phase.key, phase));
+    return Array.from(unique.values());
+  }, [matchPhaseById]);
+
+  const filteredMatches = useMemo(() => {
+    const searchText = normalizeSearchText(teamSearch);
+    const terms = searchText ? searchText.split(/\s+/) : [];
+
+    return matchesForFilters.filter((match) => {
+      const stageMatch =
+        selectedStage === "Todos" ||
+        (selectedStage === "Eliminatorias" && KNOCKOUT_STAGE_ORDER.includes(match.stage)) ||
+        match.stage === selectedStage;
+      const phaseMatch = selectedPhaseKey === "Todas" || matchPhaseById.get(match.id)?.key === selectedPhaseKey;
+      const statusMatch = statusFilter === "all" || match.status === statusFilter;
+      const searchableContent = normalizeSearchText([
+        match.local,
+        match.visitor,
+        match.stage,
+        match.stadium,
+        getStatusLabel(match.status),
+        matchPhaseById.get(match.id)?.label || "",
+        matchPhaseById.get(match.id)?.detail || ""
+      ].join(" "));
+      const contentMatch = terms.length === 0 || terms.every((term) => searchableContent.includes(term));
+      return stageMatch && phaseMatch && statusMatch && contentMatch;
+    });
+  }, [matchesForFilters, matchPhaseById, selectedPhaseKey, selectedStage, statusFilter, teamSearch]);
+
+  const hasFilters = selectedStage !== "Todos" || selectedPhaseKey !== "Todas" || statusFilter !== "all" || teamSearch.trim().length > 0;
+  const clearFilters = () => {
+    setSelectedStage("Todos");
+    setSelectedPhaseKey("Todas");
+    setStatusFilter("all");
+    setTeamSearch("");
+  };
 
   if (loading && !data) {
     return <div className="rounded-2xl border border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-800">Cargando datos oficiales del Mundial...</div>;
@@ -101,9 +214,25 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
         <div key={warning} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">{warning}</div>
       ))}
 
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-sky-50 p-4 dark:border-emerald-900 dark:from-emerald-950/25 dark:to-sky-950/15">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">Fase actual del Mundial</p>
+            <h3 className="mt-1 text-xl font-black text-slate-950 dark:text-white">{data.summary.currentPhaseLabel}</h3>
+            {data.summary.currentStage && data.summary.currentStage !== data.summary.currentPhaseLabel && (
+              <p className="mt-1 text-xs font-bold text-slate-600 dark:text-slate-300">Detalle actual: {data.summary.currentStage}</p>
+            )}
+          </div>
+          <p className="max-w-xl text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            El Mundial 2026 tiene <strong>104 partidos oficiales</strong>. En este resumen, los <strong>{data.summary.syncedMatches} partidos sincronizados</strong> son los que ya están cargados o publicados en la plataforma/API para seguimiento en vivo.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
         {[
-          ["Partidos", data.summary.totalMatches, Calendar],
+          ["Partidos oficiales", data.summary.totalMatches, Trophy],
+          ["Sincronizados", data.summary.syncedMatches, Calendar],
           ["Finalizados", data.summary.finishedMatches, BarChart3],
           ["En vivo", data.summary.liveMatches, Target],
           ["Próximos", data.summary.upcomingMatches, Calendar],
@@ -116,6 +245,112 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
           </div>
         ))}
       </div>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">Partidos del Mundial</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Busca por grupo, fase, fecha futbolera, estado, selección o estadio.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition-colors ${
+              filtersOpen || hasFilters
+                ? "bg-emerald-600 text-white"
+                : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+            }`}
+            aria-expanded={filtersOpen}
+          >
+            {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            Filtros futboleros
+            {hasFilters && <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px]">activos</span>}
+          </button>
+        </div>
+
+        {filtersOpen && (
+          <div className="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 xl:grid-cols-[minmax(150px,190px)_minmax(150px,210px)_minmax(150px,190px)_1fr]">
+            <label className="block">
+              <span className="mb-1 block text-xs font-black text-slate-600 dark:text-slate-300">Grupo / etapa</span>
+              <select
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                value={selectedStage}
+                onChange={(event) => setSelectedStage(event.target.value)}
+              >
+                {STAGES.map((stage) => <option key={stage} value={stage}>{getStageLabel(stage)}</option>)}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-black text-slate-600 dark:text-slate-300">Fase / fecha</span>
+              <select
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                value={selectedPhaseKey}
+                onChange={(event) => setSelectedPhaseKey(event.target.value)}
+              >
+                <option value="Todas">Todas las fases y fechas</option>
+                {phaseOptions.map((option) => (
+                  <option key={option.key} value={option.key}>{option.label} - {option.detail}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-black text-slate-600 dark:text-slate-300">Estado</span>
+              <select
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as "all" | Match["status"])}
+              >
+                <option value="all">Todos</option>
+                <option value="pending">Próximos</option>
+                <option value="in_progress">En vivo</option>
+                <option value="finished">Finalizados</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-black text-slate-600 dark:text-slate-300">Buscar</span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  autoComplete="off"
+                  placeholder="Selección, estadio, grupo o fase..."
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  value={teamSearch}
+                  onChange={(event) => setTeamSearch(event.target.value)}
+                />
+              </div>
+            </label>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 border-b border-slate-100 px-4 py-3 text-xs dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-bold text-slate-500 dark:text-slate-400">
+            {filteredMatches.length} de {matchesForFilters.length} partidos sincronizados
+          </span>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="min-h-9 rounded-xl bg-slate-200 px-3 font-black text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-[520px] overflow-y-auto">
+          {filteredMatches.length ? (
+            filteredMatches.map((match) => <MatchRow key={match.id} match={match} getTeamFlag={getTeamFlag} />)
+          ) : (
+            <p className="p-6 text-center text-xs font-bold text-slate-500">No hay partidos con esos filtros.</p>
+          )}
+        </div>
+      </section>
 
       {data.liveMatches.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-rose-200 bg-white dark:border-rose-900 dark:bg-slate-900">
