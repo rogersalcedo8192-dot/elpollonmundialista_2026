@@ -865,6 +865,22 @@ export function getTeamFlag(teamName: string): React.ReactNode {
   return <span className="select-none">{FLAGS_MAP[norm] || "🏳️"}</span>;
 }
 
+const countryCodeToEmoji = (code?: string) => {
+  if (!code || code.length !== 2) return "⚽";
+  return code
+    .toUpperCase()
+    .split("")
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join("");
+};
+
+const getTeamFlagText = (teamName: string) => {
+  if (!teamName) return "⚽";
+  const norm = teamName.trim();
+  const code = FLAGS_CODE_MAP[norm] || FLAGS_CODE_ALIAS_MAP[normalizeLookupKey(norm)];
+  return FLAGS_MAP[norm] || countryCodeToEmoji(code);
+};
+
 // Custom Soccer Ball SVG Icon
 export function SoccerBallIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
@@ -3214,11 +3230,13 @@ export default function App() {
   const getMatchPredictionShareText = (match: Match, prediction: Prediction) => {
     const localName = getTeamDisplayName(match.local, lang);
     const visitorName = getTeamDisplayName(match.visitor, lang);
+    const localFlag = getTeamFlagText(match.local);
+    const visitorFlag = getTeamFlagText(match.visitor);
     return [
-      "Mi pronostico en El Pollon Mundialista FIFA 2026:",
-      `${getTeamFlag(match.local)} ${localName} ${prediction.localScore} - ${prediction.visitorScore} ${visitorName} ${getTeamFlag(match.visitor)}`,
+      "Mi pronóstico en El Pollón Mundialista FIFA 2026:",
+      `${localFlag} ${localName} ${prediction.localScore} - ${prediction.visitorScore} ${visitorName} ${visitorFlag}`,
       `Partido ${match.id} - ${getStageLabel(match.stage)} - ${formatMatchDate(match.date).replace(` (${ui("bogota")})`, "")}`,
-      "Tu como lo ves?"
+      "¿Tú cómo lo ves?"
     ].join("\n");
   };
 
@@ -3239,10 +3257,10 @@ export default function App() {
           url
         });
       } else {
-        await copyTextToClipboard(`${text}\n${url}`, "Pronostico y enlace copiados para compartir.");
+        await copyTextToClipboard(`${text}\n${url}`, "Pronóstico y enlace copiados para compartir.");
       }
     } catch (err: any) {
-      if (err?.name !== "AbortError") showToast(err.message || "No se pudo compartir el pronostico.", "error");
+      if (err?.name !== "AbortError") showToast(err.message || "No se pudo compartir el pronóstico.", "error");
     } finally {
       setMatchShareBusyId(null);
     }
