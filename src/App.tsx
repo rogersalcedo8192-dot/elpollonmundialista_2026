@@ -6424,9 +6424,11 @@ export default function App() {
                                           void shareMatchPrediction(m, pred);
                                         }}
                                         disabled={matchShareBusyId === m.id}
-                                        className="min-h-12 px-4 py-2 rounded-xl text-[11px] font-black flex items-center gap-1 bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white"
+                                        className="h-9 w-9 rounded-full text-[11px] font-black inline-flex items-center justify-center bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white shadow-sm"
+                                        title="Compartir pronóstico"
+                                        aria-label="Compartir pronóstico"
                                       >
-                                        <Share2 className="w-3 h-3" /> {matchShareBusyId === m.id ? "..." : "Compartir"}
+                                        <Share2 className="w-3.5 h-3.5" />
                                       </button>
                                       <button
                                         type="button"
@@ -6435,9 +6437,11 @@ export default function App() {
                                           void shareMatchPrediction(m, pred, "whatsapp");
                                         }}
                                         disabled={matchShareBusyId === m.id}
-                                        className="min-h-12 px-4 py-2 rounded-xl text-[11px] font-black flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white"
+                                        className="h-9 w-9 rounded-full text-[10px] font-black inline-flex items-center justify-center bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white shadow-sm"
+                                        title="Compartir por WhatsApp"
+                                        aria-label="Compartir pronóstico por WhatsApp"
                                       >
-                                        WhatsApp
+                                        WA
                                       </button>
                                     </>
                                   )}
@@ -6474,17 +6478,21 @@ export default function App() {
                                   type="button"
                                   onClick={() => void shareMatchPrediction(m, pred)}
                                   disabled={matchShareBusyId === m.id}
-                                  className="min-h-10 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white text-[10px] font-black inline-flex items-center gap-1"
+                                  className="h-9 w-9 rounded-full bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white text-[10px] font-black inline-flex items-center justify-center shadow-sm"
+                                  title="Compartir pronóstico"
+                                  aria-label="Compartir pronóstico"
                                 >
-                                  <Share2 className="w-3 h-3" /> Compartir pronóstico
+                                  <Share2 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => void shareMatchPrediction(m, pred, "whatsapp")}
                                   disabled={matchShareBusyId === m.id}
-                                  className="min-h-10 px-3 rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white text-[10px] font-black"
+                                  className="h-9 w-9 rounded-full bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white text-[10px] font-black inline-flex items-center justify-center shadow-sm"
+                                  title="Compartir por WhatsApp"
+                                  aria-label="Compartir pronóstico por WhatsApp"
                                 >
-                                  WhatsApp
+                                  WA
                                 </button>
                               </div>
                             )}
