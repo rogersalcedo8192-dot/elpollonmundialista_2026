@@ -52,6 +52,7 @@ model User {
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
   favoritesAccessOverrideUntil DateTime?
+  favoriteMatchIds Json     @default("[]")
   groupPoints        Int?
   knockoutPoints     Int?
   finalistPoints     Int?

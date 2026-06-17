@@ -292,6 +292,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-17: agregados partidos favoritos personales dentro de Mis Pronosticos: cada usuario puede marcar/desmarcar partidos con un balon, se persisten en `favoriteMatchIds` con migracion Prisma, y cada partido con pronostico guardado permite compartir el marcador por Web Share/redes o abrir WhatsApp con texto publico del partido y enlace.
 - 2026-06-17: agregado permiso individual con vencimiento definido por SuperAdmin para habilitar Favoritos por usuario sin reabrir la ventana global: nuevo campo `favoritesAccessOverrideUntil`, migracion Prisma, control de fecha/hora en Gestion de Usuarios, etiqueta visible y excepcion backend/frontend para guardar Favoritos, Finalistas, Subcampeon y Campeon solo mientras la fecha siga vigente.
 - 2026-06-16: "Asi va el Mundial" incorpora filtros futboleros colapsables para partidos sincronizados: grupo/etapa, Fecha 1/2/3, eliminatorias, estado, seleccion, estadio y busqueda tolerante a tildes.
 - 2026-06-16: "Asi va el Mundial" ahora muestra la fase actual del torneo y diferencia los 104 partidos oficiales del Mundial de los partidos sincronizados/publicados actualmente en la plataforma/API.

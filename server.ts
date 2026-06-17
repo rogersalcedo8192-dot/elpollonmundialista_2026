@@ -56,6 +56,7 @@ interface User {
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
   favoritesAccessOverrideUntil?: string;
+  favoriteMatchIds?: number[];
   groupPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
@@ -1558,6 +1559,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       stripeCheckoutSessionId: u.stripeCheckoutSessionId || undefined,
       stripePaymentIntentId: u.stripePaymentIntentId || undefined,
       favoritesAccessOverrideUntil: dateToIso((u as any).favoritesAccessOverrideUntil) || undefined,
+      favoriteMatchIds: Array.isArray((u as any).favoriteMatchIds) ? ((u as any).favoriteMatchIds as number[]) : [],
       groupPoints: u.groupPoints || undefined,
       knockoutPoints: u.knockoutPoints || undefined,
       finalistPoints: u.finalistPoints || undefined,
@@ -1775,6 +1777,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           stripeCheckoutSessionId: u.stripeCheckoutSessionId || null,
           stripePaymentIntentId: u.stripePaymentIntentId || null,
           favoritesAccessOverrideUntil: u.favoritesAccessOverrideUntil ? new Date(u.favoritesAccessOverrideUntil) : null,
+          favoriteMatchIds: Array.isArray(u.favoriteMatchIds) ? u.favoriteMatchIds : [],
           groupPoints: u.groupPoints ?? null,
           knockoutPoints: u.knockoutPoints ?? null,
           finalistPoints: u.finalistPoints ?? null,
@@ -3015,6 +3018,7 @@ app.post("/api/auth/register", (req, res) => {
     predictCount: 0,
     historyPoints: [0],
     emailSubscribed: true,
+    favoriteMatchIds: [],
     paymentStatus: APP_MODE === "FREE" ? "paid" : "pending",
     paidAt: APP_MODE === "FREE" ? new Date().toISOString() : undefined
   };
@@ -3099,6 +3103,38 @@ app.put("/api/auth/profile", (req, res) => {
   const refreshed = db.users.find((u) => u.id === user.id)!;
   const { password: _, ...cleanUser } = refreshed;
   res.json({ message: "Perfil actualizado con éxito.", user: cleanUser });
+});
+
+app.put("/api/users/me/favorite-matches/:matchId", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+
+  const matchId = Number(req.params.matchId);
+  if (!Number.isInteger(matchId)) {
+    return res.status(400).json({ error: "Partido invalido." });
+  }
+
+  const db = loadDb();
+  const dbUser = db.users.find((item) => item.id === user.id);
+  if (!dbUser) return res.status(404).json({ error: "Usuario no encontrado." });
+  const match = db.matches.find((item) => item.id === matchId);
+  if (!match) return res.status(404).json({ error: "Partido no encontrado." });
+
+  const currentFavorites = Array.isArray(dbUser.favoriteMatchIds) ? dbUser.favoriteMatchIds : [];
+  const isFavorite = currentFavorites.includes(matchId);
+  dbUser.favoriteMatchIds = isFavorite
+    ? currentFavorites.filter((id) => id !== matchId)
+    : [...currentFavorites, matchId];
+
+  saveDb(db);
+
+  const { password: omittedPassword, ...updatedUser } = dbUser;
+  void omittedPassword;
+  res.json({
+    message: isFavorite ? "Partido quitado de tus favoritos." : "Partido marcado como favorito.",
+    favorite: !isFavorite,
+    user: updatedUser
+  });
 });
 
 // Recover Password
@@ -3821,6 +3857,7 @@ app.post("/api/admin/users", (req, res) => {
     historyPoints: [0],
     emailSubscribed: true,
     favoritesAccessOverrideUntil: isSuperAdmin(admin) && favoritesAccessOverrideUntil ? new Date(favoritesAccessOverrideUntil).toISOString() : undefined,
+    favoriteMatchIds: [],
     paymentStatus: APP_MODE === "FREE" || role === "admin" || role === "superadmin" || role === "company_admin" ? "paid" : "pending",
     paidAt: APP_MODE === "FREE" || role === "admin" || role === "superadmin" || role === "company_admin" ? new Date().toISOString() : undefined
   };

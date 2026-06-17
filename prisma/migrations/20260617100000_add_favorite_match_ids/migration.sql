@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "favoriteMatchIds" JSONB NOT NULL DEFAULT '[]';

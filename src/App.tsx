@@ -1713,6 +1713,7 @@ export default function App() {
   const [winnerEmailPosterByPosition, setWinnerEmailPosterByPosition] = useState<Record<1 | 2 | 3, string>>({ 1: "", 2: "", 3: "" });
   const [winnerEmailSendingPosition, setWinnerEmailSendingPosition] = useState<1 | 2 | 3 | null>(null);
   const [rankingShareBusy, setRankingShareBusy] = useState(false);
+  const [matchShareBusyId, setMatchShareBusyId] = useState<number | null>(null);
   const [rankingColumnHelp, setRankingColumnHelp] = useState<RankingColumnHelpKey | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
@@ -3185,6 +3186,65 @@ export default function App() {
       if (err?.name !== "AbortError") showToast(err.message || "No se pudo compartir el ranking.", "error");
     } finally {
       setRankingShareBusy(false);
+    }
+  };
+
+  const updateCurrentUserSession = (user: User) => {
+    localStorage.setItem("polla_user_session", JSON.stringify(user));
+    setCurrentUser(user);
+  };
+
+  const handleToggleFavoriteMatch = async (matchId: number) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/users/me/favorite-matches/${matchId}`, {
+        method: "PUT",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo actualizar el partido favorito.");
+
+      updateCurrentUserSession(data.user);
+      showToast(data.message, "success");
+    } catch (err: any) {
+      showToast(err.message || "No se pudo actualizar el partido favorito.", "error");
+    }
+  };
+
+  const getMatchPredictionShareText = (match: Match, prediction: Prediction) => {
+    const localName = getTeamDisplayName(match.local, lang);
+    const visitorName = getTeamDisplayName(match.visitor, lang);
+    return [
+      "Mi pronostico en El Pollon Mundialista FIFA 2026:",
+      `${getTeamFlag(match.local)} ${localName} ${prediction.localScore} - ${prediction.visitorScore} ${visitorName} ${getTeamFlag(match.visitor)}`,
+      `Partido ${match.id} - ${getStageLabel(match.stage)} - ${formatMatchDate(match.date).replace(` (${ui("bogota")})`, "")}`,
+      "Tu como lo ves?"
+    ].join("\n");
+  };
+
+  const shareMatchPrediction = async (match: Match, prediction: Prediction, channel: "native" | "whatsapp" = "native") => {
+    setMatchShareBusyId(match.id);
+    try {
+      const text = getMatchPredictionShareText(match, prediction);
+      const url = window.location.origin;
+      if (channel === "whatsapp") {
+        window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      if (navigator.share) {
+        await navigator.share({
+          title: "Mi pronostico en El Pollon Mundialista",
+          text,
+          url
+        });
+      } else {
+        await copyTextToClipboard(`${text}\n${url}`, "Pronostico y enlace copiados para compartir.");
+      }
+    } catch (err: any) {
+      if (err?.name !== "AbortError") showToast(err.message || "No se pudo compartir el pronostico.", "error");
+    } finally {
+      setMatchShareBusyId(null);
     }
   };
 
@@ -6146,6 +6206,7 @@ export default function App() {
                         const visVal = predScores[m.id]?.visitor ?? "";
                         const resultPick = getPredictionResultPick(localVal, visVal);
                         const isExpanded = expandedMatchId === m.id;
+                        const isFavoriteMatch = Boolean(currentUser.favoriteMatchIds?.includes(m.id));
 
                         return (
                           <div
@@ -6161,6 +6222,22 @@ export default function App() {
                             
                             {/* Match Header stage & details */}
                             <div className="w-full md:w-1/3 space-y-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleToggleFavoriteMatch(m.id);
+                                }}
+                                className={`float-right ml-2 h-8 w-8 rounded-full border text-base leading-none flex items-center justify-center transition-all ${
+                                  isFavoriteMatch
+                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                                    : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
+                                }`}
+                                title={isFavoriteMatch ? "Quitar de mis partidos favoritos" : "Marcar como mi partido favorito"}
+                                aria-label={isFavoriteMatch ? "Quitar partido de favoritos" : "Marcar partido como favorito"}
+                              >
+                                ⚽
+                              </button>
                               <span className="inline-block bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {ui("match_number", { id: m.id })} • {getStageLabel(m.stage)}
                               </span>
@@ -6320,6 +6397,32 @@ export default function App() {
                                   >
                                     <Check className="w-3 h-3" /> {pred ? t("pred_update", "Actualizar") : t("pred_save", "Guardar")}
                                   </button>
+                                  {pred && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          void shareMatchPrediction(m, pred);
+                                        }}
+                                        disabled={matchShareBusyId === m.id}
+                                        className="min-h-12 px-4 py-2 rounded-xl text-[11px] font-black flex items-center gap-1 bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white"
+                                      >
+                                        <Share2 className="w-3 h-3" /> {matchShareBusyId === m.id ? "..." : "Compartir"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          void shareMatchPrediction(m, pred, "whatsapp");
+                                        }}
+                                        disabled={matchShareBusyId === m.id}
+                                        className="min-h-12 px-4 py-2 rounded-xl text-[11px] font-black flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white"
+                                      >
+                                        WhatsApp
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="text-center md:text-right">
@@ -6346,6 +6449,27 @@ export default function App() {
                                 </div>
                               )}
                             </div>
+
+                            {isLocked && pred && (
+                              <div className="basis-full w-full flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => void shareMatchPrediction(m, pred)}
+                                  disabled={matchShareBusyId === m.id}
+                                  className="min-h-10 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:bg-slate-300 text-white text-[10px] font-black inline-flex items-center gap-1"
+                                >
+                                  <Share2 className="w-3 h-3" /> Compartir pronóstico
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void shareMatchPrediction(m, pred, "whatsapp")}
+                                  disabled={matchShareBusyId === m.id}
+                                  className="min-h-10 px-3 rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white text-[10px] font-black"
+                                >
+                                  WhatsApp
+                                </button>
+                              </div>
+                            )}
 
                             <div
                               className={`basis-full w-full pt-3 border-t flex items-center justify-center gap-2 text-xs ${
