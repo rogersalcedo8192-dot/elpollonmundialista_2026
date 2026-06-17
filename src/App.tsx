@@ -42,6 +42,7 @@ import {
   ExternalLink,
   Copy,
   Share2,
+  MessageCircle,
   CreditCard,
   Eraser,
   CircleHelp,
@@ -6437,11 +6438,11 @@ export default function App() {
                                           void shareMatchPrediction(m, pred, "whatsapp");
                                         }}
                                         disabled={matchShareBusyId === m.id}
-                                        className="h-9 w-9 rounded-full text-[10px] font-black inline-flex items-center justify-center bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white shadow-sm"
+                                        className="h-9 w-9 rounded-full text-[10px] font-black inline-flex items-center justify-center bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:bg-slate-300 disabled:text-white shadow-sm"
                                         title="Compartir por WhatsApp"
                                         aria-label="Compartir pronóstico por WhatsApp"
                                       >
-                                        WA
+                                        <MessageCircle className="w-3.5 h-3.5" />
                                       </button>
                                     </>
                                   )}
@@ -6488,11 +6489,11 @@ export default function App() {
                                   type="button"
                                   onClick={() => void shareMatchPrediction(m, pred, "whatsapp")}
                                   disabled={matchShareBusyId === m.id}
-                                  className="h-9 w-9 rounded-full bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white text-[10px] font-black inline-flex items-center justify-center shadow-sm"
+                                  className="h-9 w-9 rounded-full bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:bg-slate-300 disabled:text-white text-[10px] font-black inline-flex items-center justify-center shadow-sm"
                                   title="Compartir por WhatsApp"
                                   aria-label="Compartir pronóstico por WhatsApp"
                                 >
-                                  WA
+                                  <MessageCircle className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             )}
