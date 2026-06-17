@@ -878,8 +878,9 @@ const countryCodeToEmoji = (code?: string) => {
 const getTeamFlagText = (teamName: string) => {
   if (!teamName) return "⚽";
   const norm = teamName.trim();
-  const code = FLAGS_CODE_MAP[norm] || FLAGS_CODE_ALIAS_MAP[normalizeLookupKey(norm)];
-  return FLAGS_MAP[norm] || countryCodeToEmoji(code);
+  const normalized = normalizeLookupKey(norm);
+  const code = TEAM_COUNTRY_CODES[normalized] || FLAGS_CODE_MAP[norm] || FLAGS_CODE_ALIAS_MAP[normalized];
+  return countryCodeToEmoji(code);
 };
 
 // Custom Soccer Ball SVG Icon
@@ -3234,10 +3235,10 @@ export default function App() {
     const localFlag = getTeamFlagText(match.local);
     const visitorFlag = getTeamFlagText(match.visitor);
     return [
-      "Mi pronóstico en El Pollón Mundialista FIFA 2026:",
+      `Mi jugada para el Partido ${match.id} en El Pollón Mundialista:`,
       `${localFlag} ${localName} ${prediction.localScore} - ${prediction.visitorScore} ${visitorName} ${visitorFlag}`,
-      `Partido ${match.id} - ${getStageLabel(match.stage)} - ${formatMatchDate(match.date).replace(` (${ui("bogota")})`, "")}`,
-      "¿Tú cómo lo ves?"
+      `${getStageLabel(match.stage)} · ${formatMatchDate(match.date).replace(` (${ui("bogota")})`, "")}`,
+      "¿Visión de crack o locura mundialista? Haz tu pronóstico:"
     ].join("\n");
   };
 
