@@ -292,6 +292,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-17: agregado permiso individual con vencimiento definido por SuperAdmin para habilitar Favoritos por usuario sin reabrir la ventana global: nuevo campo `favoritesAccessOverrideUntil`, migracion Prisma, control de fecha/hora en Gestion de Usuarios, etiqueta visible y excepcion backend/frontend para guardar Favoritos, Finalistas, Subcampeon y Campeon solo mientras la fecha siga vigente.
 - 2026-06-16: "Asi va el Mundial" incorpora filtros futboleros colapsables para partidos sincronizados: grupo/etapa, Fecha 1/2/3, eliminatorias, estado, seleccion, estadio y busqueda tolerante a tildes.
 - 2026-06-16: "Asi va el Mundial" ahora muestra la fase actual del torneo y diferencia los 104 partidos oficiales del Mundial de los partidos sincronizados/publicados actualmente en la plataforma/API.
 - 2026-06-15: las opciones recientes "Asi va el Mundial" y "Trivia Mundialista" ahora muestran una insignia NUEVO en los menus mobile y desktop para facilitar su descubrimiento.

@@ -45,6 +45,7 @@ export interface User {
   paymentTransactionId?: string;
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
+  favoritesAccessOverrideUntil?: string;
   groupPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;

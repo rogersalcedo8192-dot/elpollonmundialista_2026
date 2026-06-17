@@ -51,6 +51,7 @@ model User {
   paymentTransactionId String?
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
+  favoritesAccessOverrideUntil DateTime?
   groupPoints        Int?
   knockoutPoints     Int?
   finalistPoints     Int?

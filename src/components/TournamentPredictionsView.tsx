@@ -40,6 +40,8 @@ interface Props {
   canSave: boolean;
   lockTime: string;
   temporaryAccessOpen: boolean;
+  accessOverride?: boolean;
+  accessOverrideUntil?: string;
   onSave: (preds: {
     groupWinners: Record<string, string>;
     octavosTeams: string[];
@@ -59,6 +61,8 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   canSave,
   lockTime,
   temporaryAccessOpen,
+  accessOverride = false,
+  accessOverrideUntil,
   onSave
 }) => {
   const t = (es: string, en: string) => (lang === "es" ? es : en);
@@ -66,6 +70,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   // Lock status calculation
   const LOCK_TIME = new Date(lockTime).getTime();
   const [isLocked, setIsLocked] = useState(Date.now() >= LOCK_TIME);
+  const isFormLocked = isLocked && !accessOverride;
 
   useEffect(() => {
     setIsLocked(Date.now() >= LOCK_TIME);
@@ -107,7 +112,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
   }, [tournamentPredictions]);
 
   const handleGroupWinnerSelect = (groupName: string, teamName: string) => {
-    if (isLocked) return;
+    if (isFormLocked) return;
     setGroupWinners(prev => ({
       ...prev,
       [groupName]: teamName
@@ -120,7 +125,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
     setList: React.Dispatch<React.SetStateAction<string[]>>, 
     limit: number
   ) => {
-    if (isLocked) return;
+    if (isFormLocked) return;
     const isSelected = list.includes(team);
     if (isSelected) {
       setList(prev => prev.filter(t => t !== team));
@@ -135,7 +140,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
       setMsg({ text: t("Puedes visualizar favoritos, pero necesitas pago confirmado o empresa para guardarlos.", "You can view favorites, but need confirmed payment or company access to save them."), type: "error" });
       return;
     }
-    if (isLocked) {
+    if (isFormLocked) {
       setMsg({ text: t("Las predicciones ya cerraron.", "Predictions have closed."), type: "error" });
       return;
     }
@@ -215,7 +220,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
-      {temporaryAccessOpen && !isLocked && (
+      {temporaryAccessOpen && !isFormLocked && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/25 dark:border-amber-800 p-4">
           <p className="text-sm font-black text-amber-900 dark:text-amber-200">
             Ventana especial habilitada para todos los usuarios
@@ -225,20 +230,31 @@ export const TournamentPredictionsView: React.FC<Props> = ({
           </p>
         </div>
       )}
+      {accessOverride && (
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/25 dark:border-emerald-800 p-4">
+          <p className="text-sm font-black text-emerald-900 dark:text-emerald-200">
+            Acceso especial habilitado por SuperAdmin
+          </p>
+          <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1">
+            Puedes guardar o actualizar Favoritos, Finalistas, Subcampeón y Campeón solo para tu usuario
+            {accessOverrideUntil ? ` hasta ${new Date(accessOverrideUntil).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}.` : "."}
+          </p>
+        </div>
+      )}
       {/* Informational banner / Deadline Status */}
       <div className={`p-4 rounded-2xl border flex items-start gap-3.5 ${
-        isLocked 
+        isFormLocked 
           ? "bg-rose-50/50 dark:bg-rose-950/15 border-rose-100 dark:border-rose-950 text-rose-800 dark:text-rose-400" 
           : "bg-amber-50/50 dark:bg-amber-950/15 border-amber-100 dark:border-amber-950 text-amber-800 dark:text-amber-400"
       }`}>
-        {isLocked ? (
+        {isFormLocked ? (
           <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
         ) : (
           <Clock className="w-5 h-5 mt-0.5 shrink-0 animate-pulse text-amber-600 dark:text-amber-400" />
         )}
         <div className="text-xs space-y-1">
           <p className="font-bold uppercase tracking-wider">
-            {isLocked 
+            {isFormLocked 
               ? t("PRONÓSTICOS DE FAVORITOS CERRADOS", "FAVORITE PREDICTIONS CLOSED") 
               : t("PRONÓSTICOS DE FAVORITOS ABIERTOS", "FAVORITE PREDICTIONS ACTIVE")}
           </p>
@@ -364,7 +380,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                       return (
                         <button
                           key={team}
-                          disabled={isLocked}
+                          disabled={isFormLocked}
                           onClick={() => handleGroupWinnerSelect(groupKey, team)}
                           className={`w-full flex items-center justify-between p-2.5 text-xs text-left rounded-xl transition ${
                             isPicked 
@@ -438,7 +454,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   }`}>
                     {octavosTeams.length} / 16
                   </span>
-                  {!isLocked && octavosTeams.length > 0 && (
+                  {!isFormLocked && octavosTeams.length > 0 && (
                     <button
                       onClick={() => setOctavosTeams([])}
                       className="text-[10px] text-rose-500 font-bold hover:underline"
@@ -464,7 +480,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   return (
                     <button
                       key={team}
-                      disabled={isLocked || (!isSelected && octavosTeams.length >= 16)}
+                      disabled={isFormLocked || (!isSelected && octavosTeams.length >= 16)}
                       onClick={() => toggleTeamSelection(team, octavosTeams, setOctavosTeams, 16)}
                       className={`p-2 rounded-xl text-xs text-center border transition relative select-none ${
                         isSelected
@@ -505,7 +521,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   }`}>
                     {cuartosTeams.length} / 8
                   </span>
-                  {!isLocked && cuartosTeams.length > 0 && (
+                  {!isFormLocked && cuartosTeams.length > 0 && (
                     <button
                       onClick={() => setCuartosTeams([])}
                       className="text-[10px] text-rose-500 font-bold hover:underline"
@@ -532,7 +548,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   return (
                     <button
                       key={team}
-                      disabled={isLocked || (!isSelected && cuartosTeams.length >= 8)}
+                      disabled={isFormLocked || (!isSelected && cuartosTeams.length >= 8)}
                       onClick={() => toggleTeamSelection(team, cuartosTeams, setCuartosTeams, 8)}
                       className={`p-2 rounded-xl text-xs text-center border transition relative select-none ${
                         isSelected
@@ -573,7 +589,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   }`}>
                     {semifinalTeams.length} / 4
                   </span>
-                  {!isLocked && semifinalTeams.length > 0 && (
+                  {!isFormLocked && semifinalTeams.length > 0 && (
                     <button
                       onClick={() => setSemifinalTeams([])}
                       className="text-[10px] text-rose-500 font-bold hover:underline"
@@ -599,7 +615,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   return (
                     <button
                       key={team}
-                      disabled={isLocked || (!isSelected && semifinalTeams.length >= 4)}
+                      disabled={isFormLocked || (!isSelected && semifinalTeams.length >= 4)}
                       onClick={() => toggleTeamSelection(team, semifinalTeams, setSemifinalTeams, 4)}
                       className={`p-2 rounded-xl text-xs text-center border transition relative select-none ${
                         isSelected
@@ -664,7 +680,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                       <button
                         key={team}
                         type="button"
-                        disabled={isLocked || limitReached}
+                        disabled={isFormLocked || limitReached}
                         onClick={() => {
                           setFinalists((current) =>
                             current.includes(team)
@@ -690,7 +706,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   {finalists.map(team => (
                     <span key={team} className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold rounded-full px-2.5 py-1 text-[11px] border border-emerald-500/20">
                       {team}
-                      {!isLocked && (
+                      {!isFormLocked && (
                         <button onClick={() => setFinalists(prev => prev.filter(t => t !== team))}>
                           <X className="w-3 h-3 text-emerald-600 dark:text-emerald-400 hover:text-rose-500" />
                         </button>
@@ -729,7 +745,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   {t("Elige el ocupante de la medalla de plata:", "Choose silver medal team:")}
                 </label>
                 <select
-                  disabled={isLocked}
+                  disabled={isFormLocked}
                   value={subchampion}
                   onChange={(e) => setSubchampion(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl p-3 text-xs text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500 focus:outline-none focus:border-emerald-500"
@@ -772,7 +788,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
                   {t("Elige el glorioso campeón de la Copa del Mundo 2026:", "Choose absolute champion of the FIFA Cup:")}
                 </label>
                 <select
-                  disabled={isLocked}
+                  disabled={isFormLocked}
                   value={champion}
                   onChange={(e) => setChampion(e.target.value)}
                   className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-900 rounded-xl p-3 text-xs text-slate-850 dark:text-slate-100 focus:ring-1 focus:ring-amber-500 focus:outline-none focus:border-amber-500"
@@ -816,7 +832,7 @@ export const TournamentPredictionsView: React.FC<Props> = ({
             </span>
           )}
 
-          {!isLocked ? (
+          {!isFormLocked ? (
             <button
               onClick={handleSave}
               disabled={saving || !canSave}

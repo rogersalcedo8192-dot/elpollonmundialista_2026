@@ -55,6 +55,7 @@ interface User {
   paymentTransactionId?: string;
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
+  favoritesAccessOverrideUntil?: string;
   groupPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
@@ -1556,6 +1557,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       paymentTransactionId: (u as any).paymentTransactionId || undefined,
       stripeCheckoutSessionId: u.stripeCheckoutSessionId || undefined,
       stripePaymentIntentId: u.stripePaymentIntentId || undefined,
+      favoritesAccessOverrideUntil: dateToIso((u as any).favoritesAccessOverrideUntil) || undefined,
       groupPoints: u.groupPoints || undefined,
       knockoutPoints: u.knockoutPoints || undefined,
       finalistPoints: u.finalistPoints || undefined,
@@ -1772,6 +1774,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           paymentTransactionId: u.paymentTransactionId || null,
           stripeCheckoutSessionId: u.stripeCheckoutSessionId || null,
           stripePaymentIntentId: u.stripePaymentIntentId || null,
+          favoritesAccessOverrideUntil: u.favoritesAccessOverrideUntil ? new Date(u.favoritesAccessOverrideUntil) : null,
           groupPoints: u.groupPoints ?? null,
           knockoutPoints: u.knockoutPoints ?? null,
           finalistPoints: u.finalistPoints ?? null,
@@ -2724,9 +2727,14 @@ function isTemporaryFavoritesAccessOpen(date = new Date()) {
   return date.getTime() < TEMPORARY_FAVORITES_ACCESS_DEADLINE;
 }
 
+function isFavoritesAccessOverrideOpen(user: User, date = new Date()) {
+  return Boolean(user.favoritesAccessOverrideUntil && date.getTime() < new Date(user.favoritesAccessOverrideUntil).getTime());
+}
+
 function canSubmitTournamentFavorites(user: User) {
   return (
     isTemporaryFavoritesAccessOpen() ||
+    isFavoritesAccessOverrideOpen(user) ||
     user.role === "admin" ||
     user.role === "superadmin" ||
     user.role === "company_admin" ||
@@ -3579,6 +3587,7 @@ app.get("/api/admin/users", (req, res) => {
     paymentReference: u.paymentReference,
     paymentTransactionId: u.paymentTransactionId,
     stripeCheckoutSessionId: u.stripeCheckoutSessionId,
+    favoritesAccessOverrideUntil: u.favoritesAccessOverrideUntil,
     password: u.password // accessible for administrator manual reset view
   })));
 });
@@ -3783,7 +3792,7 @@ app.post("/api/admin/users", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || (!isSuperAdmin(admin) && !isCompanyAdmin(admin))) return res.status(403).json({ error: "No autorizado." });
 
-  const { name, email, password, role, status, avatar, country, companyId } = req.body;
+  const { name, email, password, role, status, avatar, country, companyId, favoritesAccessOverrideUntil } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Datos del usuario incompletos." });
   }
@@ -3811,6 +3820,7 @@ app.post("/api/admin/users", (req, res) => {
     predictCount: 0,
     historyPoints: [0],
     emailSubscribed: true,
+    favoritesAccessOverrideUntil: isSuperAdmin(admin) && favoritesAccessOverrideUntil ? new Date(favoritesAccessOverrideUntil).toISOString() : undefined,
     paymentStatus: APP_MODE === "FREE" || role === "admin" || role === "superadmin" || role === "company_admin" ? "paid" : "pending",
     paidAt: APP_MODE === "FREE" || role === "admin" || role === "superadmin" || role === "company_admin" ? new Date().toISOString() : undefined
   };
@@ -3828,7 +3838,7 @@ app.put("/api/admin/users/:id", (req, res) => {
   if (!admin || (!isSuperAdmin(admin) && !isCompanyAdmin(admin))) return res.status(403).json({ error: "No autorizado." });
 
   const { id } = req.params;
-  const { name, email, role, status, password, avatar, country, companyId } = req.body;
+  const { name, email, role, status, password, avatar, country, companyId, favoritesAccessOverrideUntil } = req.body;
 
   const db = loadDb();
   const dbUser = db.users.find((u) => u.id === id);
@@ -3843,6 +3853,9 @@ app.put("/api/admin/users/:id", (req, res) => {
   if (status) dbUser.status = status;
   if (password) dbUser.password = password;
   if (avatar) dbUser.avatar = avatar;
+  if (favoritesAccessOverrideUntil !== undefined && isSuperAdmin(admin)) {
+    dbUser.favoritesAccessOverrideUntil = favoritesAccessOverrideUntil ? new Date(favoritesAccessOverrideUntil).toISOString() : undefined;
+  }
 
   saveDb(db);
   recalculateScoresAndRankings();
@@ -4980,7 +4993,7 @@ app.post("/api/tournament-predictions", (req, res) => {
   }
 
   const now = Date.now();
-  if (now >= TOURNAMENT_PREDICTIONS_LOCK_TIME) {
+  if (now >= TOURNAMENT_PREDICTIONS_LOCK_TIME && !isFavoritesAccessOverrideOpen(user) && !isSuperAdmin(user)) {
     return res.status(400).json({ error: "El plazo especial para guardar favoritos, finalistas, subcampeón y campeón cerró el 12 de junio de 2026 a la 1:00 p. m. hora de Bogotá." });
   }
 

@@ -73,6 +73,18 @@ const hasManagedPopupContent = (torneo?: TorneoConfig | null) => {
   return true;
 };
 
+const isFutureIsoDate = (value?: string) => Boolean(value && Date.now() < new Date(value).getTime());
+
+const toDateTimeLocalValue = (value?: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
+const fromDateTimeLocalValue = (value: string) => value ? new Date(value).toISOString() : "";
+
 type RankingColumnHelpKey =
   | "position"
   | "user"
@@ -2173,7 +2185,8 @@ export default function App() {
       if (data.user && (
         data.user.role !== currentUser.role ||
         data.user.companyId !== currentUser.companyId ||
-        data.user.paymentStatus !== currentUser.paymentStatus
+        data.user.paymentStatus !== currentUser.paymentStatus ||
+        data.user.favoritesAccessOverrideUntil !== currentUser.favoritesAccessOverrideUntil
       )) {
         localStorage.setItem("polla_user_session", JSON.stringify(data.user));
         setCurrentUser(data.user);
@@ -2843,7 +2856,10 @@ export default function App() {
 
       const res = await fetch(url, {
         method,
-        headers: getHeaders(),
+        headers: {
+          ...getHeaders(),
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(editingUser)
       });
       const data = await res.json();
@@ -3776,7 +3792,8 @@ export default function App() {
     currentUser?.role === "superadmin" ||
     currentUser?.role === "company_admin" ||
     currentUser?.companyId ||
-    currentUser?.paymentStatus === "paid"
+    currentUser?.paymentStatus === "paid" ||
+    isFutureIsoDate(currentUser?.favoritesAccessOverrideUntil)
   );
   const canManageUsers = Boolean(isSuperAdminUser || isCompanyAdminUser);
   const manageableAnnouncements = announcements.filter((ann) => {
@@ -6007,6 +6024,8 @@ export default function App() {
                       canSave={canSaveTournamentFavorites}
                       lockTime={temporaryFavoritesAccessDeadline}
                       temporaryAccessOpen={temporaryFavoritesAccessOpen}
+                      accessOverride={isFutureIsoDate(currentUser.favoritesAccessOverrideUntil)}
+                      accessOverrideUntil={currentUser.favoritesAccessOverrideUntil}
                       onSave={handleSaveTournamentPredictions}
                     />
                   ) : (
@@ -7743,6 +7762,23 @@ export default function App() {
                           </select>
                         </div>
 
+                        {isSuperAdminUser && (
+                          <div className="md:col-span-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-950">
+                            <label className="block">
+                              <span className="block font-black uppercase text-[10px] tracking-wide">Habilitar Favoritos por excepción hasta</span>
+                              <input
+                                type="datetime-local"
+                                className="mt-2 min-h-11 w-full max-w-sm rounded-lg border border-emerald-200 bg-white px-3 text-sm text-slate-900"
+                                value={toDateTimeLocalValue(editingUser.favoritesAccessOverrideUntil)}
+                                onChange={(e) => setEditingUser({ ...editingUser, favoritesAccessOverrideUntil: fromDateTimeLocalValue(e.target.value) })}
+                              />
+                            </label>
+                            <p className="mt-2 text-[11px] leading-relaxed">
+                              Permite que este usuario guarde o actualice Favoritos, Finalistas, Subcampeón y Campeón solo hasta esa fecha y hora. Deja el campo vacío para desactivar la excepción. No cambia su pago, rol ni ranking.
+                            </p>
+                          </div>
+                        )}
+
                         <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
                           <button
                             type="button"
@@ -7789,6 +7825,11 @@ export default function App() {
                                   }`}>
                                     {u.status === "active" ? "ACTIVA" : "SUSPENDIDA"}
                                   </span>
+                                  {isFutureIsoDate(u.favoritesAccessOverrideUntil) && (
+                                    <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-[9px] font-black">
+                                      FAVORITOS HASTA {new Date(u.favoritesAccessOverrideUntil!).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -7895,6 +7936,11 @@ export default function App() {
                                 <span className={`inline-flex px-2 py-1 rounded-full text-[9px] font-black whitespace-nowrap ${userType.tone}`}>
                                   {userType.label}
                                 </span>
+                                {isFutureIsoDate(u.favoritesAccessOverrideUntil) && (
+                                  <span className="mt-1 inline-flex px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-[9px] font-black whitespace-nowrap">
+                                    FAVORITOS HASTA {new Date(u.favoritesAccessOverrideUntil!).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-2.5 px-3 text-center font-black text-slate-950">{u.points}</td>
                               <td className="py-2.5 px-3">
