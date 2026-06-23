@@ -5,7 +5,7 @@
     "timezone": "Bogotá (UTC-5)",
     "allowPublicRegistration": true,
     "welcomeMessage": "¡Bienvenido a la Polla Mundialista FIFA 2026! Predice y demuestra tus dotes como estratega del fútbol.",
-    "rulesText": "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-1 y termina 2-1) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 1-1 y termina 1-1) → **35 PTS TOTALES**\n(20 pts por empate exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 1 hora antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**",
+    "rulesText": "🏆 CÓMO SE GANAN LOS PUNTOS – POLLA MUNDIALISTA FIFA 2026\n\n─── PARTIDOS ───────────────────────\n\n❌ No enviar marcador → **0 PTS**\n\n📝 Participar (sin acertar resultado ni marcador) → **5 PTS**\n\n✅ Acertar resultado 1X2\n(Local gana, empate o visitante gana, sin acertar marcador exacto) → **15 PTS TOTALES**\n(10 pts por resultado correcto + 5 pts por participación)\n\n⚽ Acertar marcador exacto con ganador\n(Ejemplo: pronosticas 2-0 y termina 2-0) → **25 PTS TOTALES**\n(10 pts por marcador exacto + 10 pts por resultado 1X2 + 5 pts por participación)\n\n🎯 Acertar marcador exacto en empate\n(Ejemplo: pronosticas 0-0 y termina 0-0) → **35 PTS TOTALES**\n(10 pts por bono de empate exacto + 10 pts por marcador exacto + 10 pts por acertar empate + 5 pts por participación)\n\n─── FAVORITOS REALES ─────────────────\n\n⚠️ Los favoritos deben enviarse mínimo 1 hora antes del primer partido del Mundial.\n\n🔵 Acertar favorito de grupo → **100 PTS**\n\n🟡 Acertar clasificado en ronda eliminatoria → **200 PTS**\n\n🟠 Acertar finalista → **300 PTS**\n\n🔴 Acertar subcampeón → **500 PTS**\n\n🏅 Acertar campeón del Mundial → **1.000 PTS**",
     "prizesText": "PREMIACIONES Y RECONOCIMIENTOS:\n- 1er Lugar: Camiseta Autografiada + Copa de Campeón de la Polla.\n- 2do Lugar: Balón Adidas Al Rihla Edición 2026.\n- 3er Lugar: Suscripción VIP de streaming deportivo.",
     "rulesImageUrl": "/uploads/reglas.png?v=20260530",
     "rulesImageUrlEn": "/src/assets/images/polla_rules_en_1780083217819.png",
@@ -25,13 +25,17 @@
       "role": "admin",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120",
-      "points": 0,
+      "points": 45,
       "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
+      "drawCount": 2,
+      "predictCount": 5,
       "historyPoints": [
         0,
-        0
+        15,
+        20,
+        25,
+        30,
+        45
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -49,13 +53,17 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
-      "points": 0,
-      "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
+      "points": 65,
+      "exactCount": 1,
+      "drawCount": 1,
+      "predictCount": 5,
       "historyPoints": [
         0,
-        0
+        5,
+        40,
+        45,
+        50,
+        65
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -73,13 +81,17 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
-      "points": 0,
+      "points": 55,
       "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
+      "drawCount": 3,
+      "predictCount": 5,
       "historyPoints": [
         0,
-        0
+        15,
+        20,
+        35,
+        40,
+        55
       ],
       "emailSubscribed": false,
       "groupPoints": 0,
@@ -97,13 +109,17 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120",
-      "points": 0,
+      "points": 65,
       "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
+      "drawCount": 4,
+      "predictCount": 5,
       "historyPoints": [
         0,
-        0
+        15,
+        30,
+        35,
+        50,
+        65
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -121,13 +137,17 @@
       "role": "standard",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120",
-      "points": 0,
+      "points": 65,
       "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
+      "drawCount": 4,
+      "predictCount": 5,
       "historyPoints": [
         0,
-        0
+        15,
+        30,
+        35,
+        50,
+        65
       ],
       "emailSubscribed": true,
       "groupPoints": 0,
@@ -148,7 +168,7 @@
       "stadium": "Ciudad de México",
       "status": "finished",
       "localScore": 2,
-      "visitorScore": 1
+      "visitorScore": 0
     },
     {
       "id": 2,
@@ -1291,8 +1311,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.149Z"
     },
     {
@@ -1301,8 +1321,8 @@
       "matchId": 2,
       "localScore": 2,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1311,8 +1331,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1321,8 +1341,8 @@
       "matchId": 4,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1331,8 +1351,8 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1341,8 +1361,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1351,8 +1371,8 @@
       "matchId": 2,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 35,
+      "reason": "exact",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1361,8 +1381,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1371,8 +1391,8 @@
       "matchId": 4,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1381,8 +1401,8 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1391,8 +1411,8 @@
       "matchId": 1,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1401,8 +1421,8 @@
       "matchId": 2,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1411,8 +1431,8 @@
       "matchId": 3,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1421,8 +1441,8 @@
       "matchId": 4,
       "localScore": 0,
       "visitorScore": 2,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1431,8 +1451,8 @@
       "matchId": 5,
       "localScore": 2,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1441,8 +1461,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1451,8 +1471,8 @@
       "matchId": 2,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1461,8 +1481,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1471,8 +1491,8 @@
       "matchId": 4,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1481,8 +1501,8 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1491,8 +1511,8 @@
       "matchId": 1,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1501,8 +1521,8 @@
       "matchId": 2,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1511,8 +1531,8 @@
       "matchId": 3,
       "localScore": 1,
       "visitorScore": 1,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 5,
+      "reason": "participation",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1521,8 +1541,8 @@
       "matchId": 4,
       "localScore": 0,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     },
     {
@@ -1531,61 +1551,27 @@
       "matchId": 5,
       "localScore": 1,
       "visitorScore": 0,
-      "pointsEarned": null,
-      "reason": null,
+      "pointsEarned": 15,
+      "reason": "draw",
       "dateCreated": "2026-05-29T17:46:51.150Z"
     }
   ],
   "rankings": [
     {
-      "userId": "user-admin",
-      "userName": "Admin Polla",
-      "userAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120",
-      "userCountry": "Colombia",
-      "points": 0,
-      "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
-      "position": 1,
-      "prevPosition": 1,
-      "shift": "equal",
-      "groupPoints": 0,
-      "knockoutPoints": 0,
-      "finalistPoints": 0,
-      "subchampionPoints": 0,
-      "championPoints": 0,
-      "totalBonusPoints": 0
-    },
-    {
       "userId": "player-1",
       "userName": "Luis Fernando Díaz",
       "userAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 0,
-      "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
-      "position": 2,
-      "prevPosition": 2,
-      "shift": "equal",
-      "groupPoints": 0,
-      "knockoutPoints": 0,
-      "finalistPoints": 0,
-      "subchampionPoints": 0,
-      "championPoints": 0,
-      "totalBonusPoints": 0
-    },
-    {
-      "userId": "player-2",
-      "userName": "James Rodríguez",
-      "userAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
-      "userCountry": "Colombia",
-      "points": 0,
-      "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
-      "position": 3,
-      "prevPosition": 3,
+      "points": 65,
+      "exactCount": 1,
+      "drawCount": 1,
+      "predictCount": 5,
+      "participationPoints": 25,
+      "outcomePoints": 20,
+      "exactScorePoints": 10,
+      "exactDrawBonusPoints": 10,
+      "position": 1,
+      "prevPosition": 1,
       "shift": "equal",
       "groupPoints": 0,
       "knockoutPoints": 0,
@@ -1599,12 +1585,16 @@
       "userName": "Linda Caicedo",
       "userAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 0,
+      "points": 65,
       "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
-      "position": 4,
-      "prevPosition": 4,
+      "drawCount": 4,
+      "predictCount": 5,
+      "participationPoints": 25,
+      "outcomePoints": 40,
+      "exactScorePoints": 0,
+      "exactDrawBonusPoints": 0,
+      "position": 2,
+      "prevPosition": 2,
       "shift": "equal",
       "groupPoints": 0,
       "knockoutPoints": 0,
@@ -1618,10 +1608,60 @@
       "userName": "Shakira Ripoll",
       "userAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120",
       "userCountry": "Colombia",
-      "points": 0,
+      "points": 65,
       "exactCount": 0,
-      "drawCount": 0,
-      "predictCount": 0,
+      "drawCount": 4,
+      "predictCount": 5,
+      "participationPoints": 25,
+      "outcomePoints": 40,
+      "exactScorePoints": 0,
+      "exactDrawBonusPoints": 0,
+      "position": 3,
+      "prevPosition": 3,
+      "shift": "equal",
+      "groupPoints": 0,
+      "knockoutPoints": 0,
+      "finalistPoints": 0,
+      "subchampionPoints": 0,
+      "championPoints": 0,
+      "totalBonusPoints": 0
+    },
+    {
+      "userId": "player-2",
+      "userName": "James Rodríguez",
+      "userAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
+      "userCountry": "Colombia",
+      "points": 55,
+      "exactCount": 0,
+      "drawCount": 3,
+      "predictCount": 5,
+      "participationPoints": 25,
+      "outcomePoints": 30,
+      "exactScorePoints": 0,
+      "exactDrawBonusPoints": 0,
+      "position": 4,
+      "prevPosition": 4,
+      "shift": "equal",
+      "groupPoints": 0,
+      "knockoutPoints": 0,
+      "finalistPoints": 0,
+      "subchampionPoints": 0,
+      "championPoints": 0,
+      "totalBonusPoints": 0
+    },
+    {
+      "userId": "user-admin",
+      "userName": "Admin Polla",
+      "userAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120",
+      "userCountry": "Colombia",
+      "points": 45,
+      "exactCount": 0,
+      "drawCount": 2,
+      "predictCount": 5,
+      "participationPoints": 25,
+      "outcomePoints": 20,
+      "exactScorePoints": 0,
+      "exactDrawBonusPoints": 0,
       "position": 5,
       "prevPosition": 5,
       "shift": "equal",

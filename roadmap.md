@@ -18,6 +18,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Modulo publico "Asi va el Mundial" con tablas oficiales de grupos A-L, resumen de partidos y goles, resultados recientes, proximos encuentros, partidos en vivo y goleadores cuando football-data.org los publica.
 - Tarjetas de "Asi va el Mundial" con acciones sutiles para compartir por Web Share, WhatsApp o descargar resumen de texto, sin escrituras en DB ni cambios de backend.
 - Fixture de eliminacion directa separado de los partidos reales de API.
+- Modulo publico "Llaves" para visualizar 16avos, octavos, cuartos, semifinales, tercer puesto y final usando el fixture oficial y los partidos/resultados ya sincronizados, sin escrituras en backend ni DB.
 - Pronosticos por marcador con guardar, actualizar y limpiar.
 - Cuenta regresiva dinámica por evento hasta el cierre de pronósticos.
 - Bloqueo backend/frontend para impedir pronosticos de usuarios sin pago confirmado.

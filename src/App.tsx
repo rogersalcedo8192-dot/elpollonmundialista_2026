@@ -46,6 +46,7 @@ import {
   CreditCard,
   Eraser,
   CircleHelp,
+  GitBranch,
   Menu,
   X
 } from "lucide-react";
@@ -55,6 +56,7 @@ import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 import { MatchResultsTicker } from "./components/MatchResultsTicker";
 import { WorldCupTrivia } from "./components/WorldCupTrivia";
 import { WorldCupOverviewView } from "./components/WorldCupOverviewView";
+import { KnockoutBracketView } from "./components/KnockoutBracketView";
 
 const createEmojiAvatar = (emoji: string, background: string) => {
   const svg = `
@@ -4561,6 +4563,7 @@ export default function App() {
               { key: "participate", label: "Partidos", icon: CreditCard },
               { key: "ranking", label: "PolloRanking", icon: Trophy },
               { key: "world-cup-overview", label: "Así va el Mundial", icon: Globe, isNew: true },
+              { key: "llaves", label: "Llaves", icon: GitBranch, isNew: true },
               { key: "trivia", label: "Trivia", icon: CircleHelp, isNew: true },
               { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
               { key: "rules-prizes", label: "Premios", icon: Info },
@@ -4956,6 +4959,18 @@ export default function App() {
                   >
                     <Globe className="w-4 h-4 shrink-0" />
                     <span>Así va el Mundial</span>
+                    <span className="ml-auto shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-amber-950">
+                      NUEVO
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateToMenuItem("llaves")}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "llaves" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <GitBranch className="w-4 h-4 shrink-0" />
+                    <span>Llaves</span>
                     <span className="ml-auto shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-amber-950">
                       NUEVO
                     </span>
@@ -6982,6 +6997,10 @@ export default function App() {
 
               {activeTab === "world-cup-overview" && (
                 <WorldCupOverviewView getTeamFlag={getTeamFlag} />
+              )}
+
+              {activeTab === "llaves" && (
+                <KnockoutBracketView getTeamFlag={getTeamFlag} />
               )}
 
               {/* 4. MÓDULO USER: PRONÓSTICOS PÚBLICOS */}
