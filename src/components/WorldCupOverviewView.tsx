@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BarChart3, Calendar, ChevronDown, ChevronUp, RefreshCw, Search, Target, Trophy } from "lucide-react";
+import { BarChart3, Calendar, ChevronDown, ChevronUp, Download, MessageCircle, RefreshCw, Search, Share2, Target, Trophy } from "lucide-react";
 import { Match, WorldCupOverview } from "../types";
 
 interface Props {
@@ -7,6 +7,8 @@ interface Props {
 }
 
 type MatchPhaseOption = { key: string; label: string; detail: string; sortOrder: number };
+type WorldCupGroup = WorldCupOverview["groups"][number];
+type WorldCupScorer = WorldCupOverview["scorers"][number];
 
 const STAGES = [
   "Todos", "Eliminatorias",
@@ -46,6 +48,104 @@ const getStatusLabel = (status: Match["status"]) => {
   if (status === "finished") return "Finalizado";
   if (status === "in_progress") return "En vivo";
   return "Próximo";
+};
+
+const getAppShareUrl = () => (typeof window === "undefined" ? "https://www.elpollonmundialista.com" : window.location.origin);
+
+const sanitizeFilename = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "asi-va-el-mundial";
+
+const formatMatchShareLine = (match: Match) => {
+  const score = match.status === "finished" ? ` ${match.localScore ?? 0}-${match.visitorScore ?? 0}` : "";
+  return `${match.local}${score} vs ${match.visitor} - ${match.stage} - ${formatBogotaDate(match.date)}`;
+};
+
+const buildMatchesShareText = (title: string, matches: Match[]) => [
+  `El Pollon Mundialista - ${title}`,
+  "",
+  ...(matches.length ? matches.slice(0, 8).map((match, index) => `${index + 1}. ${formatMatchShareLine(match)}`) : ["Aun no hay partidos publicados."]),
+  "",
+  `Ver mas: ${getAppShareUrl()}`
+].join("\n");
+
+const buildGroupShareText = (group: WorldCupGroup) => [
+  `El Pollon Mundialista - Tabla de posiciones Grupo ${group.group}`,
+  "",
+  ...group.table.map((row) => `${row.position}. ${row.team} - ${row.points} pts | PJ ${row.playedGames} | DG ${row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}`),
+  "",
+  `Ver mas: ${getAppShareUrl()}`
+].join("\n");
+
+const buildScorersShareText = (scorers: WorldCupScorer[]) => [
+  "El Pollon Mundialista - Tabla de goleadores",
+  "",
+  ...(scorers.length ? scorers.slice(0, 10).map((scorer) => `${scorer.position}. ${scorer.player} (${scorer.team}) - ${scorer.goals} goles`) : ["La API todavia no publico goleadores del Mundial 2026."]),
+  "",
+  `Ver mas: ${getAppShareUrl()}`
+].join("\n");
+
+const downloadShareText = (title: string, text: string) => {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = globalThis.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${sanitizeFilename(title)}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  globalThis.URL.revokeObjectURL(url);
+};
+
+const shareOverviewText = async (title: string, text: string, channel: "native" | "whatsapp" | "download") => {
+  if (channel === "download") {
+    downloadShareText(title, text);
+    return;
+  }
+
+  if (channel === "whatsapp") {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (navigator.share) {
+    await navigator.share({ title, text, url: getAppShareUrl() });
+    return;
+  }
+
+  await navigator.clipboard?.writeText(text);
+};
+
+const ShareActionButtons = ({ title, text }: { title: string; text: string }) => {
+  const actions = [
+    { channel: "native" as const, label: "Compartir", icon: Share2 },
+    { channel: "whatsapp" as const, label: "WhatsApp", icon: MessageCircle },
+    { channel: "download" as const, label: "Descargar", icon: Download }
+  ];
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {actions.map(({ channel, label, icon: Icon }) => (
+        <button
+          key={channel}
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            void shareOverviewText(title, text, channel);
+          }}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/85 shadow-sm shadow-slate-950/10 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
+          aria-label={label}
+          title={label}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </button>
+      ))}
+    </div>
+  );
 };
 
 const MatchRow = ({ match, getTeamFlag }: { key?: React.Key; match: Match; getTeamFlag: Props["getTeamFlag"] }) => (
@@ -354,7 +454,10 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
 
       {data.liveMatches.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-rose-200 bg-white dark:border-rose-900 dark:bg-slate-900">
-          <h3 className="bg-rose-500 px-4 py-3 text-xs font-black uppercase text-white">Partidos en vivo</h3>
+          <div className="flex items-center justify-between gap-3 bg-rose-500 px-4 py-2.5">
+            <h3 className="text-xs font-black uppercase text-white">Partidos en vivo</h3>
+            <ShareActionButtons title="Partidos en vivo" text={buildMatchesShareText("Partidos en vivo", data.liveMatches)} />
+          </div>
           {data.liveMatches.map((match) => <MatchRow key={match.id} match={match} getTeamFlag={getTeamFlag} />)}
         </section>
       )}
@@ -368,7 +471,10 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
             {data.groups.map((group) => (
               <div key={group.group} className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                 <div className="min-w-[520px]">
-                  <h4 className="bg-slate-950 px-4 py-2.5 text-xs font-black uppercase text-white">Grupo {group.group}</h4>
+                  <div className="flex items-center justify-between gap-3 bg-slate-950 px-4 py-2.5">
+                    <h4 className="text-xs font-black uppercase text-white">Grupo {group.group}</h4>
+                    <ShareActionButtons title={`Tabla Grupo ${group.group}`} text={buildGroupShareText(group)} />
+                  </div>
                   <table className="w-full text-[10px]">
                   <thead className="bg-slate-50 font-black uppercase text-slate-400 dark:bg-slate-800/60">
                     <tr>
@@ -404,17 +510,26 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="bg-slate-950 px-4 py-3 text-xs font-black uppercase text-white">Últimos resultados</h3>
+          <div className="flex items-center justify-between gap-3 bg-slate-950 px-4 py-2.5">
+            <h3 className="text-xs font-black uppercase text-white">Últimos resultados</h3>
+            <ShareActionButtons title="Ultimos resultados" text={buildMatchesShareText("Ultimos resultados", data.recentResults)} />
+          </div>
           {data.recentResults.length ? data.recentResults.map((match) => <MatchRow key={match.id} match={match} getTeamFlag={getTeamFlag} />) : <p className="p-6 text-center text-xs text-slate-500">Aún no hay resultados.</p>}
         </section>
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="bg-emerald-700 px-4 py-3 text-xs font-black uppercase text-white">Próximos partidos</h3>
+          <div className="flex items-center justify-between gap-3 bg-emerald-700 px-4 py-2.5">
+            <h3 className="text-xs font-black uppercase text-white">Próximos partidos</h3>
+            <ShareActionButtons title="Proximos partidos" text={buildMatchesShareText("Proximos partidos", data.upcomingMatches)} />
+          </div>
           {data.upcomingMatches.length ? data.upcomingMatches.map((match) => <MatchRow key={match.id} match={match} getTeamFlag={getTeamFlag} />) : <p className="p-6 text-center text-xs text-slate-500">No hay próximos partidos publicados.</p>}
         </section>
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="bg-amber-500 px-4 py-3 text-xs font-black uppercase text-amber-950">Goleadores</h3>
+        <div className="flex items-center justify-between gap-3 bg-amber-500 px-4 py-2.5">
+          <h3 className="text-xs font-black uppercase text-amber-950">Goleadores</h3>
+          <ShareActionButtons title="Tabla de goleadores" text={buildScorersShareText(data.scorers)} />
+        </div>
         {data.scorers.length === 0 ? (
           <p className="p-6 text-center text-xs text-slate-500">La API todavía no publicó la tabla de goleadores del Mundial 2026.</p>
         ) : (
