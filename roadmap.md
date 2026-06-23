@@ -230,6 +230,7 @@ Objetivo: convertir las notificaciones internas en recordatorios utiles.
 - Esperar y verificar cada envio automatico por partido; reintentar fallos del proveedor sin duplicar la alerta interna.
 - Evaluar WhatsApp solo si hay presupuesto/API adecuada.
 - Preparar plantillas de email en espanol e ingles.
+- PENDIENTE: agregar enlace seguro para desuscribirse en correos no criticos como ranking, recordatorios, resultados y comunicados; no aplicarlo a recuperacion de cuenta, pagos, seguridad ni premios.
 - Evitar notificaciones duplicadas con llaves de envio.
 - Agregar preferencias por usuario.
 
