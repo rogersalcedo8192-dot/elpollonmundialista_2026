@@ -34,16 +34,29 @@ type StageTheme = {
 type BracketSide = "left" | "right";
 type GroupSummary = {
   group: string;
-  first: string;
-  second: string;
-  third: string;
+  teams: string[];
 };
 
 const worldCupLogo = new URL("../../assets/assets/logo_polla_mundialista.PNG", import.meta.url).href;
-const BRACKET_DESIGN_WIDTH = 1280;
+const BRACKET_DESIGN_WIDTH = 1200;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 1;
 const ZOOM_STEP = 0.1;
+
+const GROUPS_TEAMS: Record<string, string[]> = {
+  "Grupo A": ["México", "Sudáfrica", "Rep. de Corea", "Rep. Checa"],
+  "Grupo B": ["Canadá", "Bosnia y Herzegovina", "Catar", "Suiza"],
+  "Grupo C": ["Brasil", "Marruecos", "Haití", "Escocia"],
+  "Grupo D": ["Estados Unidos", "Paraguay", "Australia", "Turquía"],
+  "Grupo E": ["Alemania", "Curazao", "Costa de Marfil", "Ecuador"],
+  "Grupo F": ["Países Bajos", "Japón", "Suecia", "Túnez"],
+  "Grupo G": ["Bélgica", "Egipto", "RI de Irán", "Nueva Zelanda"],
+  "Grupo H": ["España", "Cabo Verde", "Arabia Saudí", "Uruguay"],
+  "Grupo I": ["Francia", "Senegal", "Irak", "Noruega"],
+  "Grupo J": ["Argentina", "Argelia", "Austria", "Jordania"],
+  "Grupo K": ["Portugal", "RD Congo", "Uzbekistán", "Colombia"],
+  "Grupo L": ["Inglaterra", "Croacia", "Ghana", "Panamá"]
+};
 
 const STAGE_ORDER: KnockoutFixture["stage"][] = [
   "16avos de Final",
@@ -232,11 +245,11 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
 const buildGroupSummaries = (overview: WorldCupOverview | null, groups: string[]): GroupSummary[] =>
   groups.map((group) => {
     const table = overview?.groups.find((item) => item.group === group)?.table || [];
+    const apiTeams = table.map((row) => row.team).filter(Boolean);
+    const fallbackTeams = GROUPS_TEAMS[`Grupo ${group}`] || [];
     return {
       group,
-      first: table[0]?.team || `1.º Grupo ${group}`,
-      second: table[1]?.team || `2.º Grupo ${group}`,
-      third: table[2]?.team || `Mejor tercero ${group}`
+      teams: (apiTeams.length >= 4 ? apiTeams : fallbackTeams).slice(0, 4)
     };
   });
 
@@ -333,27 +346,17 @@ const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketM
 };
 
 const GroupPanel = ({ group, side, getTeamFlag }: { group: GroupSummary; side: BracketSide; getTeamFlag: Props["getTeamFlag"] }) => {
-  const rows = [
-    { label: "1.º clasificado", team: group.first },
-    { label: "2.º clasificado", team: group.second },
-    { label: "Mejor tercero", team: group.third }
-  ];
-
   return (
     <article className={`relative rounded-lg border-2 bg-black p-1.5 ${side === "left" ? "border-lime-300" : "border-sky-300"}`}>
-      <div className={`absolute top-3 ${side === "left" ? "-right-5" : "-left-5"} h-px w-5 ${side === "left" ? "bg-lime-300" : "bg-sky-300"}`} aria-hidden="true" />
+      <div className={`absolute top-1/2 ${side === "left" ? "-right-3" : "-left-3"} h-px w-3 -translate-y-1/2 ${side === "left" ? "bg-lime-300" : "bg-sky-300"}`} aria-hidden="true" />
       <div className={`mb-1.5 flex items-center justify-between rounded-md px-2 py-1 text-[10px] font-black uppercase ${side === "left" ? "bg-lime-300 text-slate-950" : "bg-sky-300 text-slate-950"}`}>
         <span>Grupo {group.group}</span>
         <span>{group.group}</span>
       </div>
-      <div className="grid grid-cols-3 gap-1">
-        {rows.map((row) => (
-          <div key={row.label} className="min-h-11 rounded-md border border-white/10 bg-white/[0.04] px-1 py-1 text-center" title={`${row.label}: ${row.team}`}>
-            <p className="text-[7px] font-black uppercase text-white/35">{row.label.replace(" clasificado", "")}</p>
-            <div className="mt-0.5 flex min-w-0 flex-col items-center justify-center">
-              {hasRealTeam(row.team) ? <span className="text-sm leading-none">{getTeamFlag(row.team)}</span> : null}
-              <span className="max-w-full truncate text-[9px] font-black uppercase text-white">{compactLabel(row.team)}</span>
-            </div>
+      <div className="grid grid-cols-2 gap-1">
+        {group.teams.map((team) => (
+          <div key={team} className="flex h-8 items-center justify-center rounded-md border border-white/10 bg-white/[0.04]" title={team} aria-label={team}>
+            <span className="text-lg leading-none">{getTeamFlag(team)}</span>
           </div>
         ))}
       </div>
@@ -368,8 +371,8 @@ const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: {
   const hasScore = match.realMatch?.localScore !== null && match.realMatch?.visitorScore !== null;
   return (
     <div className="relative">
-      <div className={`absolute top-1/2 h-px w-4 -translate-y-1/2 ${theme.panel} ${side === "left" ? "-left-4" : "-right-4"}`} aria-hidden="true" />
-      <div className={`absolute top-1/2 h-px w-4 -translate-y-1/2 ${theme.panel} ${side === "left" ? "-right-4" : "-left-4"}`} aria-hidden="true" />
+      <div className={`absolute top-1/2 h-px w-2 -translate-y-1/2 opacity-80 ${theme.panel} ${side === "left" ? "-left-2" : "-right-2"}`} aria-hidden="true" />
+      <div className={`absolute top-1/2 h-px w-2 -translate-y-1/2 opacity-80 ${theme.panel} ${side === "left" ? "-right-2" : "-left-2"}`} aria-hidden="true" />
       <article
         className={`rounded-lg border-2 bg-black px-2 py-1.5 shadow-lg ${theme.border} ${theme.glow}`}
         title={`Partido ${match.id}: ${local.label} vs ${visitor.label}${match.realMatch ? ` - ${getStatusLabel(match.realMatch)}` : ""}`}
@@ -387,7 +390,7 @@ const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: {
           </div>
         ))}
       </article>
-      {!compact && <div className={`absolute bottom-[-0.65rem] top-[calc(50%+0.25rem)] w-px ${theme.panel} ${side === "left" ? "right-[-1rem]" : "left-[-1rem]"}`} aria-hidden="true" />}
+      {!compact && <div className={`absolute bottom-[-0.45rem] top-[calc(50%+0.3rem)] w-px opacity-60 ${theme.panel} ${side === "left" ? "right-[-0.5rem]" : "left-[-0.5rem]"}`} aria-hidden="true" />}
     </div>
   );
 };
@@ -596,7 +599,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
         <>
           <div ref={bracketViewportRef} className="overflow-x-auto pb-4">
             <div
-              className="grid min-w-[1280px] grid-cols-[135px_repeat(4,105px)_210px_repeat(4,105px)_135px] items-center gap-3 transition-transform duration-200 ease-out"
+              className="grid min-w-[1200px] grid-cols-[112px_repeat(4,102px)_208px_repeat(4,102px)_112px] items-center gap-3 transition-transform duration-200 ease-out"
               style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
             >
               <section className="space-y-2">
