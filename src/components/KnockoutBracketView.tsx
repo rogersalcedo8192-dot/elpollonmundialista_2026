@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { GitBranch, RefreshCw, ShieldCheck, Trophy } from "lucide-react";
+import { GitBranch, RefreshCw, RotateCcw, ShieldCheck, Trophy } from "lucide-react";
 import type { KnockoutFixture, Match } from "../types";
 
 interface Props {
@@ -68,6 +68,10 @@ const formatBogotaDate = (date: string) => {
     minute: "2-digit"
   }).format(parsed);
 };
+
+const isMobilePortraitViewport = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches;
 
 const parseSourceSlot = (slot: string) => {
   const normalized = normalizeText(slot);
@@ -210,6 +214,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isPortraitMobile, setIsPortraitMobile] = useState(isMobilePortraitViewport);
 
   const loadBracket = async () => {
     setLoading(true);
@@ -237,10 +242,23 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   };
 
   useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px) and (orientation: portrait)");
+    const updateOrientationGate = () => setIsPortraitMobile(query.matches);
+    updateOrientationGate();
+    query.addEventListener("change", updateOrientationGate);
+    return () => query.removeEventListener("change", updateOrientationGate);
+  }, []);
+
+  useEffect(() => {
+    if (isPortraitMobile) {
+      setLoading(false);
+      return;
+    }
+
     void loadBracket();
     const timer = window.setInterval(() => void loadBracket(), 60_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [isPortraitMobile]);
 
   const matchesById = useMemo(() => new Map(matches.map((match) => [match.id, match])), [matches]);
   const bracketMatches = useMemo(() => buildBracketMatches(fixtures, matches), [fixtures, matches]);
@@ -257,6 +275,30 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   const thirdPlaceMatch = bracketMatches.find((match) => match.stage === "Tercer Puesto");
   const confirmedMatches = bracketMatches.filter((match) => match.realMatch && hasRealTeam(match.realMatch.local) && hasRealTeam(match.realMatch.visitor)).length;
   const finishedMatches = bracketMatches.filter((match) => match.realMatch?.status === "finished").length;
+
+  if (isPortraitMobile) {
+    return (
+      <section className="min-h-[62vh] overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-xl dark:border-slate-800">
+        <div className="flex min-h-[62vh] flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.24),transparent_36%),linear-gradient(135deg,#020617,#0f172a_62%,#064e3b)] px-6 py-10 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-white/15 bg-white/10 shadow-2xl shadow-slate-950/30">
+            <RotateCcw className="h-10 w-10 text-emerald-200" />
+          </div>
+          <div className="max-w-xs">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200">LLAVES</p>
+            <h2 className="mt-2 text-3xl font-black leading-tight">Gira tu celular</h2>
+            <p className="mt-3 text-sm font-semibold leading-6 text-slate-200">
+              Para ver las llaves completas del Mundial, usa este modulo con la pantalla en horizontal.
+            </p>
+          </div>
+          <div className="grid w-full max-w-xs grid-cols-3 items-center gap-2 text-[9px] font-black uppercase text-slate-300">
+            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-2">16avos</span>
+            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-2">Cuartos</span>
+            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-2">Final</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-5">
