@@ -36,6 +36,13 @@ type GroupSummary = {
   group: string;
   teams: string[];
 };
+type GroupTheme = {
+  border: string;
+  connector: string;
+  header: string;
+  title: string;
+  badge: string;
+};
 
 const worldCupLogo = new URL("../../assets/assets/logo_polla_mundialista.PNG", import.meta.url).href;
 const BRACKET_DESIGN_WIDTH = 1200;
@@ -118,6 +125,14 @@ const STAGE_THEMES: Record<KnockoutFixture["stage"], StageTheme> = {
     text: "text-rose-200",
     glow: "shadow-rose-500/20"
   }
+};
+
+const GROUP_THEME: GroupTheme = {
+  border: "border-yellow-300",
+  connector: "bg-yellow-300",
+  header: "bg-yellow-300 text-slate-950",
+  title: "text-yellow-200",
+  badge: "bg-black/70 text-yellow-100 ring-1 ring-yellow-300/40"
 };
 
 const normalizeText = (value: string) =>
@@ -297,6 +312,13 @@ const compactLabel = (value: string) => {
   return normalized.split(/\s+/).map((part) => part[0]).join("").slice(0, 4).toUpperCase();
 };
 
+const getTeamBadgeLabel = (team: string) => {
+  const normalized = normalizeText(team).trim();
+  if (!normalized) return "";
+  const firstWord = normalized.split(/\s+/)[0] || normalized;
+  return firstWord.slice(0, 8).toUpperCase();
+};
+
 const TeamSlot = ({ slot, matchesById, getTeamFlag, theme }: { slot: BracketSlot; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
   const resolved = getSlotLabel(slot, matchesById);
   return (
@@ -347,16 +369,19 @@ const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketM
 
 const GroupPanel = ({ group, side, getTeamFlag }: { group: GroupSummary; side: BracketSide; getTeamFlag: Props["getTeamFlag"] }) => {
   return (
-    <article className={`relative rounded-lg border-2 bg-black p-1.5 ${side === "left" ? "border-lime-300" : "border-sky-300"}`}>
-      <div className={`absolute top-1/2 ${side === "left" ? "-right-3" : "-left-3"} h-px w-3 -translate-y-1/2 ${side === "left" ? "bg-lime-300" : "bg-sky-300"}`} aria-hidden="true" />
-      <div className={`mb-1.5 flex items-center justify-between rounded-md px-2 py-1 text-[10px] font-black uppercase ${side === "left" ? "bg-lime-300 text-slate-950" : "bg-sky-300 text-slate-950"}`}>
+    <article className={`relative rounded-lg border-2 bg-black p-1.5 ${GROUP_THEME.border}`}>
+      <div className={`absolute top-1/2 ${side === "left" ? "-right-3" : "-left-3"} h-px w-3 -translate-y-1/2 ${GROUP_THEME.connector}`} aria-hidden="true" />
+      <div className={`mb-1.5 flex items-center justify-between rounded-md px-2 py-1 text-[10px] font-black uppercase ${GROUP_THEME.header}`}>
         <span>Grupo {group.group}</span>
-        <span>{group.group}</span>
+        <span>{group.teams.length} equipos</span>
       </div>
       <div className="grid grid-cols-2 gap-1">
         {group.teams.map((team) => (
-          <div key={team} className="flex h-8 items-center justify-center rounded-md border border-white/10 bg-white/[0.04]" title={team} aria-label={team}>
+          <div key={team} className="relative flex h-10 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/[0.04]" title={team} aria-label={team}>
             <span className="text-lg leading-none">{getTeamFlag(team)}</span>
+            <span className={`absolute inset-x-0 bottom-0 truncate px-0.5 py-0.5 text-center text-[7px] font-black uppercase leading-none ${GROUP_THEME.badge}`}>
+              {getTeamBadgeLabel(team)}
+            </span>
           </div>
         ))}
       </div>
@@ -603,7 +628,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
               style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
             >
               <section className="space-y-2">
-                <p className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">Grupos A-F</p>
+                <p className={`text-center text-[10px] font-black uppercase tracking-[0.22em] ${GROUP_THEME.title}`}>Grupos A-F</p>
                 {leftGroups.map((group) => (
                   <React.Fragment key={group.group}>
                     <GroupPanel group={group} side="left" getTeamFlag={getTeamFlag} />
@@ -667,7 +692,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
               })}
 
               <section className="space-y-2">
-                <p className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Grupos G-L</p>
+                <p className={`text-center text-[10px] font-black uppercase tracking-[0.22em] ${GROUP_THEME.title}`}>Grupos G-L</p>
                 {rightGroups.map((group) => (
                   <React.Fragment key={group.group}>
                     <GroupPanel group={group} side="right" getTeamFlag={getTeamFlag} />
