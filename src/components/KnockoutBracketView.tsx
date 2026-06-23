@@ -23,6 +23,14 @@ type BracketMatch = {
   realMatch?: Match;
 };
 
+type StageTheme = {
+  panel: string;
+  header: string;
+  border: string;
+  text: string;
+  glow: string;
+};
+
 const STAGE_ORDER: KnockoutFixture["stage"][] = [
   "16avos de Final",
   "Octavos de Final",
@@ -38,6 +46,51 @@ const STAGE_META: Record<KnockoutFixture["stage"], { title: string; short: strin
   "Semifinal": { title: "Semifinales", short: "4 equipos", count: "2 cruces" },
   "Tercer Puesto": { title: "Tercer puesto", short: "2 equipos", count: "1 cruce" },
   "Final": { title: "Gran final", short: "2 equipos", count: "1 cruce" }
+};
+
+const STAGE_THEMES: Record<KnockoutFixture["stage"], StageTheme> = {
+  "16avos de Final": {
+    panel: "bg-lime-400",
+    header: "bg-lime-300 text-slate-950",
+    border: "border-lime-300",
+    text: "text-lime-200",
+    glow: "shadow-lime-500/20"
+  },
+  "Octavos de Final": {
+    panel: "bg-sky-400",
+    header: "bg-sky-300 text-slate-950",
+    border: "border-sky-300",
+    text: "text-sky-200",
+    glow: "shadow-sky-500/20"
+  },
+  "Cuartos de Final": {
+    panel: "bg-fuchsia-500",
+    header: "bg-fuchsia-400 text-white",
+    border: "border-fuchsia-400",
+    text: "text-fuchsia-200",
+    glow: "shadow-fuchsia-500/20"
+  },
+  "Semifinal": {
+    panel: "bg-orange-500",
+    header: "bg-orange-400 text-slate-950",
+    border: "border-orange-400",
+    text: "text-orange-200",
+    glow: "shadow-orange-500/20"
+  },
+  "Tercer Puesto": {
+    panel: "bg-cyan-400",
+    header: "bg-cyan-300 text-slate-950",
+    border: "border-cyan-300",
+    text: "text-cyan-200",
+    glow: "shadow-cyan-500/20"
+  },
+  "Final": {
+    panel: "bg-rose-500",
+    header: "bg-rose-400 text-white",
+    border: "border-rose-400",
+    text: "text-rose-200",
+    glow: "shadow-rose-500/20"
+  }
 };
 
 const normalizeText = (value: string) =>
@@ -162,49 +215,50 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
   });
 };
 
-const TeamSlot = ({ slot, matchesById, getTeamFlag }: { slot: BracketSlot; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"] }) => {
+const TeamSlot = ({ slot, matchesById, getTeamFlag, theme }: { slot: BracketSlot; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
   const resolved = getSlotLabel(slot, matchesById);
   return (
-    <div className={`min-h-12 rounded-lg border px-3 py-2 ${resolved.confirmed ? "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100" : "border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"}`}>
+    <div className={`min-h-10 rounded-md border bg-black px-2.5 py-1.5 text-white ${resolved.confirmed ? theme.border : "border-white/15"}`}>
       <div className="flex min-w-0 items-center gap-2">
-        {resolved.confirmed && slot.source !== "slot" ? <span className="shrink-0">{getTeamFlag(resolved.label)}</span> : <GitBranch className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-        <span className="min-w-0 truncate text-xs font-black">{resolved.label}</span>
+        {resolved.confirmed && slot.source !== "slot" ? <span className="shrink-0 text-base leading-none">{getTeamFlag(resolved.label)}</span> : <GitBranch className={`h-3.5 w-3.5 shrink-0 ${theme.text}`} />}
+        <span className="min-w-0 truncate text-[11px] font-black uppercase">{resolved.label}</span>
       </div>
-      <p className="mt-0.5 truncate text-[9px] font-bold uppercase text-slate-400">{resolved.detail}</p>
+      <p className={`mt-0.5 truncate text-[8px] font-black uppercase ${resolved.confirmed ? theme.text : "text-white/35"}`}>{resolved.detail}</p>
     </div>
   );
 };
 
-const MatchCard = ({ match, matchesById, getTeamFlag }: { match: BracketMatch; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"] }) => {
+const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketMatch; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
   const scoreReady = match.realMatch?.localScore !== null && match.realMatch?.visitorScore !== null;
   const playedDate = match.realMatch ? formatBogotaDate(match.realMatch.date) : "";
 
   return (
-    <article className="relative rounded-xl border border-slate-200 bg-slate-50/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-      <div className="mb-2 flex items-start justify-between gap-2">
+    <article className={`relative overflow-hidden rounded-xl border-2 bg-black p-2.5 shadow-xl ${theme.border} ${theme.glow}`}>
+      <div className={`absolute bottom-0 right-0 top-0 w-2 ${theme.panel}`} aria-hidden="true" />
+      <div className="mb-2 flex items-start justify-between gap-2 pr-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Partido {match.id}</p>
-          <p className="truncate text-[11px] font-bold text-slate-600 dark:text-slate-300">{playedDate || match.dateLabel}</p>
+          <p className={`text-[9px] font-black uppercase tracking-wide ${theme.text}`}>Partido {match.id}</p>
+          <p className="truncate text-[10px] font-bold text-white/55">{playedDate || match.dateLabel}</p>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black uppercase ${match.realMatch?.status === "finished" ? "bg-emerald-500 text-white" : match.realMatch?.status === "in_progress" ? "bg-rose-500 text-white" : "bg-white text-slate-500 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800"}`}>
+        <span className={`shrink-0 rounded-full px-2 py-1 text-[8px] font-black uppercase ${match.realMatch?.status === "finished" ? "bg-emerald-400 text-slate-950" : match.realMatch?.status === "in_progress" ? "bg-rose-500 text-white" : "bg-white/10 text-white/70 ring-1 ring-white/10"}`}>
           {getStatusLabel(match.realMatch)}
         </span>
       </div>
 
-      <div className="space-y-2">
-        <TeamSlot slot={match.local} matchesById={matchesById} getTeamFlag={getTeamFlag} />
+      <div className="space-y-1.5 pr-2">
+        <TeamSlot slot={match.local} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={theme} />
         <div className="flex items-center justify-between gap-2 px-1">
-          <span className="text-[9px] font-black uppercase text-slate-400">vs</span>
+          <span className="text-[8px] font-black uppercase text-white/35">vs</span>
           {scoreReady && (
-            <span className="rounded-full bg-slate-950 px-2 py-1 text-xs font-black tabular-nums text-white dark:bg-white dark:text-slate-950">
+            <span className={`rounded-full px-2 py-1 text-xs font-black tabular-nums ${theme.header}`}>
               {match.realMatch?.localScore} - {match.realMatch?.visitorScore}
             </span>
           )}
         </div>
-        <TeamSlot slot={match.visitor} matchesById={matchesById} getTeamFlag={getTeamFlag} />
+        <TeamSlot slot={match.visitor} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={theme} />
       </div>
 
-      <p className="mt-2 truncate text-[10px] font-semibold text-slate-400">{match.stadium}</p>
+      <p className="mt-2 truncate pr-2 text-[9px] font-semibold text-white/35">{match.stadium}</p>
     </article>
   );
 };
@@ -278,13 +332,13 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
 
   if (isPortraitMobile) {
     return (
-      <section className="min-h-[62vh] overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-xl dark:border-slate-800">
-        <div className="flex min-h-[62vh] flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.24),transparent_36%),linear-gradient(135deg,#020617,#0f172a_62%,#064e3b)] px-6 py-10 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-white/15 bg-white/10 shadow-2xl shadow-slate-950/30">
-            <RotateCcw className="h-10 w-10 text-emerald-200" />
+      <section className="min-h-[62vh] overflow-hidden rounded-2xl border border-white/10 bg-black text-white shadow-xl">
+        <div className="flex min-h-[62vh] flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_center,rgba(190,242,100,0.20),transparent_34%),linear-gradient(135deg,#020617,#050816_54%,#0f172a)] px-6 py-10 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-lime-300 bg-black shadow-2xl shadow-lime-500/20">
+            <RotateCcw className="h-10 w-10 text-lime-200" />
           </div>
           <div className="max-w-xs">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200">LLAVES</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-lime-200">WORLD CUP 2026</p>
             <h2 className="mt-2 text-3xl font-black leading-tight">Gira tu celular</h2>
             <p className="mt-3 text-sm font-semibold leading-6 text-slate-200">
               Para ver las llaves completas del Mundial, usa este modulo con la pantalla en horizontal.
@@ -301,58 +355,65 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   }
 
   return (
-    <section className="space-y-5">
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-xl dark:border-slate-800">
-        <div className="bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.28),transparent_34%),linear-gradient(135deg,#020617,#0f172a_58%,#064e3b)] px-4 py-5 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-100">
-                <GitBranch className="h-3.5 w-3.5" />
-                LLAVES
-              </div>
-              <h2 className="text-2xl font-black sm:text-3xl">Camino a la gran final</h2>
-              <p className="mt-2 text-sm font-medium leading-6 text-slate-200">
-                Cruces oficiales del Mundial 2026 con equipos confirmados por los partidos reales cuando la API ya los publica. Los espacios pendientes quedan como slot FIFA para entender que viene despues.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void loadBracket()}
-              disabled={loading}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-slate-950 shadow-lg shadow-slate-950/20 transition hover:bg-emerald-50 disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Actualizar
-            </button>
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-black text-white shadow-2xl">
+      <div className="relative bg-[radial-gradient(circle_at_center,rgba(253,224,71,0.18),transparent_22%),radial-gradient(circle_at_18%_20%,rgba(190,242,100,0.18),transparent_20%),radial-gradient(circle_at_82%_28%,rgba(244,114,182,0.16),transparent_22%),linear-gradient(135deg,#020617,#050816_50%,#0f172a)] px-4 py-6 sm:px-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime-300 to-transparent" />
+        <div className="mb-6 text-center">
+          <p className="text-[11px] font-black uppercase tracking-[0.34em] text-lime-200">FIFA WORLD CUP 2026</p>
+          <h2 className="mt-1 text-4xl font-black uppercase leading-none text-white sm:text-5xl">Llaves</h2>
+          <div className="mx-auto mt-3 inline-flex rounded-full bg-lime-300 px-5 py-1.5 text-xs font-black uppercase tracking-wide text-slate-950">
+            Knockout stage
           </div>
+          <p className="mx-auto mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-200">
+            Cruces oficiales con equipos confirmados por API cuando ya existen. Los espacios pendientes quedan como slot FIFA para entender el camino.
+          </p>
+        </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-[10px] font-black uppercase text-emerald-100">Cruces confirmados</p>
-              <p className="mt-1 text-2xl font-black">{confirmedMatches}<span className="text-sm text-slate-300"> / {bracketMatches.length || 31}</span></p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-[10px] font-black uppercase text-emerald-100">Partidos cerrados</p>
-              <p className="mt-1 text-2xl font-black">{finishedMatches}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-[10px] font-black uppercase text-emerald-100">Fuente visual</p>
-              <p className="mt-1 flex items-center gap-2 text-sm font-black"><ShieldCheck className="h-4 w-4" /> Fixture + API</p>
-            </div>
+        <div className="mb-5 flex flex-wrap items-center justify-center gap-2">
+          {STAGE_ORDER.map((stage) => {
+            const theme = STAGE_THEMES[stage];
+            return (
+              <span key={stage} className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${theme.header}`}>
+                {STAGE_META[stage].title}
+              </span>
+            );
+          })}
+        </div>
+
+        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-black/60 px-4 py-3">
+            <p className="text-[10px] font-black uppercase text-lime-200">Cruces confirmados</p>
+            <p className="mt-1 text-2xl font-black">{confirmedMatches}<span className="text-sm text-slate-400"> / {bracketMatches.length || 31}</span></p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/60 px-4 py-3">
+            <p className="text-[10px] font-black uppercase text-sky-200">Partidos cerrados</p>
+            <p className="mt-1 text-2xl font-black">{finishedMatches}</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/60 px-4 py-3">
+            <p className="text-[10px] font-black uppercase text-rose-200">Fuente visual</p>
+            <p className="mt-1 flex items-center gap-2 text-sm font-black"><ShieldCheck className="h-4 w-4" /> Fixture + API</p>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-200">
-        Esta pantalla es solo informativa: no guarda pronosticos, no cambia puntajes y no modifica resultados. Si un cruce aun no esta confirmado, muestra el cupo oficial para que el usuario entienda el posible camino.
-      </div>
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-lime-300/30 bg-black/60 px-4 py-3 text-xs font-semibold leading-5 text-slate-200">
+          <span>Esta pantalla es solo informativa: no guarda pronosticos, no cambia puntajes y no modifica resultados.</span>
+          <button
+            type="button"
+            onClick={() => void loadBracket()}
+            disabled={loading}
+            className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-lime-300 px-4 text-[10px] font-black uppercase text-slate-950 shadow-lg shadow-lime-500/20 transition hover:bg-lime-200 disabled:opacity-60"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </button>
+        </div>
 
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-200">
+        <div className="rounded-xl border border-rose-400 bg-rose-950/50 p-4 text-sm font-semibold text-rose-100">
           {error}
         </div>
       ) : loading && !bracketMatches.length ? (
-        <div className="rounded-xl border border-slate-200 p-8 text-center text-sm font-semibold text-slate-500 dark:border-slate-800">
+        <div className="rounded-xl border border-white/10 p-8 text-center text-sm font-semibold text-slate-300">
           Cargando llaves del Mundial...
         </div>
       ) : (
@@ -361,17 +422,18 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
             <div className="grid min-w-[1180px] grid-cols-5 gap-4">
               {STAGE_ORDER.map((stage) => {
                 const meta = STAGE_META[stage];
+                const theme = STAGE_THEMES[stage];
                 const stageMatches = matchesByStage.get(stage) || [];
                 return (
-                  <section key={stage} className="space-y-3">
-                    <div className="sticky top-0 z-10 rounded-xl border border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-                      <p className="text-sm font-black text-slate-950 dark:text-white">{meta.title}</p>
+                  <section key={stage} className={`rounded-2xl border-2 bg-black/75 p-2.5 ${theme.border}`}>
+                    <div className={`mb-3 rounded-xl px-3 py-3 text-center ${theme.header}`}>
+                      <p className="text-base font-black uppercase leading-none">{meta.title}</p>
                       <p className="text-[10px] font-bold uppercase text-slate-400">{meta.short} · {meta.count}</p>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {stageMatches.map((match) => (
                         <React.Fragment key={match.id}>
-                          <MatchCard match={match} matchesById={matchesById} getTeamFlag={getTeamFlag} />
+                          <MatchCard match={match} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={theme} />
                         </React.Fragment>
                       ))}
                     </div>
@@ -382,18 +444,19 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
           </div>
 
           {thirdPlaceMatch && (
-            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+            <div className="mt-5 rounded-2xl border-2 border-cyan-300 bg-black/70 p-4">
               <div className="mb-3 flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-amber-500" />
-                <h3 className="text-sm font-black text-slate-950 dark:text-white">Tambien se juega tercer puesto</h3>
+                <Trophy className="h-4 w-4 text-cyan-200" />
+                <h3 className="text-sm font-black uppercase text-white">Tambien se juega tercer puesto</h3>
               </div>
               <div className="max-w-sm">
-                <MatchCard match={thirdPlaceMatch} matchesById={matchesById} getTeamFlag={getTeamFlag} />
+                <MatchCard match={thirdPlaceMatch} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={STAGE_THEMES["Tercer Puesto"]} />
               </div>
             </div>
           )}
         </>
       )}
+      </div>
     </section>
   );
 };
