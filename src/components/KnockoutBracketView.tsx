@@ -368,22 +368,35 @@ const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketM
 };
 
 const GroupPanel = ({ group, side, getTeamFlag }: { group: GroupSummary; side: BracketSide; getTeamFlag: Props["getTeamFlag"] }) => {
+  const [visibleTeam, setVisibleTeam] = useState<string | null>(null);
+
   return (
     <article className={`relative rounded-lg border-2 bg-black p-1.5 ${GROUP_THEME.border}`}>
       <div className={`absolute top-1/2 ${side === "left" ? "-right-3" : "-left-3"} h-px w-3 -translate-y-1/2 ${GROUP_THEME.connector}`} aria-hidden="true" />
-      <div className={`mb-1.5 flex items-center justify-between rounded-md px-2 py-1 text-[10px] font-black uppercase ${GROUP_THEME.header}`}>
+      <div className={`mb-1.5 flex items-center justify-center rounded-md px-2 py-1 text-[10px] font-black uppercase ${GROUP_THEME.header}`}>
         <span>Grupo {group.group}</span>
-        <span>{group.teams.length} equipos</span>
       </div>
       <div className="grid grid-cols-2 gap-1">
-        {group.teams.map((team) => (
-          <div key={team} className="relative flex h-10 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/[0.04]" title={team} aria-label={team}>
-            <span className="text-lg leading-none">{getTeamFlag(team)}</span>
-            <span className={`absolute inset-x-0 bottom-0 truncate px-0.5 py-0.5 text-center text-[7px] font-black uppercase leading-none ${GROUP_THEME.badge}`}>
-              {getTeamBadgeLabel(team)}
-            </span>
-          </div>
-        ))}
+        {group.teams.map((team) => {
+          const labelVisible = visibleTeam === team;
+          return (
+            <button
+              key={team}
+              type="button"
+              onClick={() => setVisibleTeam(labelVisible ? null : team)}
+              className={`relative flex h-10 items-center justify-center overflow-hidden rounded-md border bg-white/[0.04] transition ${labelVisible ? "border-yellow-300/70" : "border-white/10 hover:border-white/25"}`}
+              aria-label={`${labelVisible ? "Ocultar" : "Mostrar"} etiqueta de ${team}`}
+              aria-pressed={labelVisible}
+            >
+              <span className="text-lg leading-none">{getTeamFlag(team)}</span>
+              {labelVisible && (
+                <span className={`absolute inset-x-0 bottom-0 truncate px-0.5 py-0.5 text-center text-[7px] font-black uppercase leading-none ${GROUP_THEME.badge}`}>
+                  {getTeamBadgeLabel(team)}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </article>
   );
