@@ -45,7 +45,8 @@ type GroupTheme = {
 };
 
 const worldCupLogo = new URL("../../assets/assets/logo_polla_mundialista.PNG", import.meta.url).href;
-const BRACKET_DESIGN_WIDTH = 1200;
+const BRACKET_DESIGN_WIDTH = 1368;
+const BRACKET_DESIGN_HEIGHT = 720;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 1;
 const ZOOM_STEP = 0.1;
@@ -119,11 +120,11 @@ const STAGE_THEMES: Record<KnockoutFixture["stage"], StageTheme> = {
     glow: "shadow-cyan-500/20"
   },
   "Final": {
-    panel: "bg-rose-500",
-    header: "bg-rose-400 text-white",
-    border: "border-rose-400",
-    text: "text-rose-200",
-    glow: "shadow-rose-500/20"
+    panel: "bg-yellow-300",
+    header: "bg-yellow-300 text-slate-950",
+    border: "border-yellow-300",
+    text: "text-yellow-200",
+    glow: "shadow-yellow-500/20"
   }
 };
 
@@ -428,7 +429,6 @@ const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: {
           </div>
         ))}
       </article>
-      {!compact && <div className={`absolute bottom-[-0.45rem] top-[calc(50%+0.3rem)] w-px opacity-60 ${theme.panel} ${side === "left" ? "right-[-0.5rem]" : "left-[-0.5rem]"}`} aria-hidden="true" />}
     </div>
   );
 };
@@ -521,7 +521,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   const sideStages: KnockoutFixture["stage"][] = ["16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal"];
   const leftFinalist = getResolvedSideWinner(101, bracketMatchesById, matchesById, "FINALISTA IZQUIERDO");
   const rightFinalist = getResolvedSideWinner(102, bracketMatchesById, matchesById, "FINALISTA DERECHO");
-  const champion = getMatchWinner(finalMatch?.realMatch) || "CAMPEÓN DEL MUNDIAL FIFA 2026";
+  const champion = getMatchWinner(finalMatch?.realMatch) || "POR DEFINIR";
   const confirmedMatches = bracketMatches.filter((match) => match.realMatch && hasRealTeam(match.realMatch.local) && hasRealTeam(match.realMatch.visitor)).length;
   const finishedMatches = bracketMatches.filter((match) => match.realMatch?.status === "finished").length;
 
@@ -637,9 +637,16 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
         <>
           <div ref={bracketViewportRef} className="overflow-x-auto pb-4">
             <div
-              className="grid min-w-[1200px] grid-cols-[112px_repeat(4,102px)_208px_repeat(4,102px)_112px] items-center gap-3 transition-transform duration-200 ease-out"
-              style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
+              className="relative transition-[height,width] duration-200 ease-out"
+              style={{
+                width: `${BRACKET_DESIGN_WIDTH * zoom}px`,
+                height: `${BRACKET_DESIGN_HEIGHT * zoom}px`
+              }}
             >
+              <div
+                className="absolute left-0 top-0 grid w-[1368px] grid-cols-[112px_repeat(4,102px)_208px_repeat(4,102px)_112px] items-center gap-3 transition-transform duration-200 ease-out"
+                style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
+              >
               <section className="space-y-2">
                 <p className={`text-center text-[10px] font-black uppercase tracking-[0.22em] ${GROUP_THEME.title}`}>Grupos A-F</p>
                 {leftGroups.map((group) => (
@@ -667,8 +674,8 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
               })}
 
               <section className="relative flex min-h-[560px] flex-col items-center justify-center">
-                <div className="absolute left-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-orange-400" aria-hidden="true" />
-                <div className="absolute right-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-orange-400" aria-hidden="true" />
+                <div className="absolute left-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-yellow-300" aria-hidden="true" />
+                <div className="absolute right-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-yellow-300" aria-hidden="true" />
                 <div className="w-full rounded-3xl border-2 border-yellow-300 bg-black/80 p-3 text-center shadow-2xl shadow-yellow-500/20">
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-yellow-200">Final</p>
                   <img src={worldCupLogo} alt="El Pollon Mundialista" className="mx-auto mt-2 h-40 w-auto object-contain drop-shadow-[0_0_22px_rgba(250,204,21,0.35)]" />
@@ -712,6 +719,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
                   </React.Fragment>
                 ))}
               </section>
+              </div>
             </div>
           </div>
 
