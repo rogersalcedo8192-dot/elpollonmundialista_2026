@@ -66,6 +66,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Creacion autogestionada de Polla Grupal para familias, empresas, amigos y comunidades, sin aprobacion manual del superadmin.
 - Las solicitudes de Polla Grupal se activan automaticamente despues de 5 minutos; el solicitante pasa a `company_admin` y recibe acceso gratuito al panel Administrador Grupal.
 - Tarjetas de pronosticos mejoradas: toque para expandir, controles +/-, y marcador 1X2 resaltado.
+- Mis Pronosticos incluye boton flotante sutil para volver arriba cuando el usuario baja en la lista larga de partidos.
 - Textos publicos del footer, FAQ y modal informativo corregidos en espanol con tildes y signos de apertura de pregunta.
 
 ## Fase 1 - Estabilizacion Inmediata

@@ -1786,6 +1786,9 @@ export default function App() {
   const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | "pending" | "finished">("all");
   const [teamSearch, setTeamSearch] = useState("");
   const [matchFiltersOpen, setMatchFiltersOpen] = useState(false);
+  const [showPredictionsBackToTop, setShowPredictionsBackToTop] = useState(false);
+  const predictionsTopRef = useRef<HTMLDivElement | null>(null);
+  const predictionsListRef = useRef<HTMLDivElement | null>(null);
 
   // Manage Profiles states
   const [profileName, setProfileName] = useState("");
@@ -3854,6 +3857,32 @@ export default function App() {
     setMatchStatusFilter("all");
     setTeamSearch("");
   };
+  const scrollPredictionsToTop = () => {
+    predictionsListRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    predictionsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  useEffect(() => {
+    if (activeTab !== "predictions" || predictionsMode !== "matches") {
+      setShowPredictionsBackToTop(false);
+      return;
+    }
+
+    const list = predictionsListRef.current;
+    const updateBackToTopVisibility = () => {
+      const listScrolled = (list?.scrollTop || 0) > 260;
+      const moduleScrolled = (predictionsTopRef.current?.getBoundingClientRect().top || 0) < -320;
+      setShowPredictionsBackToTop(listScrolled || moduleScrolled);
+    };
+
+    updateBackToTopVisibility();
+    window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+    list?.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateBackToTopVisibility);
+      list?.removeEventListener("scroll", updateBackToTopVisibility);
+    };
+  }, [activeTab, predictionsMode, filteredMatches.length]);
   const canSubmitPredictions = appMode === "FREE" || Boolean(currentUser?.companyId) || currentUser?.role === "admin" || currentUser?.role === "superadmin" || currentUser?.role === "company_admin" || currentUser?.paymentStatus === "paid";
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
@@ -6019,7 +6048,7 @@ export default function App() {
               )}
 
               {activeTab === "predictions" && (
-                <div className="space-y-4">
+                <div ref={predictionsTopRef} className="space-y-4 scroll-mt-4">
                   <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <h2 className="text-xl font-bold flex items-center gap-2">
@@ -6110,6 +6139,18 @@ export default function App() {
                     />
                   ) : (
                     <>
+                      {showPredictionsBackToTop && (
+                        <button
+                          type="button"
+                          onClick={scrollPredictionsToTop}
+                          className="fixed right-3 top-1/2 z-40 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-full border border-emerald-200/80 bg-white/85 px-3 py-2 text-[11px] font-black text-emerald-700 shadow-lg shadow-slate-900/10 backdrop-blur transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-800/80 dark:bg-slate-950/85 dark:text-emerald-300 dark:hover:bg-emerald-950"
+                          title="Volver arriba"
+                          aria-label="Volver arriba en Mis Pronósticos"
+                        >
+                          <ChevronUp className="h-4 w-4 stroke-[3]" />
+                          <span className="hidden sm:inline">Arriba</span>
+                        </button>
+                      )}
                       {selectedStage === "Eliminatorias" && (
                         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
                           <strong>Eliminatorias oficiales:</strong> los cruces aparecen automáticamente cuando football-data.org confirma ambos equipos. Puedes registrar el marcador aquí hasta cinco minutos antes de cada partido.
@@ -6210,7 +6251,7 @@ export default function App() {
                       </div>
 
                   {/* Core Matches Prediction Loop */}
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[850px] lg:max-h-[950px] xl:max-h-[1050px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
+                  <div ref={predictionsListRef} className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl md:max-h-[850px] lg:max-h-[950px] xl:max-h-[1050px] overflow-y-auto bg-white dark:bg-slate-900 shadow-sm">
                     {filteredMatches.length === 0 ? (
                       <p className="p-8 text-center text-xs text-slate-400">{t("pred_no_results", "No se encontraron partidos programados con los filtros indicados.")}</p>
                     ) : (
