@@ -120,7 +120,7 @@ const shareOverviewText = async (title: string, text: string, channel: "native" 
   await navigator.clipboard?.writeText(text);
 };
 
-const ShareActionButtons = ({ title, text }: { title: string; text: string }) => {
+const ShareActionButtons = ({ title, text, disabled = false, disabledLabel = "Disponible pronto" }: { title: string; text: string; disabled?: boolean; disabledLabel?: string }) => {
   const actions = [
     { channel: "native" as const, label: "Compartir", icon: Share2 },
     { channel: "whatsapp" as const, label: "WhatsApp", icon: MessageCircle },
@@ -133,13 +133,15 @@ const ShareActionButtons = ({ title, text }: { title: string; text: string }) =>
         <button
           key={channel}
           type="button"
+          disabled={disabled}
           onClick={(event) => {
             event.stopPropagation();
+            if (disabled) return;
             void shareOverviewText(title, text, channel);
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/85 shadow-sm shadow-slate-950/10 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/85 shadow-sm shadow-slate-950/10 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:translate-y-0 disabled:hover:border-white/20 disabled:hover:bg-white/10 disabled:hover:text-white/85"
           aria-label={label}
-          title={label}
+          title={disabled ? disabledLabel : label}
         >
           <Icon className="h-3.5 w-3.5" />
         </button>
@@ -528,7 +530,12 @@ export const WorldCupOverviewView: React.FC<Props> = ({ getTeamFlag }) => {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-3 bg-amber-500 px-4 py-2.5">
           <h3 className="text-xs font-black uppercase text-amber-950">Goleadores</h3>
-          <ShareActionButtons title="Tabla de goleadores" text={buildScorersShareText(data.scorers)} />
+          <ShareActionButtons
+            title="Tabla de goleadores"
+            text={buildScorersShareText(data.scorers)}
+            disabled={data.scorers.length === 0}
+            disabledLabel="Disponible cuando haya goleadores oficiales"
+          />
         </div>
         {data.scorers.length === 0 ? (
           <p className="p-6 text-center text-xs text-slate-500">La API todavía no publicó la tabla de goleadores del Mundial 2026.</p>
