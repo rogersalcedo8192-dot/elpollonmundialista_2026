@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { GitBranch, RefreshCw, RotateCcw, ShieldCheck, Trophy } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { GitBranch, RefreshCw, ShieldCheck, Trophy } from "lucide-react";
 import type { KnockoutFixture, Match, WorldCupOverview } from "../types";
 
 interface Props {
@@ -38,6 +38,12 @@ type GroupSummary = {
   second: string;
   third: string;
 };
+
+const worldCupLogo = new URL("../../assets/assets/logo_polla_mundialista.PNG", import.meta.url).href;
+const BRACKET_DESIGN_WIDTH = 1280;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 1;
+const ZOOM_STEP = 0.1;
 
 const STAGE_ORDER: KnockoutFixture["stage"][] = [
   "16avos de Final",
@@ -259,6 +265,25 @@ const getResolvedSideWinner = (matchId: number, byId: Map<number, BracketMatch>,
   return getSlotLabel({ label: fallback, source: "winner", sourceMatchId: matchId, confirmed: false }, matchesById).label;
 };
 
+const compactLabel = (value: string) => {
+  const normalized = normalizeText(value)
+    .replace("1.Âº Grupo", "1")
+    .replace("2.Âº Grupo", "2")
+    .replace("1.º Grupo", "1")
+    .replace("2.º Grupo", "2")
+    .replace("Mejor tercero", "3")
+    .replace("Ganador Partido", "G")
+    .replace("Perdedor Partido", "P")
+    .replace("FINALISTA IZQUIERDO", "FINALISTA IZQ.")
+    .replace("FINALISTA DERECHO", "FINALISTA DER.");
+
+  if (/^[12]\s?[A-L]$/i.test(normalized.trim())) return normalized.replace(/\s+/g, "").toUpperCase();
+  if (/^3\s?[A-L]$/i.test(normalized.trim())) return normalized.replace(/\s+/g, "").toUpperCase();
+  if (/^[GP]\s?\d+$/i.test(normalized.trim())) return normalized.replace(/\s+/g, "").toUpperCase();
+  if (normalized.length <= 14) return normalized.toUpperCase();
+  return normalized.split(/\s+/).map((part) => part[0]).join("").slice(0, 4).toUpperCase();
+};
+
 const TeamSlot = ({ slot, matchesById, getTeamFlag, theme }: { slot: BracketSlot; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
   const resolved = getSlotLabel(slot, matchesById);
   return (
@@ -315,18 +340,19 @@ const GroupPanel = ({ group, side, getTeamFlag }: { group: GroupSummary; side: B
   ];
 
   return (
-    <article className={`relative rounded-xl border-2 bg-black p-2.5 ${side === "left" ? "border-lime-300" : "border-sky-300"}`}>
+    <article className={`relative rounded-lg border-2 bg-black p-1.5 ${side === "left" ? "border-lime-300" : "border-sky-300"}`}>
       <div className={`absolute top-3 ${side === "left" ? "-right-5" : "-left-5"} h-px w-5 ${side === "left" ? "bg-lime-300" : "bg-sky-300"}`} aria-hidden="true" />
-      <div className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-base font-black ${side === "left" ? "bg-lime-300 text-slate-950" : "bg-sky-300 text-slate-950"}`}>
-        {group.group}
+      <div className={`mb-1.5 flex items-center justify-between rounded-md px-2 py-1 text-[10px] font-black uppercase ${side === "left" ? "bg-lime-300 text-slate-950" : "bg-sky-300 text-slate-950"}`}>
+        <span>Grupo {group.group}</span>
+        <span>{group.group}</span>
       </div>
-      <div className="space-y-1.5">
+      <div className="grid grid-cols-3 gap-1">
         {rows.map((row) => (
-          <div key={row.label} className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5">
-            <p className="text-[8px] font-black uppercase text-white/35">{row.label}</p>
-            <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-              {hasRealTeam(row.team) ? <span className="shrink-0 text-sm leading-none">{getTeamFlag(row.team)}</span> : null}
-              <span className="min-w-0 truncate text-[10px] font-black uppercase text-white">{row.team}</span>
+          <div key={row.label} className="min-h-11 rounded-md border border-white/10 bg-white/[0.04] px-1 py-1 text-center" title={`${row.label}: ${row.team}`}>
+            <p className="text-[7px] font-black uppercase text-white/35">{row.label.replace(" clasificado", "")}</p>
+            <div className="mt-0.5 flex min-w-0 flex-col items-center justify-center">
+              {hasRealTeam(row.team) ? <span className="text-sm leading-none">{getTeamFlag(row.team)}</span> : null}
+              <span className="max-w-full truncate text-[9px] font-black uppercase text-white">{compactLabel(row.team)}</span>
             </div>
           </div>
         ))}
@@ -337,23 +363,51 @@ const GroupPanel = ({ group, side, getTeamFlag }: { group: GroupSummary; side: B
 
 const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: { match: BracketMatch; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; side: BracketSide; compact?: boolean }) => {
   const theme = STAGE_THEMES[match.stage];
+  const local = getSlotLabel(match.local, matchesById);
+  const visitor = getSlotLabel(match.visitor, matchesById);
+  const hasScore = match.realMatch?.localScore !== null && match.realMatch?.visitorScore !== null;
   return (
     <div className="relative">
       <div className={`absolute top-1/2 h-px w-4 -translate-y-1/2 ${theme.panel} ${side === "left" ? "-left-4" : "-right-4"}`} aria-hidden="true" />
       <div className={`absolute top-1/2 h-px w-4 -translate-y-1/2 ${theme.panel} ${side === "left" ? "-right-4" : "-left-4"}`} aria-hidden="true" />
-      <MatchCard match={match} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={theme} />
+      <article
+        className={`rounded-lg border-2 bg-black px-2 py-1.5 shadow-lg ${theme.border} ${theme.glow}`}
+        title={`Partido ${match.id}: ${local.label} vs ${visitor.label}${match.realMatch ? ` - ${getStatusLabel(match.realMatch)}` : ""}`}
+      >
+        <p className={`mb-1 text-center text-[8px] font-black uppercase ${theme.text}`}>P{match.id}</p>
+        {[local, visitor].map((slot, index) => (
+          <div key={`${match.id}-${index}`} className="flex h-6 items-center gap-1.5 border-t border-white/10 first:border-t-0">
+            {hasRealTeam(slot.label) ? <span className="text-xs leading-none">{getTeamFlag(slot.label)}</span> : null}
+            <span className="min-w-0 flex-1 truncate text-[9px] font-black uppercase text-white">{compactLabel(slot.label)}</span>
+            {hasScore && (
+              <span className={`rounded px-1 text-[9px] font-black ${theme.header}`}>
+                {index === 0 ? match.realMatch?.localScore : match.realMatch?.visitorScore}
+              </span>
+            )}
+          </div>
+        ))}
+      </article>
       {!compact && <div className={`absolute bottom-[-0.65rem] top-[calc(50%+0.25rem)] w-px ${theme.panel} ${side === "left" ? "right-[-1rem]" : "left-[-1rem]"}`} aria-hidden="true" />}
     </div>
   );
 };
 
 export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
+  const bracketViewportRef = useRef<HTMLDivElement | null>(null);
   const [fixtures, setFixtures] = useState<KnockoutFixture[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [overview, setOverview] = useState<WorldCupOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isPortraitMobile, setIsPortraitMobile] = useState(isMobilePortraitViewport);
+  const [zoom, setZoom] = useState(1);
+
+  const clampZoom = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(2))));
+  const updateZoom = (nextZoom: number) => setZoom(clampZoom(nextZoom));
+  const fitBracketToViewport = () => {
+    const availableWidth = bracketViewportRef.current?.clientWidth || window.innerWidth;
+    updateZoom(Math.min(1, availableWidth / BRACKET_DESIGN_WIDTH));
+  };
 
   const loadBracket = async () => {
     setLoading(true);
@@ -392,15 +446,17 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   }, []);
 
   useEffect(() => {
-    if (isPortraitMobile) {
-      setLoading(false);
-      return;
-    }
-
     void loadBracket();
     const timer = window.setInterval(() => void loadBracket(), 60_000);
     return () => window.clearInterval(timer);
   }, [isPortraitMobile]);
+
+  useEffect(() => {
+    fitBracketToViewport();
+    const handleResize = () => fitBracketToViewport();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const matchesById = useMemo(() => new Map(matches.map((match) => [match.id, match])), [matches]);
   const bracketMatches = useMemo(() => buildBracketMatches(fixtures, matches), [fixtures, matches]);
@@ -427,30 +483,6 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   const champion = getMatchWinner(finalMatch?.realMatch) || "CAMPEÓN DEL MUNDIAL FIFA 2026";
   const confirmedMatches = bracketMatches.filter((match) => match.realMatch && hasRealTeam(match.realMatch.local) && hasRealTeam(match.realMatch.visitor)).length;
   const finishedMatches = bracketMatches.filter((match) => match.realMatch?.status === "finished").length;
-
-  if (isPortraitMobile) {
-    return (
-      <section className="min-h-[62vh] overflow-hidden rounded-2xl border border-white/10 bg-black text-white shadow-xl">
-        <div className="flex min-h-[62vh] flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_center,rgba(190,242,100,0.20),transparent_34%),linear-gradient(135deg,#020617,#050816_54%,#0f172a)] px-6 py-10 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-lime-300 bg-black shadow-2xl shadow-lime-500/20">
-            <RotateCcw className="h-10 w-10 text-lime-200" />
-          </div>
-          <div className="max-w-xs">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-lime-200">WORLD CUP 2026</p>
-            <h2 className="mt-2 text-3xl font-black leading-tight">Gira tu celular</h2>
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-200">
-              Para ver las llaves completas del Mundial, usa este modulo con la pantalla en horizontal.
-            </p>
-          </div>
-          <div className="grid w-full max-w-xs grid-cols-3 items-center gap-2 text-[9px] font-black uppercase text-slate-300">
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-2">16avos</span>
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-2">Cuartos</span>
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-2">Final</span>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="overflow-hidden rounded-2xl border border-white/10 bg-black text-white shadow-2xl">
@@ -506,6 +538,52 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
           </button>
         </div>
 
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/60 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">Zoom de llaves</p>
+            <p className="mt-1 text-xs font-semibold text-slate-300">
+              {isPortraitMobile ? "En móvil vertical puedes alejar para ver todo; horizontal se lee mejor." : "Aleja para ver la llave completa de una sola mirada."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => updateZoom(zoom - ZOOM_STEP)}
+              className="h-9 min-w-9 rounded-full border border-white/10 bg-white/10 px-3 text-sm font-black text-white hover:bg-white/20"
+              aria-label="Alejar llaves"
+              title="Alejar"
+            >
+              -
+            </button>
+            <span className="min-w-14 rounded-full bg-white px-3 py-2 text-center text-[10px] font-black text-slate-950">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => updateZoom(zoom + ZOOM_STEP)}
+              className="h-9 min-w-9 rounded-full border border-white/10 bg-white/10 px-3 text-sm font-black text-white hover:bg-white/20"
+              aria-label="Acercar llaves"
+              title="Acercar"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => updateZoom(1)}
+              className="h-9 rounded-full border border-white/10 bg-white/10 px-3 text-[10px] font-black uppercase text-white hover:bg-white/20"
+            >
+              100%
+            </button>
+            <button
+              type="button"
+              onClick={fitBracketToViewport}
+              className="h-9 rounded-full bg-lime-300 px-4 text-[10px] font-black uppercase text-slate-950 hover:bg-lime-200"
+            >
+              Ver completo
+            </button>
+          </div>
+        </div>
+
       {error ? (
         <div className="rounded-xl border border-rose-400 bg-rose-950/50 p-4 text-sm font-semibold text-rose-100">
           {error}
@@ -516,9 +594,12 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto pb-4">
-            <div className="grid min-w-[2100px] grid-cols-[190px_repeat(4,215px)_260px_repeat(4,215px)_190px] items-center gap-4">
-              <section className="space-y-3">
+          <div ref={bracketViewportRef} className="overflow-x-auto pb-4">
+            <div
+              className="grid min-w-[1280px] grid-cols-[135px_repeat(4,105px)_210px_repeat(4,105px)_135px] items-center gap-3 transition-transform duration-200 ease-out"
+              style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
+            >
+              <section className="space-y-2">
                 <p className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">Grupos A-F</p>
                 {leftGroups.map((group) => (
                   <React.Fragment key={group.group}>
@@ -531,9 +612,9 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
                 const theme = STAGE_THEMES[stage];
                 const stageMatches = getStageMatchesForSide(leftSideIds, stage, bracketMatches);
                 return (
-                  <section key={`left-${stage}`} className="relative space-y-3">
-                    <div className={`rounded-xl px-3 py-2 text-center ${theme.header}`}>
-                      <p className="text-[11px] font-black uppercase">{STAGE_META[stage].title}</p>
+                  <section key={`left-${stage}`} className="relative space-y-2">
+                    <div className={`rounded-lg px-2 py-1.5 text-center ${theme.header}`}>
+                      <p className="text-[9px] font-black uppercase">{STAGE_META[stage].title}</p>
                     </div>
                     {stageMatches.map((match) => (
                       <React.Fragment key={match.id}>
@@ -544,27 +625,23 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
                 );
               })}
 
-              <section className="relative flex min-h-[620px] flex-col items-center justify-center">
+              <section className="relative flex min-h-[560px] flex-col items-center justify-center">
                 <div className="absolute left-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-orange-400" aria-hidden="true" />
                 <div className="absolute right-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-orange-400" aria-hidden="true" />
-                <div className="w-full rounded-3xl border-2 border-yellow-300 bg-black p-4 text-center shadow-2xl shadow-yellow-500/20">
+                <div className="w-full rounded-3xl border-2 border-yellow-300 bg-black/80 p-3 text-center shadow-2xl shadow-yellow-500/20">
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-yellow-200">Final</p>
-                  <div className="mt-3 rounded-xl border border-yellow-300/40 bg-yellow-300 px-3 py-2 text-xs font-black uppercase text-slate-950">
-                    {hasRealTeam(leftFinalist) ? getTeamFlag(leftFinalist) : null} {leftFinalist}
+                  <img src={worldCupLogo} alt="El Pollon Mundialista" className="mx-auto mt-2 h-40 w-auto object-contain drop-shadow-[0_0_22px_rgba(250,204,21,0.35)]" />
+                  <div className="mt-3 rounded-lg border border-yellow-300/40 bg-yellow-300 px-2 py-1.5 text-[10px] font-black uppercase text-slate-950" title={leftFinalist}>
+                    {hasRealTeam(leftFinalist) ? getTeamFlag(leftFinalist) : null} {compactLabel(leftFinalist)}
                   </div>
-                  <p className="my-3 text-sm font-black text-white/60">VS</p>
-                  <div className="rounded-xl border border-yellow-300/40 bg-yellow-300 px-3 py-2 text-xs font-black uppercase text-slate-950">
-                    {hasRealTeam(rightFinalist) ? getTeamFlag(rightFinalist) : null} {rightFinalist}
+                  <p className="my-2 text-sm font-black text-white/60">VS</p>
+                  <div className="rounded-lg border border-yellow-300/40 bg-yellow-300 px-2 py-1.5 text-[10px] font-black uppercase text-slate-950" title={rightFinalist}>
+                    {hasRealTeam(rightFinalist) ? getTeamFlag(rightFinalist) : null} {compactLabel(rightFinalist)}
                   </div>
-                  {finalMatch && (
-                    <div className="mt-4">
-                      <MatchCard match={finalMatch} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={STAGE_THEMES["Final"]} />
-                    </div>
-                  )}
-                  <div className="mt-4 rounded-2xl border-2 border-yellow-200 bg-gradient-to-r from-yellow-300 via-lime-200 to-yellow-300 px-4 py-4 text-slate-950">
-                    <Trophy className="mx-auto mb-2 h-7 w-7" />
+                  <div className="mt-3 rounded-2xl border-2 border-yellow-200 bg-gradient-to-r from-yellow-300 via-lime-200 to-yellow-300 px-3 py-3 text-slate-950" title={champion}>
+                    <Trophy className="mx-auto mb-1.5 h-6 w-6" />
                     <p className="text-[10px] font-black uppercase tracking-[0.18em]">Campeon del Mundial FIFA 2026</p>
-                    <p className="mt-1 text-lg font-black uppercase">{champion}</p>
+                    <p className="mt-1 truncate text-sm font-black uppercase">{compactLabel(champion)}</p>
                   </div>
                 </div>
               </section>
@@ -573,9 +650,9 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
                 const theme = STAGE_THEMES[stage];
                 const stageMatches = getStageMatchesForSide(rightSideIds, stage, bracketMatches);
                 return (
-                  <section key={`right-${stage}`} className="relative space-y-3">
-                    <div className={`rounded-xl px-3 py-2 text-center ${theme.header}`}>
-                      <p className="text-[11px] font-black uppercase">{STAGE_META[stage].title}</p>
+                  <section key={`right-${stage}`} className="relative space-y-2">
+                    <div className={`rounded-lg px-2 py-1.5 text-center ${theme.header}`}>
+                      <p className="text-[9px] font-black uppercase">{STAGE_META[stage].title}</p>
                     </div>
                     {stageMatches.map((match) => (
                       <React.Fragment key={match.id}>
@@ -586,7 +663,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
                 );
               })}
 
-              <section className="space-y-3">
+              <section className="space-y-2">
                 <p className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Grupos G-L</p>
                 {rightGroups.map((group) => (
                   <React.Fragment key={group.group}>
