@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { GitBranch, RefreshCw, RotateCcw, ShieldCheck, Trophy } from "lucide-react";
-import type { KnockoutFixture, Match } from "../types";
+import type { KnockoutFixture, Match, WorldCupOverview } from "../types";
 
 interface Props {
   getTeamFlag: (team: string) => React.ReactNode;
@@ -29,6 +29,14 @@ type StageTheme = {
   border: string;
   text: string;
   glow: string;
+};
+
+type BracketSide = "left" | "right";
+type GroupSummary = {
+  group: string;
+  first: string;
+  second: string;
+  third: string;
 };
 
 const STAGE_ORDER: KnockoutFixture["stage"][] = [
@@ -215,6 +223,42 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
   });
 };
 
+const buildGroupSummaries = (overview: WorldCupOverview | null, groups: string[]): GroupSummary[] =>
+  groups.map((group) => {
+    const table = overview?.groups.find((item) => item.group === group)?.table || [];
+    return {
+      group,
+      first: table[0]?.team || `1.º Grupo ${group}`,
+      second: table[1]?.team || `2.º Grupo ${group}`,
+      third: table[2]?.team || `Mejor tercero ${group}`
+    };
+  });
+
+const collectSourceMatchIds = (matchId: number, byId: Map<number, BracketMatch>, ids = new Set<number>()) => {
+  if (ids.has(matchId)) return ids;
+  const match = byId.get(matchId);
+  if (!match) return ids;
+  ids.add(matchId);
+  [match.local, match.visitor].forEach((slot) => {
+    if (slot.sourceMatchId) collectSourceMatchIds(slot.sourceMatchId, byId, ids);
+  });
+  return ids;
+};
+
+const getStageMatchesForSide = (
+  sideIds: Set<number>,
+  stage: KnockoutFixture["stage"],
+  matches: BracketMatch[]
+) => matches.filter((match) => sideIds.has(match.id) && match.stage === stage).sort((a, b) => a.id - b.id);
+
+const getResolvedSideWinner = (matchId: number, byId: Map<number, BracketMatch>, matchesById: Map<number, Match>, fallback: string) => {
+  const match = byId.get(matchId);
+  if (!match) return fallback;
+  const realWinner = getMatchWinner(match.realMatch);
+  if (realWinner) return realWinner;
+  return getSlotLabel({ label: fallback, source: "winner", sourceMatchId: matchId, confirmed: false }, matchesById).label;
+};
+
 const TeamSlot = ({ slot, matchesById, getTeamFlag, theme }: { slot: BracketSlot; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
   const resolved = getSlotLabel(slot, matchesById);
   return (
@@ -263,9 +307,50 @@ const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketM
   );
 };
 
+const GroupPanel = ({ group, side, getTeamFlag }: { group: GroupSummary; side: BracketSide; getTeamFlag: Props["getTeamFlag"] }) => {
+  const rows = [
+    { label: "1.º clasificado", team: group.first },
+    { label: "2.º clasificado", team: group.second },
+    { label: "Mejor tercero", team: group.third }
+  ];
+
+  return (
+    <article className={`relative rounded-xl border-2 bg-black p-2.5 ${side === "left" ? "border-lime-300" : "border-sky-300"}`}>
+      <div className={`absolute top-3 ${side === "left" ? "-right-5" : "-left-5"} h-px w-5 ${side === "left" ? "bg-lime-300" : "bg-sky-300"}`} aria-hidden="true" />
+      <div className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-base font-black ${side === "left" ? "bg-lime-300 text-slate-950" : "bg-sky-300 text-slate-950"}`}>
+        {group.group}
+      </div>
+      <div className="space-y-1.5">
+        {rows.map((row) => (
+          <div key={row.label} className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5">
+            <p className="text-[8px] font-black uppercase text-white/35">{row.label}</p>
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+              {hasRealTeam(row.team) ? <span className="shrink-0 text-sm leading-none">{getTeamFlag(row.team)}</span> : null}
+              <span className="min-w-0 truncate text-[10px] font-black uppercase text-white">{row.team}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+};
+
+const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: { match: BracketMatch; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; side: BracketSide; compact?: boolean }) => {
+  const theme = STAGE_THEMES[match.stage];
+  return (
+    <div className="relative">
+      <div className={`absolute top-1/2 h-px w-4 -translate-y-1/2 ${theme.panel} ${side === "left" ? "-left-4" : "-right-4"}`} aria-hidden="true" />
+      <div className={`absolute top-1/2 h-px w-4 -translate-y-1/2 ${theme.panel} ${side === "left" ? "-right-4" : "-left-4"}`} aria-hidden="true" />
+      <MatchCard match={match} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={theme} />
+      {!compact && <div className={`absolute bottom-[-0.65rem] top-[calc(50%+0.25rem)] w-px ${theme.panel} ${side === "left" ? "right-[-1rem]" : "left-[-1rem]"}`} aria-hidden="true" />}
+    </div>
+  );
+};
+
 export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   const [fixtures, setFixtures] = useState<KnockoutFixture[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [overview, setOverview] = useState<WorldCupOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isPortraitMobile, setIsPortraitMobile] = useState(isMobilePortraitViewport);
@@ -274,13 +359,15 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
     setLoading(true);
     setError("");
     try {
-      const [fixturesResponse, matchesResponse] = await Promise.all([
+      const [fixturesResponse, matchesResponse, overviewResponse] = await Promise.all([
         fetch("/api/knockout-fixtures", { cache: "no-store" }),
-        fetch("/api/matches", { cache: "no-store" })
+        fetch("/api/matches", { cache: "no-store" }),
+        fetch("/api/world-cup-overview", { cache: "no-store" }).catch(() => null)
       ]);
-      const [fixturesPayload, matchesPayload] = await Promise.all([
+      const [fixturesPayload, matchesPayload, overviewPayload] = await Promise.all([
         fixturesResponse.json(),
-        matchesResponse.json()
+        matchesResponse.json(),
+        overviewResponse?.ok ? overviewResponse.json() : Promise.resolve(null)
       ]);
 
       if (!fixturesResponse.ok) throw new Error(fixturesPayload.error || "No se pudo consultar el fixture de llaves.");
@@ -288,6 +375,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
 
       setFixtures(fixturesPayload);
       setMatches(matchesPayload);
+      setOverview(overviewPayload);
     } catch (err: any) {
       setError(err.message || "No se pudieron cargar las llaves.");
     } finally {
@@ -316,6 +404,7 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
 
   const matchesById = useMemo(() => new Map(matches.map((match) => [match.id, match])), [matches]);
   const bracketMatches = useMemo(() => buildBracketMatches(fixtures, matches), [fixtures, matches]);
+  const bracketMatchesById = useMemo(() => new Map(bracketMatches.map((match) => [match.id, match])), [bracketMatches]);
   const matchesByStage = useMemo(() => {
     const grouped = new Map<KnockoutFixture["stage"], BracketMatch[]>();
     STAGE_ORDER.forEach((stage) => grouped.set(stage, []));
@@ -327,6 +416,15 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
     return grouped;
   }, [bracketMatches]);
   const thirdPlaceMatch = bracketMatches.find((match) => match.stage === "Tercer Puesto");
+  const finalMatch = bracketMatchesById.get(104);
+  const leftSideIds = useMemo(() => collectSourceMatchIds(101, bracketMatchesById), [bracketMatchesById]);
+  const rightSideIds = useMemo(() => collectSourceMatchIds(102, bracketMatchesById), [bracketMatchesById]);
+  const leftGroups = useMemo(() => buildGroupSummaries(overview, ["A", "B", "C", "D", "E", "F"]), [overview]);
+  const rightGroups = useMemo(() => buildGroupSummaries(overview, ["G", "H", "I", "J", "K", "L"]), [overview]);
+  const sideStages: KnockoutFixture["stage"][] = ["16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal"];
+  const leftFinalist = getResolvedSideWinner(101, bracketMatchesById, matchesById, "FINALISTA IZQUIERDO");
+  const rightFinalist = getResolvedSideWinner(102, bracketMatchesById, matchesById, "FINALISTA DERECHO");
+  const champion = getMatchWinner(finalMatch?.realMatch) || "CAMPEÓN DEL MUNDIAL FIFA 2026";
   const confirmedMatches = bracketMatches.filter((match) => match.realMatch && hasRealTeam(match.realMatch.local) && hasRealTeam(match.realMatch.visitor)).length;
   const finishedMatches = bracketMatches.filter((match) => match.realMatch?.status === "finished").length;
 
@@ -418,7 +516,88 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto pb-3">
+          <div className="overflow-x-auto pb-4">
+            <div className="grid min-w-[2100px] grid-cols-[190px_repeat(4,215px)_260px_repeat(4,215px)_190px] items-center gap-4">
+              <section className="space-y-3">
+                <p className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">Grupos A-F</p>
+                {leftGroups.map((group) => (
+                  <React.Fragment key={group.group}>
+                    <GroupPanel group={group} side="left" getTeamFlag={getTeamFlag} />
+                  </React.Fragment>
+                ))}
+              </section>
+
+              {sideStages.map((stage) => {
+                const theme = STAGE_THEMES[stage];
+                const stageMatches = getStageMatchesForSide(leftSideIds, stage, bracketMatches);
+                return (
+                  <section key={`left-${stage}`} className="relative space-y-3">
+                    <div className={`rounded-xl px-3 py-2 text-center ${theme.header}`}>
+                      <p className="text-[11px] font-black uppercase">{STAGE_META[stage].title}</p>
+                    </div>
+                    {stageMatches.map((match) => (
+                      <React.Fragment key={match.id}>
+                        <FlowMatch match={match} matchesById={matchesById} getTeamFlag={getTeamFlag} side="left" compact={stage === "Semifinal"} />
+                      </React.Fragment>
+                    ))}
+                  </section>
+                );
+              })}
+
+              <section className="relative flex min-h-[620px] flex-col items-center justify-center">
+                <div className="absolute left-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-orange-400" aria-hidden="true" />
+                <div className="absolute right-[-1rem] top-1/2 h-px w-4 -translate-y-1/2 bg-orange-400" aria-hidden="true" />
+                <div className="w-full rounded-3xl border-2 border-yellow-300 bg-black p-4 text-center shadow-2xl shadow-yellow-500/20">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-yellow-200">Final</p>
+                  <div className="mt-3 rounded-xl border border-yellow-300/40 bg-yellow-300 px-3 py-2 text-xs font-black uppercase text-slate-950">
+                    {hasRealTeam(leftFinalist) ? getTeamFlag(leftFinalist) : null} {leftFinalist}
+                  </div>
+                  <p className="my-3 text-sm font-black text-white/60">VS</p>
+                  <div className="rounded-xl border border-yellow-300/40 bg-yellow-300 px-3 py-2 text-xs font-black uppercase text-slate-950">
+                    {hasRealTeam(rightFinalist) ? getTeamFlag(rightFinalist) : null} {rightFinalist}
+                  </div>
+                  {finalMatch && (
+                    <div className="mt-4">
+                      <MatchCard match={finalMatch} matchesById={matchesById} getTeamFlag={getTeamFlag} theme={STAGE_THEMES["Final"]} />
+                    </div>
+                  )}
+                  <div className="mt-4 rounded-2xl border-2 border-yellow-200 bg-gradient-to-r from-yellow-300 via-lime-200 to-yellow-300 px-4 py-4 text-slate-950">
+                    <Trophy className="mx-auto mb-2 h-7 w-7" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em]">Campeon del Mundial FIFA 2026</p>
+                    <p className="mt-1 text-lg font-black uppercase">{champion}</p>
+                  </div>
+                </div>
+              </section>
+
+              {[...sideStages].reverse().map((stage) => {
+                const theme = STAGE_THEMES[stage];
+                const stageMatches = getStageMatchesForSide(rightSideIds, stage, bracketMatches);
+                return (
+                  <section key={`right-${stage}`} className="relative space-y-3">
+                    <div className={`rounded-xl px-3 py-2 text-center ${theme.header}`}>
+                      <p className="text-[11px] font-black uppercase">{STAGE_META[stage].title}</p>
+                    </div>
+                    {stageMatches.map((match) => (
+                      <React.Fragment key={match.id}>
+                        <FlowMatch match={match} matchesById={matchesById} getTeamFlag={getTeamFlag} side="right" compact={stage === "Semifinal"} />
+                      </React.Fragment>
+                    ))}
+                  </section>
+                );
+              })}
+
+              <section className="space-y-3">
+                <p className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Grupos G-L</p>
+                {rightGroups.map((group) => (
+                  <React.Fragment key={group.group}>
+                    <GroupPanel group={group} side="right" getTeamFlag={getTeamFlag} />
+                  </React.Fragment>
+                ))}
+              </section>
+            </div>
+          </div>
+
+          <div className="hidden overflow-x-auto pb-3">
             <div className="grid min-w-[1180px] grid-cols-5 gap-4">
               {STAGE_ORDER.map((stage) => {
                 const meta = STAGE_META[stage];
