@@ -269,6 +269,8 @@ const FIRST_PLACE_RATE = 0.8;
 const SECOND_PLACE_RATE = 0.15;
 const THIRD_PLACE_RATE = 0.05;
 const PREDICTION_LOCK_MINUTES = 5;
+const PHASE_REMINDER_WINDOW_START_MS = 24 * 60 * 60 * 1000;
+const PHASE_REMINDER_WINDOW_END_MS = 4 * 60 * 60 * 1000;
 const REMINDER_30M_WINDOW_START_MS = 30 * 60 * 1000;
 const REMINDER_30M_WINDOW_END_MS = 5 * 60 * 1000;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -2724,7 +2726,29 @@ function canSubmitPredictions(user: User) {
   return user.role === "admin" || user.role === "superadmin" || user.role === "company_admin" || Boolean(user.companyId) || user.paymentStatus === "paid";
 }
 
+function shouldReceivePredictionReminder(user: User) {
+  return user.status === "active" && !isSuperAdmin(user) && canSubmitPredictions(user);
+}
+
 const TEMPORARY_FAVORITES_ACCESS_DEADLINE = new Date("2026-06-12T18:00:00.000Z").getTime();
+const FINAL_PHASES = [
+  "16avos de Final",
+  "Octavos de Final",
+  "Cuartos de Final",
+  "Semifinales",
+  "Semifinal",
+  "Tercer Puesto",
+  "Final"
+];
+const FINAL_PHASE_LABELS: Record<string, string> = {
+  "16avos de Final": "16avos de final",
+  "Octavos de Final": "octavos de final",
+  "Cuartos de Final": "cuartos de final",
+  "Semifinales": "semifinales",
+  "Semifinal": "semifinales",
+  "Tercer Puesto": "el tercer puesto",
+  "Final": "la gran final"
+};
 
 function isTemporaryFavoritesAccessOpen(date = new Date()) {
   return date.getTime() < TEMPORARY_FAVORITES_ACCESS_DEADLINE;
@@ -5406,7 +5430,7 @@ async function runReminderScheduler() {
       if (diffToKickoff > REMINDER_30M_WINDOW_START_MS || diffToKickoff < REMINDER_30M_WINDOW_END_MS) return;
 
       db.users.forEach((u) => {
-        if (u.role === "admin") return;
+        if (!shouldReceivePredictionReminder(u)) return;
         const reminderKey = `30m_${u.id}_${m.id}`;
         if (db.sentReminders.includes(reminderKey)) return;
 
@@ -5434,6 +5458,67 @@ async function runReminderScheduler() {
           reminderKey,
           subject: `Recordatorio: ${m.local} vs ${m.visitor}`,
           title: "Recordatorio de Pronostico",
+          message
+        });
+      });
+    });
+
+    FINAL_PHASES.forEach((stage) => {
+      const phaseMatches = db.matches
+        .filter((m) => m.stage === stage)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      if (!phaseMatches.length) return;
+
+      const firstMatchTime = new Date(phaseMatches[0].date).getTime();
+      const diffToPhaseStart = firstMatchTime - now;
+      if (!db.torneo.notificationConfig.reminders) return;
+      if (diffToPhaseStart > PHASE_REMINDER_WINDOW_START_MS || diffToPhaseStart < PHASE_REMINDER_WINDOW_END_MS) return;
+
+      const pendingPhaseMatches = phaseMatches.filter((m) => m.status === "pending");
+      if (!pendingPhaseMatches.length) return;
+
+      const stageLabel = FINAL_PHASE_LABELS[stage] || stage.toLowerCase();
+      const phaseVerb = stage === "Final" || stage === "Tercer Puesto" ? "Empieza" : "Empiezan";
+      const phaseMatchSummary = pendingPhaseMatches
+        .slice(0, 6)
+        .map((m) => `- ${m.local} vs ${m.visitor}`)
+        .join("\n");
+      const extraMatches = pendingPhaseMatches.length > 6
+        ? `\n- Y ${pendingPhaseMatches.length - 6} partidos mas de esta fase.`
+        : "";
+
+      db.users.forEach((u) => {
+        if (!shouldReceivePredictionReminder(u)) return;
+
+        const missingPredictions = pendingPhaseMatches.filter((m) =>
+          !db.predictions.some((p) => p.userId === u.id && p.matchId === m.id)
+        );
+        if (!missingPredictions.length) return;
+
+        const reminderKey = `phase_${stage.replace(/\s+/g, "_").toLowerCase()}_${u.id}`;
+        if (db.sentReminders.includes(reminderKey)) return;
+
+        const message = `Se acerca ${stageLabel} del Mundial 2026. No olvides dejar tus marcadores antes del cierre de cada partido: se bloquean ${PREDICTION_LOCK_MINUTES} minutos antes del inicio.\n\nPartidos de la fase:\n${phaseMatchSummary}${extraMatches}\n\nTe faltan ${missingPredictions.length} marcador(es) por registrar en esta fase.`;
+        const notificationId = `not_phase_${stage.replace(/\s+/g, "_").toLowerCase()}_${u.id}`;
+        if (!db.notifications.some((notification) => notification.id === notificationId)) {
+          db.notifications.push({
+            id: notificationId,
+            userId: u.id,
+            title: `${phaseVerb} ${stageLabel}`,
+            message,
+            type: "reminder",
+            date: new Date().toISOString(),
+            read: false
+          });
+          updated = true;
+        }
+
+        pendingEmails.push({
+          user: u,
+          matchId: phaseMatches[0].id,
+          reminderKey,
+          subject: `${phaseVerb} ${stageLabel}: registra tus marcadores`,
+          title: `${phaseVerb} ${stageLabel}`,
           message
         });
       });
