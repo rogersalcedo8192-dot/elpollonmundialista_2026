@@ -133,6 +133,20 @@ interface KnockoutFixture {
   stadium: string;
 }
 
+type LocalGroupStandingRow = {
+  team: string;
+  playedGames: number;
+  won: number;
+  draw: number;
+  lost: number;
+  points: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  crest?: string;
+  position?: number;
+};
+
 interface Prediction {
   id: string;
   userId: string;
@@ -1043,6 +1057,136 @@ function getFinishedStageWinners(apiMatches: any[], stages: string[], expectedMa
   return winners.length === expectedMatches ? winners : [];
 }
 
+function ensureTournamentOutcomes(db: DatabaseSchema) {
+  if (!db.tournamentOutcomes) {
+    db.tournamentOutcomes = {
+      groupWinners: {},
+      octavosTeams: [],
+      cuartosTeams: [],
+      semifinalTeams: [],
+      finalists: [],
+      subchampion: "",
+      champion: ""
+    };
+  }
+  return db.tournamentOutcomes;
+}
+
+function isPlayedFinishedMatch(match: Match) {
+  return (
+    match.status === "finished" &&
+    match.localScore !== null &&
+    match.visitorScore !== null &&
+    new Date(match.date).getTime() <= Date.now()
+  );
+}
+
+function getFinishedLocalStageWinners(matches: Match[], stage: string, expectedMatches: number) {
+  const stageMatches = matches
+    .filter((match) => match.stage === stage && isPlayedFinishedMatch(match))
+    .sort((a, b) => a.id - b.id);
+  if (stageMatches.length !== expectedMatches) return [];
+
+  const winners = stageMatches.map((match) => {
+    if (match.localScore === match.visitorScore) return "";
+    return match.localScore! > match.visitorScore! ? match.local : match.visitor;
+  });
+  return winners.every(Boolean) ? winners : [];
+}
+
+function getFinishedLocalStageLosers(matches: Match[], stage: string, expectedMatches: number) {
+  const stageMatches = matches
+    .filter((match) => match.stage === stage && isPlayedFinishedMatch(match))
+    .sort((a, b) => a.id - b.id);
+  if (stageMatches.length !== expectedMatches) return [];
+
+  const losers = stageMatches.map((match) => {
+    if (match.localScore === match.visitorScore) return "";
+    return match.localScore! < match.visitorScore! ? match.local : match.visitor;
+  });
+  return losers.every(Boolean) ? losers : [];
+}
+
+function buildLocalGroupStandingForGroup(matches: Match[], groupLetter: string) {
+  const groupMatches = matches.filter((match) => match.stage === `Grupo ${groupLetter}`);
+  if (groupMatches.length !== 6) return null;
+
+  const rows = new Map<string, LocalGroupStandingRow>();
+  const ensureTeam = (team: string) => {
+    if (!rows.has(team)) {
+      rows.set(team, {
+        team,
+        playedGames: 0,
+        won: 0,
+        draw: 0,
+        lost: 0,
+        points: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0
+      });
+    }
+    return rows.get(team)!;
+  };
+
+  for (const match of groupMatches) {
+    const home = ensureTeam(match.local);
+    const away = ensureTeam(match.visitor);
+    if (!isPlayedFinishedMatch(match)) continue;
+
+    home.playedGames += 1;
+    away.playedGames += 1;
+    home.goalsFor += match.localScore!;
+    home.goalsAgainst += match.visitorScore!;
+    away.goalsFor += match.visitorScore!;
+    away.goalsAgainst += match.localScore!;
+    if (match.localScore! > match.visitorScore!) {
+      home.won += 1;
+      home.points += 3;
+      away.lost += 1;
+    } else if (match.localScore! < match.visitorScore!) {
+      away.won += 1;
+      away.points += 3;
+      home.lost += 1;
+    } else {
+      home.draw += 1;
+      away.draw += 1;
+      home.points += 1;
+      away.points += 1;
+    }
+  }
+
+  const table = Array.from(rows.values())
+    .map((row) => ({ ...row, goalDifference: row.goalsFor - row.goalsAgainst, crest: "" }))
+    .sort((a, b) =>
+      b.points - a.points ||
+      b.goalDifference - a.goalDifference ||
+      b.goalsFor - a.goalsFor ||
+      a.team.localeCompare(b.team)
+    )
+    .map((row, index) => ({ ...row, position: index + 1 }));
+
+  return table.length === 4 && table.every((row) => row.playedGames === 3) ? table : null;
+}
+
+function getSafeLocalGroupWinners(matches: Match[]) {
+  const winners: Record<string, string> = {};
+  for (const groupLetter of "ABCDEFGHIJKL") {
+    const table = buildLocalGroupStandingForGroup(matches, groupLetter);
+    if (!table) continue;
+    const leader = table[0];
+    const runnerUp = table[1];
+    if (!leader || !runnerUp) continue;
+
+    const leaderIsClear =
+      leader.points !== runnerUp.points ||
+      leader.goalDifference !== runnerUp.goalDifference ||
+      leader.goalsFor !== runnerUp.goalsFor;
+    if (leaderIsClear) winners[groupLetter] = leader.team;
+  }
+  return winners;
+}
+
 function getCompletedGroupWinners(apiMatches: any[], standingsPayload: any) {
   const winners: Record<string, string> = {};
   const standings = Array.isArray(standingsPayload?.standings) ? standingsPayload.standings : [];
@@ -1072,15 +1216,7 @@ function applyAutomaticTournamentOutcomes(
   apiMatches: any[],
   standingsPayload: any
 ) {
-  const outcomes = db.tournamentOutcomes || {
-    groupWinners: {},
-    octavosTeams: [],
-    cuartosTeams: [],
-    semifinalTeams: [],
-    finalists: [],
-    subchampion: "",
-    champion: ""
-  };
+  const outcomes = ensureTournamentOutcomes(db);
   let changed = false;
 
   const groupWinners = getCompletedGroupWinners(apiMatches, standingsPayload);
@@ -1090,27 +1226,43 @@ function applyAutomaticTournamentOutcomes(
     changed = true;
   });
 
+  const localMatches = Array.isArray(db.matches) ? db.matches : [];
+  const localGroupWinners = getSafeLocalGroupWinners(localMatches);
+  Object.entries(localGroupWinners).forEach(([group, team]) => {
+    if (outcomes.groupWinners[group]) return;
+    outcomes.groupWinners[group] = team;
+    changed = true;
+  });
+
   const octavosTeams = getFinishedStageWinners(apiMatches, ["LAST_32", "ROUND_OF_32"], 16);
-  if (!outcomes.octavosTeams.length && octavosTeams.length === 16) {
-    outcomes.octavosTeams = octavosTeams;
+  const localOctavosTeams = getFinishedLocalStageWinners(localMatches, "16avos de Final", 16);
+  const resolvedOctavosTeams = octavosTeams.length === 16 ? octavosTeams : localOctavosTeams;
+  if (!outcomes.octavosTeams.length && resolvedOctavosTeams.length === 16) {
+    outcomes.octavosTeams = resolvedOctavosTeams;
     changed = true;
   }
 
   const cuartosTeams = getFinishedStageWinners(apiMatches, ["ROUND_OF_16", "LAST_16"], 8);
-  if (!outcomes.cuartosTeams.length && cuartosTeams.length === 8) {
-    outcomes.cuartosTeams = cuartosTeams;
+  const localCuartosTeams = getFinishedLocalStageWinners(localMatches, "Octavos de Final", 8);
+  const resolvedCuartosTeams = cuartosTeams.length === 8 ? cuartosTeams : localCuartosTeams;
+  if (!outcomes.cuartosTeams.length && resolvedCuartosTeams.length === 8) {
+    outcomes.cuartosTeams = resolvedCuartosTeams;
     changed = true;
   }
 
   const semifinalTeams = getFinishedStageWinners(apiMatches, ["QUARTER_FINALS"], 4);
-  if (!outcomes.semifinalTeams.length && semifinalTeams.length === 4) {
-    outcomes.semifinalTeams = semifinalTeams;
+  const localSemifinalTeams = getFinishedLocalStageWinners(localMatches, "Cuartos de Final", 4);
+  const resolvedSemifinalTeams = semifinalTeams.length === 4 ? semifinalTeams : localSemifinalTeams;
+  if (!outcomes.semifinalTeams.length && resolvedSemifinalTeams.length === 4) {
+    outcomes.semifinalTeams = resolvedSemifinalTeams;
     changed = true;
   }
 
   const finalists = getFinishedStageWinners(apiMatches, ["SEMI_FINALS"], 2);
-  if (!outcomes.finalists.length && finalists.length === 2) {
-    outcomes.finalists = finalists;
+  const localFinalists = getFinishedLocalStageWinners(localMatches, "Semifinal", 2);
+  const resolvedFinalists = finalists.length === 2 ? finalists : localFinalists;
+  if (!outcomes.finalists.length && resolvedFinalists.length === 2) {
+    outcomes.finalists = resolvedFinalists;
     changed = true;
   }
 
@@ -1126,6 +1278,17 @@ function applyAutomaticTournamentOutcomes(
       outcomes.subchampion = subchampion;
       changed = true;
     }
+  }
+
+  const localFinalWinners = getFinishedLocalStageWinners(localMatches, "Final", 1);
+  const localFinalLosers = getFinishedLocalStageLosers(localMatches, "Final", 1);
+  if (!outcomes.champion && localFinalWinners[0]) {
+    outcomes.champion = localFinalWinners[0];
+    changed = true;
+  }
+  if (!outcomes.subchampion && localFinalLosers[0]) {
+    outcomes.subchampion = localFinalLosers[0];
+    changed = true;
   }
 
   db.tournamentOutcomes = outcomes;
@@ -1157,8 +1320,44 @@ function validateFootballDataTournamentAutomation() {
     throw new Error("Validacion invalida: no se reconocio el ganador de un grupo completo.");
   }
 
+  const localGroupMatches: Match[] = [
+    { id: 1, stage: "Grupo A", local: "MÃ©xico", visitor: "SudÃ¡frica", date: "2026-06-11T19:00:00.000Z", stadium: "Test", status: "finished", localScore: 2, visitorScore: 0 },
+    { id: 2, stage: "Grupo A", local: "Rep. de Corea", visitor: "Rep. Checa", date: "2026-06-12T02:00:00.000Z", stadium: "Test", status: "finished", localScore: 1, visitorScore: 1 },
+    { id: 25, stage: "Grupo A", local: "Rep. Checa", visitor: "SudÃ¡frica", date: "2026-06-18T16:00:00.000Z", stadium: "Test", status: "finished", localScore: 0, visitorScore: 1 },
+    { id: 28, stage: "Grupo A", local: "MÃ©xico", visitor: "Rep. de Corea", date: "2026-06-19T01:00:00.000Z", stadium: "Test", status: "finished", localScore: 2, visitorScore: 1 },
+    { id: 53, stage: "Grupo A", local: "Rep. Checa", visitor: "MÃ©xico", date: "2026-06-25T01:00:00.000Z", stadium: "Test", status: "finished", localScore: 0, visitorScore: 3 },
+    { id: 54, stage: "Grupo A", local: "SudÃ¡frica", visitor: "Rep. de Corea", date: "2026-06-25T01:00:00.000Z", stadium: "Test", status: "finished", localScore: 2, visitorScore: 1 }
+  ];
+  const localGroupWinners = getSafeLocalGroupWinners(localGroupMatches);
+  if (localGroupWinners.A !== "MÃ©xico") {
+    throw new Error("Validacion invalida: no se reconocio el ganador local seguro de un grupo completo.");
+  }
+
+  const placeholderKnockoutMatch: Match = {
+    id: 73,
+    stage: "16avos de Final",
+    local: "2Âº Grupo A",
+    visitor: "2Âº Grupo B",
+    date: "2026-06-28T19:00:00.000Z",
+    stadium: "Test",
+    status: "pending",
+    localScore: null,
+    visitorScore: null
+  };
+  const officialKnockoutMatch: Match = {
+    ...placeholderKnockoutMatch,
+    local: "SudÃ¡frica",
+    visitor: "CanadÃ¡",
+    externalSource: FOOTBALL_DATA_SOURCE,
+    externalSourceId: "fixture-73"
+  };
+  if (!isSameFixtureCandidate(placeholderKnockoutMatch, officialKnockoutMatch)) {
+    throw new Error("Validacion invalida: el fixture de eliminatoria oficial no conserva el partido placeholder.");
+  }
+
   const manualOctavos = ["Correccion manual"];
   const mockDb = {
+    matches: [],
     tournamentOutcomes: {
       groupWinners: {},
       octavosTeams: [...manualOctavos],
@@ -1179,6 +1378,28 @@ function isSameFixtureCandidate(existing: Match, incoming: Match) {
   const existingDate = new Date(existing.date).getTime();
   const incomingDate = new Date(incoming.date).getTime();
   const withinSameWindow = Number.isFinite(existingDate) && Number.isFinite(incomingDate) && Math.abs(existingDate - incomingDate) < 12 * 60 * 60 * 1000;
+  const withinSameKickoffWindow = Number.isFinite(existingDate) && Number.isFinite(incomingDate) && Math.abs(existingDate - incomingDate) < 2 * 60 * 60 * 1000;
+  const hasPlaceholderSlot = [existing.local, existing.visitor].some((team) => {
+    const normalized = normalizeFixtureTeamName(team);
+    return (
+      normalized.includes("grupo ") ||
+      normalized.includes("ganador partido") ||
+      normalized.includes("perdedor partido") ||
+      /^[123]\s?[a-l](?:\s?\/\s?[a-l])*/i.test(normalized)
+    );
+  });
+  const isKnownKnockoutFixture = KNOCKOUT_FIXTURES.some((fixture) =>
+    fixture.id === existing.id &&
+    fixture.stage === incoming.stage
+  );
+  if (
+    isKnownKnockoutFixture &&
+    hasPlaceholderSlot &&
+    withinSameKickoffWindow
+  ) {
+    return true;
+  }
+
   return (
     withinSameWindow &&
     existing.stage === incoming.stage &&
@@ -2420,6 +2641,7 @@ function saveDb(schema: DatabaseSchema) {
 // Recalculates all scores and rankings
 function recalculateScoresAndRankings() {
   const db = loadDb();
+  applyAutomaticTournamentOutcomes(db, [], null);
   const nowMs = Date.now();
   const isScoreableFinishedMatch = (match: Match) => match.status === "finished" && new Date(match.date).getTime() <= nowMs;
   const hasScoreableFinishedMatches = db.matches.some(isScoreableFinishedMatch);
