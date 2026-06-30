@@ -193,9 +193,19 @@ const getMatchLoser = (match?: Match) => {
   return "";
 };
 
+const isPlaceholderTeam = (team: string) => {
+  const normalized = normalizeText(team).trim();
+  return (
+    /^(Ganador|Perdedor) Partido/i.test(normalized) ||
+    /^(Gan\.?|Per\.?)\s*P?\d+$/i.test(normalized) ||
+    /Grupo [A-L]/i.test(normalized) ||
+    /^[123](?:\.?º|º)?\s*(?:Grupo\s*)?[A-L](?:\s*\/\s*[A-L])*/i.test(normalized)
+  );
+};
+
 const hasRealTeam = (team: string) => {
-  const normalized = normalizeText(team);
-  return Boolean(normalized && !/^(Ganador|Perdedor) Partido/i.test(normalized) && !/Grupo [A-L]/i.test(normalized));
+  const normalized = normalizeText(team).trim();
+  return Boolean(normalized && !isPlaceholderTeam(normalized));
 };
 
 const getSlotFromRealMatch = (team: string): BracketSlot | null => {
@@ -242,8 +252,8 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
     const realMatch = matchesById.get(fixture.id);
     const parsedLocal = parseSourceSlot(fixture.localSlot);
     const parsedVisitor = parseSourceSlot(fixture.visitorSlot);
-    const realLocal = realMatch ? getSlotFromRealMatch(realMatch.local) : null;
-    const realVisitor = realMatch ? getSlotFromRealMatch(realMatch.visitor) : null;
+    const realLocal = realMatch && parsedLocal.source === "slot" ? getSlotFromRealMatch(realMatch.local) : null;
+    const realVisitor = realMatch && parsedVisitor.source === "slot" ? getSlotFromRealMatch(realMatch.visitor) : null;
 
     return {
       id: fixture.id,
