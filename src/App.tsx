@@ -96,6 +96,7 @@ type RankingColumnHelpKey =
   | "outcome"
   | "exactScore"
   | "exactDraw"
+  | "knockout"
   | "favorites"
   | "total"
   | "matches"
@@ -137,6 +138,11 @@ const RANKING_COLUMN_HELP: Record<RankingColumnHelpKey, { title: string; descrip
     title: "PTS X marcador exacto empate",
     description: "Acumula un bono adicional de 10 puntos cuando aciertas exactamente un empate.",
     example: "Ejemplo: pronosticas 0-0 y termina 0-0: 10 PTS de bono + 10 PTS exacto + 10 PTS 1X2 + 5 PTS = 35 PTS."
+  },
+  knockout: {
+    title: "PTS X clasificados",
+    description: "Acumula 200 puntos por cada equipo acertado que clasifica a octavos, cuartos o semifinales.",
+    example: "Ejemplo: si aciertas 3 clasificados entre octavos, cuartos y semifinales, sumas 600 PTS en esta columna."
   },
   favorites: {
     title: "Favoritos",
@@ -3010,9 +3016,9 @@ export default function App() {
   const handleExportRankingCSV = () => {
     try {
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "Posicion,Nombre,Pais,Puntos Totales,Puntos por Participar,Puntos por Resultado 1X2,Puntos por Marcador Exacto,Bono Empate Exacto,Puntos Favoritos,Partidos Predichos\n";
+      csvContent += "Posicion,Nombre,Pais,Puntos Totales,Puntos por Participar,Puntos por Resultado 1X2,Puntos por Marcador Exacto,Bono Empate Exacto,Puntos Clasificados 200,Puntos Favoritos,Partidos Predichos\n";
       rankings.forEach((r) => {
-        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.participationPoints || 0},${r.outcomePoints || 0},${r.exactScorePoints || 0},${r.exactDrawBonusPoints || 0},${r.totalBonusPoints || 0},${r.predictCount}\n`;
+        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.participationPoints || 0},${r.outcomePoints || 0},${r.exactScorePoints || 0},${r.exactDrawBonusPoints || 0},${r.knockoutPoints || 0},${r.totalBonusPoints || 0},${r.predictCount}\n`;
       });
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -6677,7 +6683,7 @@ export default function App() {
                       Desliza la tabla para consultar el detalle. Toca el icono de hoja de una columna para ver su explicación y ejemplo.
                     </p>
                     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                      <table className="min-w-[760px] border-collapse text-left text-[10px]">
+                      <table className="min-w-[840px] border-collapse text-left text-[10px]">
                         <thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                           <tr>
                             {([
@@ -6688,6 +6694,7 @@ export default function App() {
                               ["outcome", <>PTS Resultado<br />1X2</>, "w-20"],
                               ["exactScore", <>PTS X marcador<br />exacto (L o V)</>, "w-20"],
                               ["exactDraw", <>PTS X marcador<br />exacto empate</>, "w-24"],
+                              ["knockout", <>PTS X clasificados<br />200 c/u</>, "w-20"],
                               ["favorites", <>Favoritos</>, "w-16"],
                               ["matches", <>Partidos</>, "w-14"],
                               ["certificate", <>Certificado<br />ganador</>, "w-24"]
@@ -6765,6 +6772,7 @@ export default function App() {
                                 <td className="px-2 py-3 text-center font-bold text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-fuchsia-700 dark:text-fuchsia-400">{r.knockoutPoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-slate-500 dark:text-slate-400">{r.predictCount}</td>
                                 <td className="px-2 py-2 text-center">
@@ -6809,6 +6817,7 @@ export default function App() {
                               ["outcome", "PTS Resultado 1X2", "text-center"],
                               ["exactScore", "PTS X marcador exacto (L o V)", "text-center"],
                               ["exactDraw", "PTS X marcador exacto empate", "text-center"],
+                              ["knockout", "PTS X clasificados 200 c/u", "text-center"],
                               ["favorites", "Favoritos", "text-center"],
                               ["total", "Total PTS", "text-center"],
                               ["matches", t("rank_col_matches", "Partidos"), "text-center"],
@@ -6871,6 +6880,7 @@ export default function App() {
                                 <td className="py-2.5 px-3 text-center text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-fuchsia-700 dark:text-fuchsia-400">{r.knockoutPoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">{r.points}</td>
                                 <td className="py-2.5 px-3 text-center text-slate-500 dark:text-slate-400">{r.predictCount}</td>
