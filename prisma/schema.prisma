@@ -115,6 +115,7 @@ model Match {
   status           String
   localScore       Int?
   visitorScore     Int?
+  officialWinner   String?
   externalSource   String?
   externalSourceId String?
   createdAt        DateTime @default(now())

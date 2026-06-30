@@ -111,6 +111,7 @@ export interface Match {
   status: "pending" | "in_progress" | "finished";
   localScore: number | null;
   visitorScore: number | null;
+  officialWinner?: string;
   externalSource?: string;
   externalSourceId?: string;
 }

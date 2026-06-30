@@ -120,6 +120,7 @@ interface Match {
   status: "pending" | "in_progress" | "finished";
   localScore: number | null;
   visitorScore: number | null;
+  officialWinner?: string;
   externalSource?: string;
   externalSourceId?: string;
 }
@@ -1088,6 +1089,7 @@ function getFinishedLocalStageWinners(matches: Match[], stage: string, expectedM
   if (stageMatches.length !== expectedMatches) return [];
 
   const winners = stageMatches.map((match) => {
+    if (match.officialWinner) return match.officialWinner;
     if (match.localScore === match.visitorScore) return "";
     return match.localScore! > match.visitorScore! ? match.local : match.visitor;
   });
@@ -1101,6 +1103,11 @@ function getFinishedLocalStageLosers(matches: Match[], stage: string, expectedMa
   if (stageMatches.length !== expectedMatches) return [];
 
   const losers = stageMatches.map((match) => {
+    if (match.officialWinner) {
+      return normalizeFixtureTeamName(match.officialWinner) === normalizeFixtureTeamName(match.local)
+        ? match.visitor
+        : match.local;
+    }
     if (match.localScore === match.visitorScore) return "";
     return match.localScore! < match.visitorScore! ? match.local : match.visitor;
   });
@@ -1307,6 +1314,15 @@ function validateFootballDataTournamentAutomation() {
   if (winners.length !== 16 || getFinishedStageWinners(roundOf32.slice(0, 15), ["LAST_32"], 16).length) {
     throw new Error("Validacion invalida: la automatizacion de 16avos no respeta el cierre completo de la fase.");
   }
+  const penaltyWinner = getFootballDataMatchWinner({
+    status: "FINISHED",
+    homeTeam: { name: "Marruecos" },
+    awayTeam: { name: "Paises Bajos" },
+    score: { winner: "HOME_TEAM", fullTime: { home: 1, away: 1 } }
+  });
+  if (penaltyWinner !== "Marruecos") {
+    throw new Error("Validacion invalida: no se reconocio el ganador oficial de un empate decidido por penales.");
+  }
 
   const groupMatches = Array.from({ length: 6 }, () => ({
     stage: "GROUP_STAGE",
@@ -1331,6 +1347,13 @@ function validateFootballDataTournamentAutomation() {
   const localGroupWinners = getSafeLocalGroupWinners(localGroupMatches);
   if (localGroupWinners.A !== "MÃ©xico") {
     throw new Error("Validacion invalida: no se reconocio el ganador local seguro de un grupo completo.");
+  }
+
+  const localPenaltyWinners = getFinishedLocalStageWinners([
+    { id: 73, stage: "16avos de Final", local: "Marruecos", visitor: "Paises Bajos", date: "2026-06-29T19:00:00.000Z", stadium: "Test", status: "finished", localScore: 1, visitorScore: 1, officialWinner: "Marruecos" }
+  ], "16avos de Final", 1);
+  if (localPenaltyWinners[0] !== "Marruecos") {
+    throw new Error("Validacion invalida: no se reconocio el ganador local oficial por penales.");
   }
 
   const placeholderKnockoutMatch: Match = {
@@ -1800,6 +1823,7 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       status: m.status as Match["status"],
       localScore: m.localScore,
       visitorScore: m.visitorScore,
+      officialWinner: (m as any).officialWinner || undefined,
       externalSource: m.externalSource || undefined,
       externalSourceId: m.externalSourceId || undefined
     })),
@@ -2049,6 +2073,7 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           status: m.status,
           localScore: m.localScore,
           visitorScore: m.visitorScore,
+          officialWinner: m.officialWinner || null,
           externalSource: m.externalSource || null,
           externalSourceId: m.externalSourceId || null
         }))
@@ -4773,6 +4798,8 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     }
 
     const scores = getFootballDataScore(apiMatch);
+    const officialWinner =
+      apiMatch?.status === "FINISHED" ? getFootballDataMatchWinner(apiMatch) : "";
     const incoming: Match = {
       id: nextId,
       stage: mapFootballDataStage(apiMatch.stage, apiMatch.group),
@@ -4783,6 +4810,7 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
       status: mapFootballDataStatus(apiMatch.status),
       localScore: scores.localScore,
       visitorScore: scores.visitorScore,
+      officialWinner: officialWinner || undefined,
       externalSource: FOOTBALL_DATA_SOURCE,
       externalSourceId: String(apiMatch.id)
     };
@@ -4801,7 +4829,7 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
       return;
     }
 
-    const previousResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
+    const previousResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}:${existing.officialWinner ?? ""}`;
     existing.stage = incoming.stage;
     existing.local = incoming.local;
     existing.visitor = incoming.visitor;
@@ -4812,12 +4840,15 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
       existing.status = incoming.status;
       existing.localScore = incoming.localScore;
       existing.visitorScore = incoming.visitorScore;
+      existing.officialWinner = incoming.officialWinner;
+    } else if (incoming.officialWinner) {
+      existing.officialWinner = incoming.officialWinner;
     }
     existing.externalSource = FOOTBALL_DATA_SOURCE;
     existing.externalSourceId = incoming.externalSourceId;
     updated += 1;
 
-    const nextResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}`;
+    const nextResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}:${existing.officialWinner ?? ""}`;
     if (previousResult !== nextResult && existing.status === "finished") {
       resultChanged = true;
     }
