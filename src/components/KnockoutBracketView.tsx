@@ -73,6 +73,22 @@ const STAGE_ORDER: KnockoutFixture["stage"][] = [
   "Final"
 ];
 
+const LEFT_BRACKET_MATCH_IDS = [
+  73, 74, 75, 77,
+  81, 82, 83, 84,
+  89, 90, 93, 94,
+  97, 98,
+  101
+];
+
+const RIGHT_BRACKET_MATCH_IDS = [
+  76, 78, 79, 80,
+  85, 86, 87, 88,
+  91, 92, 95, 96,
+  99, 100,
+  102
+];
+
 const STAGE_META: Record<KnockoutFixture["stage"], { title: string; short: string; count: string }> = {
   "16avos de Final": { title: "16avos", short: "32 equipos", count: "16 cruces" },
   "Octavos de Final": { title: "Octavos", short: "16 equipos", count: "8 cruces" },
@@ -278,22 +294,13 @@ const buildGroupSummaries = (overview: WorldCupOverview | null, groups: string[]
     };
   });
 
-const collectSourceMatchIds = (matchId: number, byId: Map<number, BracketMatch>, ids = new Set<number>()) => {
-  if (ids.has(matchId)) return ids;
-  const match = byId.get(matchId);
-  if (!match) return ids;
-  ids.add(matchId);
-  [match.local, match.visitor].forEach((slot) => {
-    if (slot.sourceMatchId) collectSourceMatchIds(slot.sourceMatchId, byId, ids);
-  });
-  return ids;
-};
-
 const getStageMatchesForSide = (
   sideIds: Set<number>,
   stage: KnockoutFixture["stage"],
   matches: BracketMatch[]
 ) => matches.filter((match) => sideIds.has(match.id) && match.stage === stage).sort((a, b) => a.id - b.id);
+
+const getVisualSideIds = (matchIds: number[]) => new Set(matchIds);
 
 const getResolvedSideWinner = (matchId: number, byId: Map<number, BracketMatch>, matchesById: Map<number, Match>, fallback: string) => {
   const match = byId.get(matchId);
@@ -524,8 +531,8 @@ export const KnockoutBracketView: React.FC<Props> = ({ getTeamFlag }) => {
   }, [bracketMatches]);
   const thirdPlaceMatch = bracketMatches.find((match) => match.stage === "Tercer Puesto");
   const finalMatch = bracketMatchesById.get(104);
-  const leftSideIds = useMemo(() => collectSourceMatchIds(101, bracketMatchesById), [bracketMatchesById]);
-  const rightSideIds = useMemo(() => collectSourceMatchIds(102, bracketMatchesById), [bracketMatchesById]);
+  const leftSideIds = useMemo(() => getVisualSideIds(LEFT_BRACKET_MATCH_IDS), []);
+  const rightSideIds = useMemo(() => getVisualSideIds(RIGHT_BRACKET_MATCH_IDS), []);
   const leftGroups = useMemo(() => buildGroupSummaries(overview, ["A", "B", "C", "D", "E", "F"]), [overview]);
   const rightGroups = useMemo(() => buildGroupSummaries(overview, ["G", "H", "I", "J", "K", "L"]), [overview]);
   const sideStages: KnockoutFixture["stage"][] = ["16avos de Final", "Octavos de Final", "Cuartos de Final", "Semifinal"];
