@@ -19,6 +19,7 @@ Este roadmap resume el estado real del proyecto y organiza lo que falta para ope
 - Tarjetas de "Asi va el Mundial" con acciones sutiles para compartir por Web Share, WhatsApp o descargar resumen de texto, sin escrituras en DB ni cambios de backend.
 - Fixture de eliminacion directa separado de los partidos reales de API.
 - Modulo publico "Llaves" para visualizar 16avos, octavos, cuartos, semifinales, tercer puesto y final usando el fixture oficial y los partidos/resultados ya sincronizados, sin escrituras en backend ni DB.
+- Las llaves reconocen el ganador oficial de partidos empatados definidos por penales mediante `officialWinner`, conservando el marcador real para puntuacion normal.
 - Pronosticos por marcador con guardar, actualizar y limpiar.
 - Cuenta regresiva dinámica por evento hasta el cierre de pronósticos.
 - Bloqueo backend/frontend para impedir pronosticos de usuarios sin pago confirmado.
@@ -137,6 +138,7 @@ Objetivo: operar el Mundial con datos consistentes y actualizables.
 - Registrar auditoria de sincronizaciones API.
 - COMPLETADO: mantener la lista historica de 16 equipos como clasificados a Octavos; no se crean puntos retroactivos por los 32 clasificados a 16avos porque esa prediccion nunca fue solicitada.
 - COMPLETADO: incorporar automaticamente los cruces reales de 16avos, Octavos, Cuartos, Semifinales, Tercer Puesto y Final cuando la API confirme ambos equipos; quedan pronosticables con marcador y cierre normal de cinco minutos.
+- COMPLETADO: respetar `score.winner` de football-data.org en empates decididos por penales para que equipos como Marruecos o Paraguay avancen en la llave aunque el marcador quede empatado en tiempo reglamentario/prorroga.
 
 Criterio de cierre:
 
@@ -296,6 +298,7 @@ Criterio de cierre:
 
 ## Ultima Actualizacion
 
+- 2026-06-30: corregido avance de eliminatorias decididas por penales: se agrega `officialWinner` opcional a partidos sincronizados desde football-data.org, la automatizacion de clasificados/ganadores lo usa en empates y la vista "Llaves" muestra el clasificado oficial sin alterar el marcador usado para la puntuacion normal. Verificado con `npm.cmd run lint`, `npm.cmd run build` y servidor local respondiendo en `/api/knockout-fixtures`.
 - 2026-06-23: ajustada la vista publica "Llaves" para que la fase de grupos use un color simetrico unico en ambos lados del diagrama; las banderas muestran su etiqueta compacta solo al hacer clic y los encabezados quedan como Grupo A-L, sin cambios de datos ni escrituras.
 - 2026-06-17: agregados partidos favoritos personales dentro de Mis Pronosticos: cada usuario puede marcar/desmarcar partidos con un balon, se persisten en `favoriteMatchIds` con migracion Prisma, y cada partido con pronostico guardado permite compartir el marcador por Web Share/redes o abrir WhatsApp con texto publico del partido y enlace.
 - 2026-06-17: agregado permiso individual con vencimiento definido por SuperAdmin para habilitar Favoritos por usuario sin reabrir la ventana global: nuevo campo `favoritesAccessOverrideUntil`, migracion Prisma, control de fecha/hora en Gestion de Usuarios, etiqueta visible y excepcion backend/frontend para guardar Favoritos, Finalistas, Subcampeon y Campeon solo mientras la fecha siga vigente.
