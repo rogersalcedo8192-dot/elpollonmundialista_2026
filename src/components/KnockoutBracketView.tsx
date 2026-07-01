@@ -195,18 +195,21 @@ const parseSourceSlot = (slot: string) => {
   };
 };
 
-const hasPlayableFinalResult = (match?: Match) => {
-  if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) return false;
-  const matchTime = new Date(match.date).getTime();
-  return !Number.isFinite(matchTime) || matchTime <= Date.now();
-};
-
 const getValidOfficialWinner = (match: Match) => {
   if (!match.officialWinner) return "";
   const winner = normalizeText(match.officialWinner).trim().toLowerCase();
   const local = normalizeText(match.local).trim().toLowerCase();
   const visitor = normalizeText(match.visitor).trim().toLowerCase();
   return winner === local || winner === visitor ? normalizeText(match.officialWinner) : "";
+};
+
+const hasInvalidOfficialWinner = (match: Match) => Boolean(match.officialWinner && !getValidOfficialWinner(match));
+
+const hasPlayableFinalResult = (match?: Match) => {
+  if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) return false;
+  if (hasInvalidOfficialWinner(match)) return false;
+  const matchTime = new Date(match.date).getTime();
+  return !Number.isFinite(matchTime) || matchTime <= Date.now();
 };
 
 const getMatchWinner = (match?: Match) => {

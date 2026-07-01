@@ -1147,6 +1147,10 @@ function getValidOfficialWinner(match: Pick<Match, "local" | "visitor" | "offici
   return winner === local || winner === visitor ? match.officialWinner : "";
 }
 
+function hasInvalidOfficialWinner(match: Pick<Match, "local" | "visitor" | "officialWinner">) {
+  return Boolean(match.officialWinner && !getValidOfficialWinner(match));
+}
+
 function sanitizeMatchForClient(match: Match): Match {
   const validOfficialWinner = getValidOfficialWinner(match);
   const matchTime = new Date(match.date).getTime();
@@ -1154,16 +1158,18 @@ function sanitizeMatchForClient(match: Match): Match {
     match.status === "finished" &&
     Number.isFinite(matchTime) &&
     matchTime > Date.now();
+  const hasContaminatedFinishedResult = match.status === "finished" && hasInvalidOfficialWinner(match);
+  const shouldHideResult = hasFutureFinishedResult || hasContaminatedFinishedResult;
 
-  if (!hasFutureFinishedResult && (!match.officialWinner || validOfficialWinner === match.officialWinner)) {
+  if (!shouldHideResult && (!match.officialWinner || validOfficialWinner === match.officialWinner)) {
     return match;
   }
 
   return {
     ...match,
-    status: hasFutureFinishedResult ? "pending" : match.status,
-    localScore: hasFutureFinishedResult ? null : match.localScore,
-    visitorScore: hasFutureFinishedResult ? null : match.visitorScore,
+    status: shouldHideResult ? "pending" : match.status,
+    localScore: shouldHideResult ? null : match.localScore,
+    visitorScore: shouldHideResult ? null : match.visitorScore,
     officialWinner: validOfficialWinner || undefined
   };
 }
@@ -1438,7 +1444,13 @@ function validateFootballDataTournamentAutomation() {
     visitorScore: 0,
     officialWinner: "Francia"
   };
-  if (sanitizeMatchForClient(invalidOfficialWinnerMatch).officialWinner) {
+  const sanitizedInvalidWinnerMatch = sanitizeMatchForClient(invalidOfficialWinnerMatch);
+  if (
+    sanitizedInvalidWinnerMatch.status !== "pending" ||
+    sanitizedInvalidWinnerMatch.localScore !== null ||
+    sanitizedInvalidWinnerMatch.visitorScore !== null ||
+    sanitizedInvalidWinnerMatch.officialWinner
+  ) {
     throw new Error("Validacion invalida: un ganador oficial debe pertenecer al partido.");
   }
   const expectedRoundOf16Fixtures = [
@@ -2813,6 +2825,7 @@ function recalculateScoresAndRankings() {
     match.status === "finished" &&
     match.localScore !== null &&
     match.visitorScore !== null &&
+    !hasInvalidOfficialWinner(match) &&
     new Date(match.date).getTime() <= nowMs;
   const hasScoreableFinishedMatches = db.matches.some(isScoreableFinishedMatch);
   const outcomes = db.tournamentOutcomes;
