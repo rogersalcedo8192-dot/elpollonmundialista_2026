@@ -195,8 +195,14 @@ const parseSourceSlot = (slot: string) => {
   };
 };
 
+const hasPlayableFinalResult = (match?: Match) => {
+  if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) return false;
+  const matchTime = new Date(match.date).getTime();
+  return !Number.isFinite(matchTime) || matchTime <= Date.now();
+};
+
 const getMatchWinner = (match?: Match) => {
-  if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) return "";
+  if (!hasPlayableFinalResult(match)) return "";
   if (match.officialWinner) return normalizeText(match.officialWinner);
   if (match.localScore > match.visitorScore) return match.local;
   if (match.visitorScore > match.localScore) return match.visitor;
@@ -204,7 +210,7 @@ const getMatchWinner = (match?: Match) => {
 };
 
 const getMatchLoser = (match?: Match) => {
-  if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) return "";
+  if (!hasPlayableFinalResult(match)) return "";
   if (match.officialWinner) {
     return normalizeText(match.officialWinner) === normalizeText(match.local) ? match.visitor : match.local;
   }

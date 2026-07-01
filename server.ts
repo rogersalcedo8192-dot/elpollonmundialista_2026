@@ -1020,13 +1020,25 @@ function mapFootballDataStage(stage?: string | null, group?: string | null) {
   return stageMap[stage || ""] || stage || "Grupo A";
 }
 
-function mapFootballDataStatus(status?: string | null): Match["status"] {
-  if (status === "FINISHED") return "finished";
+function isFootballDataMatchFinished(match: any) {
+  const matchTime = new Date(match?.utcDate || "").getTime();
+  const hasStarted = !Number.isFinite(matchTime) || matchTime <= Date.now();
+  return match?.status === "FINISHED" && hasStarted;
+}
+
+function mapFootballDataStatus(status?: string | null, utcDate?: string | null): Match["status"] {
+  const matchTime = new Date(utcDate || "").getTime();
+  const hasStarted = !Number.isFinite(matchTime) || matchTime <= Date.now();
+  if (status === "FINISHED" && hasStarted) return "finished";
   if (status === "LIVE" || status === "IN_PLAY" || status === "PAUSED") return "in_progress";
   return "pending";
 }
 
 function getFootballDataScore(match: any) {
+  if (!isFootballDataMatchFinished(match)) {
+    return { localScore: null, visitorScore: null };
+  }
+
   const fullTime = match?.score?.fullTime || {};
   return {
     localScore: typeof fullTime.home === "number" ? fullTime.home : null,
@@ -1035,6 +1047,8 @@ function getFootballDataScore(match: any) {
 }
 
 function getFootballDataMatchWinner(match: any) {
+  if (!isFootballDataMatchFinished(match)) return "";
+
   const winner = match?.score?.winner;
   if (winner === "HOME_TEAM") return normalizeExternalTeamName(match?.homeTeam?.name);
   if (winner === "AWAY_TEAM") return normalizeExternalTeamName(match?.awayTeam?.name);
@@ -1059,7 +1073,7 @@ function getFootballDataMatchLoser(match: any) {
 function getFinishedStageWinners(apiMatches: any[], stages: string[], expectedMatches: number) {
   const finishedMatches = apiMatches.filter((match) =>
     stages.includes(String(match?.stage || "")) &&
-    match?.status === "FINISHED"
+    isFootballDataMatchFinished(match)
   );
   if (finishedMatches.length !== expectedMatches) return [];
 
@@ -1123,6 +1137,20 @@ function isPlayedFinishedMatch(match: Match) {
     match.visitorScore !== null &&
     new Date(match.date).getTime() <= Date.now()
   );
+}
+
+function sanitizeMatchForClient(match: Match): Match {
+  if (match.status !== "finished") return match;
+  const matchTime = new Date(match.date).getTime();
+  if (!Number.isFinite(matchTime) || matchTime <= Date.now()) return match;
+
+  return {
+    ...match,
+    status: "pending",
+    localScore: null,
+    visitorScore: null,
+    officialWinner: undefined
+  };
 }
 
 function getFinishedLocalStageWinners(matches: Match[], stage: string, expectedMatches: number) {
@@ -1246,7 +1274,7 @@ function getCompletedGroupWinners(apiMatches: any[], standingsPayload: any) {
     const finishedGroupMatches = apiMatches.filter((match) =>
       match?.stage === "GROUP_STAGE" &&
       match?.group === groupKey &&
-      match?.status === "FINISHED"
+      isFootballDataMatchFinished(match)
     );
     if (finishedGroupMatches.length !== 6) continue;
 
@@ -1359,12 +1387,27 @@ function validateFootballDataTournamentAutomation() {
   }
   const penaltyWinner = getFootballDataMatchWinner({
     status: "FINISHED",
+    utcDate: "2000-06-01T19:00:00.000Z",
     homeTeam: { name: "Marruecos" },
     awayTeam: { name: "Paises Bajos" },
     score: { winner: "HOME_TEAM", fullTime: { home: 1, away: 1 } }
   });
   if (penaltyWinner !== "Marruecos") {
     throw new Error("Validacion invalida: no se reconocio el ganador oficial de un empate decidido por penales.");
+  }
+  const futureFinishedMatch = {
+    status: "FINISHED",
+    utcDate: "2099-06-30T19:00:00.000Z",
+    homeTeam: { name: "México" },
+    awayTeam: { name: "Ecuador" },
+    score: { winner: "AWAY_TEAM", fullTime: { home: 0, away: 3 } }
+  };
+  if (
+    mapFootballDataStatus(futureFinishedMatch.status, futureFinishedMatch.utcDate) !== "pending" ||
+    getFootballDataMatchWinner(futureFinishedMatch) ||
+    getFootballDataScore(futureFinishedMatch).localScore !== null
+  ) {
+    throw new Error("Validacion invalida: un partido futuro no debe publicar resultado oficial.");
   }
   const expectedRoundOf16Fixtures = [
     [89, "Ganador Partido 73", "Ganador Partido 75"],
@@ -2734,7 +2777,11 @@ function recalculateScoresAndRankings() {
   const db = loadDb();
   applyAutomaticTournamentOutcomes(db, [], null);
   const nowMs = Date.now();
-  const isScoreableFinishedMatch = (match: Match) => match.status === "finished" && new Date(match.date).getTime() <= nowMs;
+  const isScoreableFinishedMatch = (match: Match) =>
+    match.status === "finished" &&
+    match.localScore !== null &&
+    match.visitorScore !== null &&
+    new Date(match.date).getTime() <= nowMs;
   const hasScoreableFinishedMatches = db.matches.some(isScoreableFinishedMatch);
   const outcomes = db.tournamentOutcomes;
   const hasTournamentOutcomeResults = Boolean(
@@ -4537,7 +4584,7 @@ app.post("/api/admin/reset-tournament", (req, res) => {
 // API: Matches Endpoints
 app.get("/api/matches", (req, res) => {
   const db = loadDb();
-  res.json(db.matches);
+  res.json(db.matches.map(sanitizeMatchForClient));
 });
 
 let worldCupOverviewCache: { expiresAt: number; data: any } | null = null;
@@ -4603,7 +4650,7 @@ function buildLocalGroupStandings(matches: Match[]) {
     groupMatches.forEach((match) => {
       const home = ensureTeam(match.local);
       const away = ensureTeam(match.visitor);
-      if (match.status !== "finished" || match.localScore === null || match.visitorScore === null) return;
+      if (!isPlayedFinishedMatch(match)) return;
 
       home.playedGames += 1;
       away.playedGames += 1;
@@ -4707,7 +4754,7 @@ app.get("/api/world-cup-overview", async (_req, res) => {
     .filter((group: any) => group.group)
     .sort((a: any, b: any) => a.group.localeCompare(b.group));
   if (!groups.length) {
-    groups = buildLocalGroupStandings(db.matches);
+    groups = buildLocalGroupStandings(db.matches.map(sanitizeMatchForClient));
     if (groups.length) warnings.push("Posiciones calculadas provisionalmente con los resultados sincronizados.");
   }
 
@@ -4721,7 +4768,7 @@ app.get("/api/world-cup-overview", async (_req, res) => {
     penalties: typeof entry?.penalties === "number" ? entry.penalties : null
   }));
 
-  const sortedMatches = [...db.matches].sort(
+  const sortedMatches = db.matches.map(sanitizeMatchForClient).sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id
   );
   const finishedMatches = sortedMatches.filter((match) => match.status === "finished");
@@ -4874,7 +4921,7 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
       visitor: awayName,
       date: apiMatch.utcDate || new Date().toISOString(),
       stadium: apiMatch.venue || "Por definir",
-      status: mapFootballDataStatus(apiMatch.status),
+      status: mapFootballDataStatus(apiMatch.status, apiMatch.utcDate),
       localScore: scores.localScore,
       visitorScore: scores.visitorScore,
       officialWinner: officialWinner || undefined,
