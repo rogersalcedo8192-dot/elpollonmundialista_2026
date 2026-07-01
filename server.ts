@@ -1000,6 +1000,27 @@ function getFixtureKey(match: Match) {
   ].join("|");
 }
 
+function hasSwappedTeams(existing: Pick<Match, "local" | "visitor">, incoming: Pick<Match, "local" | "visitor">) {
+  return (
+    normalizeFixtureTeamName(existing.local) === normalizeFixtureTeamName(incoming.visitor) &&
+    normalizeFixtureTeamName(existing.visitor) === normalizeFixtureTeamName(incoming.local)
+  );
+}
+
+function swapPredictionsForMatch(db: DatabaseSchema, matchId: number) {
+  let swapped = 0;
+  db.predictions.forEach((prediction) => {
+    if (prediction.matchId !== matchId) return;
+    const previousLocalScore = prediction.localScore;
+    prediction.localScore = prediction.visitorScore;
+    prediction.visitorScore = previousLocalScore;
+    prediction.pointsEarned = null;
+    prediction.reason = null;
+    swapped += 1;
+  });
+  return swapped;
+}
+
 function mapFootballDataStage(stage?: string | null, group?: string | null) {
   if (stage === "GROUP_STAGE") {
     const groupLetter = group?.match(/GROUP_([A-L])/i)?.[1] || "";
@@ -1529,6 +1550,43 @@ function validateFootballDataTournamentAutomation() {
   };
   if (!isSameFixtureCandidate(placeholderKnockoutMatch, officialKnockoutMatch)) {
     throw new Error("Validacion invalida: el fixture de eliminatoria oficial no conserva el partido placeholder.");
+  }
+
+  const swappedPredictionDb = {
+    predictions: [{
+      id: "pred-test",
+      userId: "user-test",
+      matchId: 80,
+      localScore: 5,
+      visitorScore: 1,
+      pointsEarned: 25,
+      reason: "exact",
+      dateCreated: "2026-07-01T00:00:00.000Z"
+    }]
+  } as DatabaseSchema;
+  const englandCongoMatch = {
+    id: 80,
+    stage: "16avos de Final",
+    local: "Inglaterra",
+    visitor: "RD Congo",
+    date: "2026-07-01T19:00:00.000Z",
+    stadium: "Test",
+    status: "pending",
+    localScore: null,
+    visitorScore: null
+  } as Match;
+  const congoEnglandMatch = { ...englandCongoMatch, local: "RD Congo", visitor: "Inglaterra" };
+  if (!hasSwappedTeams(englandCongoMatch, congoEnglandMatch)) {
+    throw new Error("Validacion invalida: no se detecto el intercambio local/visitante en eliminatorias.");
+  }
+  swapPredictionsForMatch(swappedPredictionDb, 80);
+  if (
+    swappedPredictionDb.predictions[0].localScore !== 1 ||
+    swappedPredictionDb.predictions[0].visitorScore !== 5 ||
+    swappedPredictionDb.predictions[0].pointsEarned !== null ||
+    swappedPredictionDb.predictions[0].reason !== null
+  ) {
+    throw new Error("Validacion invalida: no se corrigio el marcador de usuario cuando se invirtio local/visitante.");
   }
 
   const manualOctavos = ["Correccion manual"];
@@ -4996,6 +5054,8 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     }
 
     const previousResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}:${existing.officialWinner ?? ""}`;
+    const teamsWereSwapped = hasSwappedTeams(existing, incoming);
+    const swappedPredictions = teamsWereSwapped ? swapPredictionsForMatch(db, existing.id) : 0;
     existing.stage = incoming.stage;
     existing.local = incoming.local;
     existing.visitor = incoming.visitor;
@@ -5017,6 +5077,12 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     const nextResult = `${existing.status}:${existing.localScore ?? ""}:${existing.visitorScore ?? ""}:${existing.officialWinner ?? ""}`;
     if (previousResult !== nextResult && existing.status === "finished") {
       resultChanged = true;
+    }
+    if (swappedPredictions > 0) {
+      resultChanged = true;
+      console.warn(
+        `Football-data sync corrected ${swappedPredictions} predictions after home/away swap for match ${existing.id}: ${incoming.local} vs ${incoming.visitor}`
+      );
     }
   });
 
