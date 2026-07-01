@@ -74,7 +74,7 @@ const STAGE_ORDER: KnockoutFixture["stage"][] = [
 ];
 
 const LEFT_BRACKET_MATCH_IDS = [
-  73, 74, 75, 77,
+  73, 76, 74, 77,
   81, 82, 83, 84,
   89, 90, 93, 94,
   97, 98,
@@ -82,7 +82,7 @@ const LEFT_BRACKET_MATCH_IDS = [
 ];
 
 const RIGHT_BRACKET_MATCH_IDS = [
-  76, 78, 79, 80,
+  75, 78, 79, 80,
   85, 86, 87, 88,
   91, 92, 95, 96,
   99, 100,
@@ -305,12 +305,17 @@ const buildGroupSummaries = (overview: WorldCupOverview | null, groups: string[]
   });
 
 const getStageMatchesForSide = (
-  sideIds: Set<number>,
+  sideIds: number[],
   stage: KnockoutFixture["stage"],
   matches: BracketMatch[]
-) => matches.filter((match) => sideIds.has(match.id) && match.stage === stage).sort((a, b) => a.id - b.id);
+) => {
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
+  return sideIds
+    .map((id) => matchesById.get(id))
+    .filter((match): match is BracketMatch => Boolean(match) && match.stage === stage);
+};
 
-const getVisualSideIds = (matchIds: number[]) => new Set(matchIds);
+const getVisualSideIds = (matchIds: number[]) => matchIds;
 
 const getResolvedSideWinner = (matchId: number, byId: Map<number, BracketMatch>, matchesById: Map<number, Match>, fallback: string) => {
   const match = byId.get(matchId);
