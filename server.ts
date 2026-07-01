@@ -843,8 +843,8 @@ const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
   { id: 86, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "1º Grupo J", visitorSlot: "2º Grupo H", stadium: "Estadio Miami" },
   { id: 87, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "1º Grupo K", visitorSlot: "3º Grupo D/E/I/J/L", stadium: "Estadio Kansas City" },
   { id: 88, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "2º Grupo D", visitorSlot: "2º Grupo G", stadium: "Estadio Dallas" },
-  { id: 89, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 74", visitorSlot: "Ganador Partido 77", stadium: "Estadio Filadelfia" },
-  { id: 90, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 73", visitorSlot: "Ganador Partido 75", stadium: "Estadio Houston" },
+  { id: 89, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 73", visitorSlot: "Ganador Partido 75", stadium: "Estadio Filadelfia" },
+  { id: 90, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 74", visitorSlot: "Ganador Partido 77", stadium: "Estadio Houston" },
   { id: 91, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 76", visitorSlot: "Ganador Partido 78", stadium: "Estadio Nueva York Nueva Jersey" },
   { id: 92, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 79", visitorSlot: "Ganador Partido 80", stadium: "Estadio Ciudad de México" },
   { id: 93, stage: "Octavos de Final", dateLabel: "Lunes, 6 de julio 2026", localSlot: "Ganador Partido 83", visitorSlot: "Ganador Partido 84", stadium: "Estadio Dallas" },
@@ -1323,6 +1323,17 @@ function validateFootballDataTournamentAutomation() {
   if (penaltyWinner !== "Marruecos") {
     throw new Error("Validacion invalida: no se reconocio el ganador oficial de un empate decidido por penales.");
   }
+  const expectedRoundOf16Fixtures = [
+    [89, "Ganador Partido 73", "Ganador Partido 75"],
+    [90, "Ganador Partido 74", "Ganador Partido 77"],
+    [91, "Ganador Partido 76", "Ganador Partido 78"]
+  ] as const;
+  expectedRoundOf16Fixtures.forEach(([id, localSlot, visitorSlot]) => {
+    const fixture = KNOCKOUT_FIXTURES.find((item) => item.id === id);
+    if (fixture?.localSlot !== localSlot || fixture?.visitorSlot !== visitorSlot) {
+      throw new Error(`Validacion invalida: el cruce de octavos P${id} no coincide con el bracket oficial.`);
+    }
+  });
 
   const groupMatches = Array.from({ length: 6 }, () => ({
     stage: "GROUP_STAGE",
