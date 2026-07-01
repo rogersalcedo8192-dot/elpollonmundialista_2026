@@ -861,6 +861,15 @@ const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
   { id: 104, stage: "Final", dateLabel: "Domingo, 19 de julio 2026", localSlot: "Ganador Partido 101", visitorSlot: "Ganador Partido 102", stadium: "Estadio Nueva York Nueva Jersey" }
 ];
 
+const KNOCKOUT_FIXTURE_IDS_BY_STAGE: Partial<Record<KnockoutFixture["stage"], number[]>> = {
+  "16avos de Final": [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88],
+  "Octavos de Final": [89, 90, 91, 92, 93, 94, 95, 96],
+  "Cuartos de Final": [97, 98, 99, 100],
+  "Semifinal": [101, 102],
+  "Tercer Puesto": [103],
+  "Final": [104]
+};
+
 const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Argentina": "Argentina",
   "Australia": "Australia",
@@ -1056,6 +1065,40 @@ function getFinishedStageWinners(apiMatches: any[], stages: string[], expectedMa
 
   const winners = finishedMatches.map(getFootballDataMatchWinner).filter(Boolean);
   return winners.length === expectedMatches ? winners : [];
+}
+
+function buildOfficialKnockoutFixtureIdMap(apiMatches: any[]) {
+  const externalIdToFixtureId = new Map<string, number>();
+  const grouped = new Map<KnockoutFixture["stage"], any[]>();
+
+  apiMatches.forEach((apiMatch) => {
+    if (!apiMatch?.id) return;
+    const stage = mapFootballDataStage(apiMatch.stage, apiMatch.group) as KnockoutFixture["stage"];
+    if (!KNOCKOUT_FIXTURE_IDS_BY_STAGE[stage]) return;
+    const homeName = normalizeExternalTeamName(apiMatch?.homeTeam?.name);
+    const awayName = normalizeExternalTeamName(apiMatch?.awayTeam?.name);
+    if (homeName === "Por definir" || awayName === "Por definir") return;
+
+    const stageMatches = grouped.get(stage) || [];
+    stageMatches.push(apiMatch);
+    grouped.set(stage, stageMatches);
+  });
+
+  grouped.forEach((stageMatches, stage) => {
+    const fixtureIds = KNOCKOUT_FIXTURE_IDS_BY_STAGE[stage] || [];
+    [...stageMatches]
+      .sort((a, b) => {
+        const dateDiff = new Date(a?.utcDate || 0).getTime() - new Date(b?.utcDate || 0).getTime();
+        if (dateDiff) return dateDiff;
+        return Number(a?.id) - Number(b?.id);
+      })
+      .slice(0, fixtureIds.length)
+      .forEach((apiMatch, index) => {
+        externalIdToFixtureId.set(String(apiMatch.id), fixtureIds[index]);
+      });
+  });
+
+  return externalIdToFixtureId;
 }
 
 function ensureTournamentOutcomes(db: DatabaseSchema) {
@@ -1334,6 +1377,18 @@ function validateFootballDataTournamentAutomation() {
       throw new Error(`Validacion invalida: el cruce de octavos P${id} no coincide con el bracket oficial.`);
     }
   });
+  const fixtureIdMap = buildOfficialKnockoutFixtureIdMap(
+    Array.from({ length: 16 }, (_, index) => ({
+      id: 7301 + index,
+      stage: "LAST_32",
+      utcDate: new Date(Date.UTC(2026, 5, 28 + Math.floor(index / 2), 19 + (index % 2) * 4)).toISOString(),
+      homeTeam: { name: index === 3 ? "Brasil" : `Local ${index + 1}` },
+      awayTeam: { name: index === 5 ? "Noruega" : `Visitante ${index + 1}` }
+    }))
+  );
+  if (fixtureIdMap.get("7304") !== 76 || fixtureIdMap.get("7306") !== 78) {
+    throw new Error("Validacion invalida: el mapa oficial de eliminatorias no conserva el orden esperado.");
+  }
 
   const groupMatches = Array.from({ length: 6 }, () => ({
     stage: "GROUP_STAGE",
@@ -4799,6 +4854,7 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
   let resultChanged = false;
   let nextId = db.matches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
   const incomingMatches: Match[] = [];
+  const officialKnockoutFixtureIdsByExternalId = buildOfficialKnockoutFixtureIdMap(apiMatches);
 
   apiMatches.forEach((apiMatch: any) => {
     const homeName = normalizeExternalTeamName(apiMatch?.homeTeam?.name);
@@ -4827,14 +4883,21 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     };
     incomingMatches.push(incoming);
 
-    const existing = db.matches.find((match) =>
-      match.externalSource === FOOTBALL_DATA_SOURCE &&
-      match.externalSourceId === incoming.externalSourceId
-    ) || db.matches.find((match) => isSameFixtureCandidate(match, incoming));
+    const officialKnockoutFixtureId = officialKnockoutFixtureIdsByExternalId.get(incoming.externalSourceId || "");
+    const existing = officialKnockoutFixtureId
+      ? db.matches.find((match) => match.id === officialKnockoutFixtureId)
+      : db.matches.find((match) =>
+        match.externalSource === FOOTBALL_DATA_SOURCE &&
+        match.externalSourceId === incoming.externalSourceId
+      ) || db.matches.find((match) => isSameFixtureCandidate(match, incoming));
 
     if (!existing) {
-      db.matches.push({ ...incoming, id: nextId });
-      nextId += 1;
+      db.matches.push({ ...incoming, id: officialKnockoutFixtureId || nextId });
+      if (!officialKnockoutFixtureId) {
+        nextId += 1;
+      } else {
+        nextId = Math.max(nextId, officialKnockoutFixtureId + 1);
+      }
       created += 1;
       if (incoming.status === "finished") resultChanged = true;
       return;
