@@ -201,9 +201,18 @@ const hasPlayableFinalResult = (match?: Match) => {
   return !Number.isFinite(matchTime) || matchTime <= Date.now();
 };
 
+const getValidOfficialWinner = (match: Match) => {
+  if (!match.officialWinner) return "";
+  const winner = normalizeText(match.officialWinner).trim().toLowerCase();
+  const local = normalizeText(match.local).trim().toLowerCase();
+  const visitor = normalizeText(match.visitor).trim().toLowerCase();
+  return winner === local || winner === visitor ? normalizeText(match.officialWinner) : "";
+};
+
 const getMatchWinner = (match?: Match) => {
   if (!hasPlayableFinalResult(match)) return "";
-  if (match.officialWinner) return normalizeText(match.officialWinner);
+  const officialWinner = getValidOfficialWinner(match);
+  if (officialWinner) return officialWinner;
   if (match.localScore > match.visitorScore) return match.local;
   if (match.visitorScore > match.localScore) return match.visitor;
   return "";
@@ -211,8 +220,9 @@ const getMatchWinner = (match?: Match) => {
 
 const getMatchLoser = (match?: Match) => {
   if (!hasPlayableFinalResult(match)) return "";
-  if (match.officialWinner) {
-    return normalizeText(match.officialWinner) === normalizeText(match.local) ? match.visitor : match.local;
+  const officialWinner = getValidOfficialWinner(match);
+  if (officialWinner) {
+    return officialWinner === normalizeText(match.local) ? match.visitor : match.local;
   }
   if (match.localScore < match.visitorScore) return match.local;
   if (match.visitorScore < match.localScore) return match.visitor;

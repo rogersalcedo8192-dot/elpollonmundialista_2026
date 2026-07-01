@@ -1139,17 +1139,32 @@ function isPlayedFinishedMatch(match: Match) {
   );
 }
 
+function getValidOfficialWinner(match: Pick<Match, "local" | "visitor" | "officialWinner">) {
+  if (!match.officialWinner) return "";
+  const winner = normalizeFixtureTeamName(match.officialWinner);
+  const local = normalizeFixtureTeamName(match.local);
+  const visitor = normalizeFixtureTeamName(match.visitor);
+  return winner === local || winner === visitor ? match.officialWinner : "";
+}
+
 function sanitizeMatchForClient(match: Match): Match {
-  if (match.status !== "finished") return match;
+  const validOfficialWinner = getValidOfficialWinner(match);
   const matchTime = new Date(match.date).getTime();
-  if (!Number.isFinite(matchTime) || matchTime <= Date.now()) return match;
+  const hasFutureFinishedResult =
+    match.status === "finished" &&
+    Number.isFinite(matchTime) &&
+    matchTime > Date.now();
+
+  if (!hasFutureFinishedResult && (!match.officialWinner || validOfficialWinner === match.officialWinner)) {
+    return match;
+  }
 
   return {
     ...match,
-    status: "pending",
-    localScore: null,
-    visitorScore: null,
-    officialWinner: undefined
+    status: hasFutureFinishedResult ? "pending" : match.status,
+    localScore: hasFutureFinishedResult ? null : match.localScore,
+    visitorScore: hasFutureFinishedResult ? null : match.visitorScore,
+    officialWinner: validOfficialWinner || undefined
   };
 }
 
@@ -1160,7 +1175,8 @@ function getFinishedLocalStageWinners(matches: Match[], stage: string, expectedM
   if (stageMatches.length !== expectedMatches) return [];
 
   const winners = stageMatches.map((match) => {
-    if (match.officialWinner) return match.officialWinner;
+    const officialWinner = getValidOfficialWinner(match);
+    if (officialWinner) return officialWinner;
     if (match.localScore === match.visitorScore) return "";
     return match.localScore! > match.visitorScore! ? match.local : match.visitor;
   });
@@ -1174,8 +1190,9 @@ function getFinishedLocalStageLosers(matches: Match[], stage: string, expectedMa
   if (stageMatches.length !== expectedMatches) return [];
 
   const losers = stageMatches.map((match) => {
-    if (match.officialWinner) {
-      return normalizeFixtureTeamName(match.officialWinner) === normalizeFixtureTeamName(match.local)
+    const officialWinner = getValidOfficialWinner(match);
+    if (officialWinner) {
+      return normalizeFixtureTeamName(officialWinner) === normalizeFixtureTeamName(match.local)
         ? match.visitor
         : match.local;
     }
@@ -1408,6 +1425,21 @@ function validateFootballDataTournamentAutomation() {
     getFootballDataScore(futureFinishedMatch).localScore !== null
   ) {
     throw new Error("Validacion invalida: un partido futuro no debe publicar resultado oficial.");
+  }
+  const invalidOfficialWinnerMatch: Match = {
+    id: 79,
+    stage: "16avos de Final",
+    local: "México",
+    visitor: "Ecuador",
+    date: "2000-06-30T19:00:00.000Z",
+    stadium: "Test",
+    status: "finished",
+    localScore: 3,
+    visitorScore: 0,
+    officialWinner: "Francia"
+  };
+  if (sanitizeMatchForClient(invalidOfficialWinnerMatch).officialWinner) {
+    throw new Error("Validacion invalida: un ganador oficial debe pertenecer al partido.");
   }
   const expectedRoundOf16Fixtures = [
     [89, "Ganador Partido 73", "Ganador Partido 76"],
