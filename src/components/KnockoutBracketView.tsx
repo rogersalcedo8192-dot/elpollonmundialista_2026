@@ -74,7 +74,7 @@ const STAGE_ORDER: KnockoutFixture["stage"][] = [
 ];
 
 const LEFT_BRACKET_MATCH_IDS = [
-  73, 76, 74, 77,
+  73, 76, 75, 78,
   81, 82, 83, 84,
   89, 90, 93, 94,
   97, 98,
@@ -82,7 +82,7 @@ const LEFT_BRACKET_MATCH_IDS = [
 ];
 
 const RIGHT_BRACKET_MATCH_IDS = [
-  75, 78, 79, 80,
+  74, 77, 79, 80,
   85, 86, 87, 88,
   91, 92, 95, 96,
   99, 100,
@@ -278,8 +278,8 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
     const realMatch = matchesById.get(fixture.id);
     const parsedLocal = parseSourceSlot(fixture.localSlot);
     const parsedVisitor = parseSourceSlot(fixture.visitorSlot);
-    const realLocal = realMatch && parsedLocal.source === "slot" ? getSlotFromRealMatch(realMatch.local) : null;
-    const realVisitor = realMatch && parsedVisitor.source === "slot" ? getSlotFromRealMatch(realMatch.visitor) : null;
+    const realLocal = realMatch ? getSlotFromRealMatch(realMatch.local) : null;
+    const realVisitor = realMatch ? getSlotFromRealMatch(realMatch.visitor) : null;
 
     return {
       id: fixture.id,
@@ -365,7 +365,7 @@ const TeamSlot = ({ slot, matchesById, getTeamFlag, theme }: { slot: BracketSlot
 };
 
 const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketMatch; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
-  const scoreReady = match.realMatch?.localScore !== null && match.realMatch?.visitorScore !== null;
+  const scoreReady = hasPlayableFinalResult(match.realMatch);
   const playedDate = match.realMatch ? formatBogotaDate(match.realMatch.date) : "";
 
   return (
@@ -438,7 +438,7 @@ const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: {
   const theme = STAGE_THEMES[match.stage];
   const local = getSlotLabel(match.local, matchesById);
   const visitor = getSlotLabel(match.visitor, matchesById);
-  const hasScore = match.realMatch?.localScore !== null && match.realMatch?.visitorScore !== null;
+  const hasScore = hasPlayableFinalResult(match.realMatch);
   return (
     <div className="relative">
       <div className={`absolute top-1/2 h-px w-2 -translate-y-1/2 opacity-80 ${theme.panel} ${side === "left" ? "-left-2" : "-right-2"}`} aria-hidden="true" />

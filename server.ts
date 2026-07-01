@@ -844,8 +844,8 @@ const KNOCKOUT_FIXTURES: KnockoutFixture[] = [
   { id: 87, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "1º Grupo K", visitorSlot: "3º Grupo D/E/I/J/L", stadium: "Estadio Kansas City" },
   { id: 88, stage: "16avos de Final", dateLabel: "Viernes, 3 de julio 2026", localSlot: "2º Grupo D", visitorSlot: "2º Grupo G", stadium: "Estadio Dallas" },
   { id: 89, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 73", visitorSlot: "Ganador Partido 76", stadium: "Estadio Filadelfia" },
-  { id: 90, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 74", visitorSlot: "Ganador Partido 77", stadium: "Estadio Houston" },
-  { id: 91, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 75", visitorSlot: "Ganador Partido 78", stadium: "Estadio Nueva York Nueva Jersey" },
+  { id: 90, stage: "Octavos de Final", dateLabel: "Sábado, 4 de julio 2026", localSlot: "Ganador Partido 75", visitorSlot: "Ganador Partido 78", stadium: "Estadio Houston" },
+  { id: 91, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 74", visitorSlot: "Ganador Partido 77", stadium: "Estadio Nueva York Nueva Jersey" },
   { id: 92, stage: "Octavos de Final", dateLabel: "Domingo, 5 de julio 2026", localSlot: "Ganador Partido 79", visitorSlot: "Ganador Partido 80", stadium: "Estadio Ciudad de México" },
   { id: 93, stage: "Octavos de Final", dateLabel: "Lunes, 6 de julio 2026", localSlot: "Ganador Partido 83", visitorSlot: "Ganador Partido 84", stadium: "Estadio Dallas" },
   { id: 94, stage: "Octavos de Final", dateLabel: "Lunes, 6 de julio 2026", localSlot: "Ganador Partido 81", visitorSlot: "Ganador Partido 82", stadium: "Estadio Seattle" },
@@ -1411,8 +1411,8 @@ function validateFootballDataTournamentAutomation() {
   }
   const expectedRoundOf16Fixtures = [
     [89, "Ganador Partido 73", "Ganador Partido 76"],
-    [90, "Ganador Partido 74", "Ganador Partido 77"],
-    [91, "Ganador Partido 75", "Ganador Partido 78"]
+    [90, "Ganador Partido 75", "Ganador Partido 78"],
+    [91, "Ganador Partido 74", "Ganador Partido 77"]
   ] as const;
   expectedRoundOf16Fixtures.forEach(([id, localSlot, visitorSlot]) => {
     const fixture = KNOCKOUT_FIXTURES.find((item) => item.id === id);
