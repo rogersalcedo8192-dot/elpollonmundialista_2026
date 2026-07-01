@@ -23,6 +23,13 @@ type BracketMatch = {
   realMatch?: Match;
 };
 
+type BracketResultCorrection = {
+  localScore: number;
+  visitorScore: number;
+  officialWinner?: string;
+  shootout?: string;
+};
+
 type StageTheme = {
   panel: string;
   header: string;
@@ -88,6 +95,13 @@ const RIGHT_BRACKET_MATCH_IDS = [
   99, 100,
   102
 ];
+
+const BRACKET_RESULT_CORRECTIONS: Record<number, BracketResultCorrection> = {
+  75: { localScore: 1, visitorScore: 1, officialWinner: "Paraguay", shootout: "3-4 pen." },
+  76: { localScore: 1, visitorScore: 1, officialWinner: "Marruecos", shootout: "3-4 pen." },
+  77: { localScore: 1, visitorScore: 2, officialWinner: "Noruega" },
+  78: { localScore: 3, visitorScore: 0, officialWinner: "Francia" }
+};
 
 const STAGE_META: Record<KnockoutFixture["stage"], { title: string; short: string; count: string }> = {
   "16avos de Final": { title: "16avos", short: "32 equipos", count: "16 cruces" },
@@ -205,15 +219,42 @@ const getValidOfficialWinner = (match: Match) => {
 
 const hasInvalidOfficialWinner = (match: Match) => Boolean(match.officialWinner && !getValidOfficialWinner(match));
 
+const getBracketResultCorrection = (match?: Match) => match ? BRACKET_RESULT_CORRECTIONS[match.id] : undefined;
+
 const hasPlayableFinalResult = (match?: Match) => {
+  if (getBracketResultCorrection(match)) return true;
   if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) return false;
   if (hasInvalidOfficialWinner(match)) return false;
   const matchTime = new Date(match.date).getTime();
   return !Number.isFinite(matchTime) || matchTime <= Date.now();
 };
 
+const getDisplayMatchScore = (match?: Match) => {
+  const correction = getBracketResultCorrection(match);
+  if (correction) {
+    return {
+      localScore: correction.localScore,
+      visitorScore: correction.visitorScore,
+      shootout: correction.shootout || ""
+    };
+  }
+  if (!hasPlayableFinalResult(match)) return null;
+  return {
+    localScore: match!.localScore!,
+    visitorScore: match!.visitorScore!,
+    shootout: ""
+  };
+};
+
 const getMatchWinner = (match?: Match) => {
   if (!hasPlayableFinalResult(match)) return "";
+  const correction = getBracketResultCorrection(match);
+  if (correction?.officialWinner) return correction.officialWinner;
+  if (correction) {
+    if (correction.localScore > correction.visitorScore) return match!.local;
+    if (correction.visitorScore > correction.localScore) return match!.visitor;
+    return "";
+  }
   const officialWinner = getValidOfficialWinner(match);
   if (officialWinner) return officialWinner;
   if (match.localScore > match.visitorScore) return match.local;
@@ -223,6 +264,15 @@ const getMatchWinner = (match?: Match) => {
 
 const getMatchLoser = (match?: Match) => {
   if (!hasPlayableFinalResult(match)) return "";
+  const correction = getBracketResultCorrection(match);
+  if (correction?.officialWinner) {
+    return correction.officialWinner === normalizeText(match!.local) ? match!.visitor : match!.local;
+  }
+  if (correction) {
+    if (correction.localScore < correction.visitorScore) return match!.local;
+    if (correction.visitorScore < correction.localScore) return match!.visitor;
+    return "";
+  }
   const officialWinner = getValidOfficialWinner(match);
   if (officialWinner) {
     return officialWinner === normalizeText(match.local) ? match.visitor : match.local;
@@ -378,7 +428,8 @@ const TeamSlot = ({ slot, matchesById, getTeamFlag, theme }: { slot: BracketSlot
 };
 
 const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketMatch; matchesById: Map<number, Match>; getTeamFlag: Props["getTeamFlag"]; theme: StageTheme }) => {
-  const scoreReady = hasPlayableFinalResult(match.realMatch);
+  const displayScore = getDisplayMatchScore(match.realMatch);
+  const scoreReady = Boolean(displayScore);
   const playedDate = match.realMatch ? formatBogotaDate(match.realMatch.date) : "";
 
   return (
@@ -399,8 +450,9 @@ const MatchCard = ({ match, matchesById, getTeamFlag, theme }: { match: BracketM
         <div className="flex items-center justify-between gap-2 px-1">
           <span className="text-[8px] font-black uppercase text-white/35">vs</span>
           {scoreReady && (
-            <span className={`rounded-full px-2 py-1 text-xs font-black tabular-nums ${theme.header}`}>
-              {match.realMatch?.localScore} - {match.realMatch?.visitorScore}
+            <span className={`inline-flex flex-col items-center rounded-full px-2 py-1 text-xs font-black tabular-nums leading-none ${theme.header}`}>
+              <span>{displayScore?.localScore} - {displayScore?.visitorScore}</span>
+              {displayScore?.shootout && <span className="mt-0.5 text-[8px] uppercase">{displayScore.shootout}</span>}
             </span>
           )}
         </div>
@@ -451,7 +503,8 @@ const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: {
   const theme = STAGE_THEMES[match.stage];
   const local = getSlotLabel(match.local, matchesById);
   const visitor = getSlotLabel(match.visitor, matchesById);
-  const hasScore = hasPlayableFinalResult(match.realMatch);
+  const displayScore = getDisplayMatchScore(match.realMatch);
+  const hasScore = Boolean(displayScore);
   return (
     <div className="relative">
       <div className={`absolute top-1/2 h-px w-2 -translate-y-1/2 opacity-80 ${theme.panel} ${side === "left" ? "-left-2" : "-right-2"}`} aria-hidden="true" />
@@ -467,11 +520,14 @@ const FlowMatch = ({ match, matchesById, getTeamFlag, side, compact = false }: {
             <span className="min-w-0 flex-1 truncate text-[9px] font-black uppercase text-white">{compactLabel(slot.label)}</span>
             {hasScore && (
               <span className={`rounded px-1 text-[9px] font-black ${theme.header}`}>
-                {index === 0 ? match.realMatch?.localScore : match.realMatch?.visitorScore}
+                {index === 0 ? displayScore?.localScore : displayScore?.visitorScore}
               </span>
             )}
           </div>
         ))}
+        {displayScore?.shootout && (
+          <p className={`mt-1 truncate text-center text-[7px] font-black uppercase ${theme.text}`}>{displayScore.shootout}</p>
+        )}
       </article>
       {!compact && <div className={`absolute bottom-[-0.45rem] top-[calc(50%+0.3rem)] w-px opacity-60 ${theme.panel} ${side === "left" ? "right-[-0.5rem]" : "left-[-0.5rem]"}`} aria-hidden="true" />}
     </div>
