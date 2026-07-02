@@ -344,15 +344,14 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
     const realLocal = realMatch ? getSlotFromRealMatch(realMatch.local) : null;
     const realVisitor = realMatch ? getSlotFromRealMatch(realMatch.visitor) : null;
     const usesPreviousRoundSources = parsedLocal.source !== "slot" || parsedVisitor.source !== "slot";
-    const canUsePersistedTeams = !usesPreviousRoundSources || Boolean(realLocal && realVisitor);
 
     return {
       id: fixture.id,
       stage: fixture.stage,
       dateLabel: normalizeText(fixture.dateLabel),
       stadium: normalizeText(fixture.stadium),
-      local: canUsePersistedTeams && realLocal ? realLocal : { ...parsedLocal, confirmed: false },
-      visitor: canUsePersistedTeams && realVisitor ? realVisitor : { ...parsedVisitor, confirmed: false },
+      local: !usesPreviousRoundSources && realLocal ? realLocal : { ...parsedLocal, confirmed: false },
+      visitor: !usesPreviousRoundSources && realVisitor ? realVisitor : { ...parsedVisitor, confirmed: false },
       realMatch
     };
   });
