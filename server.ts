@@ -870,6 +870,11 @@ const KNOCKOUT_FIXTURE_IDS_BY_STAGE: Partial<Record<KnockoutFixture["stage"], nu
   "Final": [104]
 };
 
+const KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS: Record<number, Pick<Match, "local" | "visitor">> = {
+  95: { local: "Argentina", visitor: "Egipto" },
+  96: { local: "Suiza", visitor: "Colombia" }
+};
+
 const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
   "Argentina": "Argentina",
   "Australia": "Australia",
@@ -1665,6 +1670,21 @@ function applyKnownOfficialResultCorrections(db: DatabaseSchema) {
       match.visitorScore = 0;
       corrected = true;
     }
+  });
+
+  db.matches.forEach((match) => {
+    const officialMatchup = KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS[match.id];
+    if (!officialMatchup) return;
+    if (
+      normalizeFixtureTeamName(match.local) === normalizeFixtureTeamName(officialMatchup.local) &&
+      normalizeFixtureTeamName(match.visitor) === normalizeFixtureTeamName(officialMatchup.visitor)
+    ) {
+      return;
+    }
+
+    match.local = officialMatchup.local;
+    match.visitor = officialMatchup.visitor;
+    corrected = true;
   });
 
   if (corrected) saveDb(db);
@@ -2473,6 +2493,7 @@ async function initializeDb() {
       const postgresDb = await loadDbFromPostgres();
       if (postgresDb) {
         dbState = postgresDb;
+        applyKnownOfficialResultCorrections(dbState);
         return;
       }
       console.warn("PostgreSQL esta vacio. Se cargara db_store.json y se sincronizara como seed inicial.");
@@ -2482,6 +2503,7 @@ async function initializeDb() {
   }
 
   loadDb();
+  applyKnownOfficialResultCorrections(dbState);
   if (prisma) {
     await persistDbToPostgres(dbState);
   }
@@ -5094,8 +5116,9 @@ async function syncMatchesFromFootballData(apiOnly = false, preserveFinishedResu
     ? { pruned: strictApiReplacement?.removed || 0, predictionsRemoved: strictApiReplacement?.predictionsRemoved || 0 }
     : { pruned: 0, predictionsRemoved: 0 };
   const tournamentOutcomesChanged = applyAutomaticTournamentOutcomes(db, apiMatches, standingsPayload);
+  const knownCorrectionsChanged = applyKnownOfficialResultCorrections(db);
   saveDb(db);
-  if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0 || tournamentOutcomesChanged) {
+  if (resultChanged || merged > 0 || apiOnlyCleanup.pruned > 0 || tournamentOutcomesChanged || knownCorrectionsChanged) {
     recalculateScoresAndRankings();
   }
 

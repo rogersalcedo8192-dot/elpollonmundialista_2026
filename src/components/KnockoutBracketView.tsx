@@ -103,6 +103,11 @@ const BRACKET_RESULT_CORRECTIONS: Record<number, BracketResultCorrection> = {
   78: { localScore: 3, visitorScore: 0, officialWinner: "Francia" }
 };
 
+const OFFICIAL_MATCHUP_OVERRIDES: Record<number, { local: string; visitor: string }> = {
+  95: { local: "Argentina", visitor: "Egipto" },
+  96: { local: "Suiza", visitor: "Colombia" }
+};
+
 const STAGE_META: Record<KnockoutFixture["stage"], { title: string; short: string; count: string }> = {
   "16avos de Final": { title: "16avos", short: "32 equipos", count: "16 cruces" },
   "Octavos de Final": { title: "Octavos", short: "16 equipos", count: "8 cruces" },
@@ -339,6 +344,7 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
 
   return fixtures.map((fixture): BracketMatch => {
     const realMatch = matchesById.get(fixture.id);
+    const officialMatchup = OFFICIAL_MATCHUP_OVERRIDES[fixture.id];
     const parsedLocal = parseSourceSlot(fixture.localSlot);
     const parsedVisitor = parseSourceSlot(fixture.visitorSlot);
     const realLocal = realMatch ? getSlotFromRealMatch(realMatch.local) : null;
@@ -350,8 +356,12 @@ const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
       stage: fixture.stage,
       dateLabel: normalizeText(fixture.dateLabel),
       stadium: normalizeText(fixture.stadium),
-      local: !usesPreviousRoundSources && realLocal ? realLocal : { ...parsedLocal, confirmed: false },
-      visitor: !usesPreviousRoundSources && realVisitor ? realVisitor : { ...parsedVisitor, confirmed: false },
+      local: officialMatchup
+        ? { label: officialMatchup.local, source: "team", confirmed: true }
+        : !usesPreviousRoundSources && realLocal ? realLocal : { ...parsedLocal, confirmed: false },
+      visitor: officialMatchup
+        ? { label: officialMatchup.visitor, source: "team", confirmed: true }
+        : !usesPreviousRoundSources && realVisitor ? realVisitor : { ...parsedVisitor, confirmed: false },
       realMatch
     };
   });
