@@ -100,10 +100,12 @@ const BRACKET_RESULT_CORRECTIONS: Record<number, BracketResultCorrection> = {
   75: { localScore: 1, visitorScore: 1, officialWinner: "Paraguay", shootout: "3-4 pen." },
   76: { localScore: 1, visitorScore: 1, officialWinner: "Marruecos", shootout: "3-4 pen." },
   77: { localScore: 1, visitorScore: 2, officialWinner: "Noruega" },
-  78: { localScore: 3, visitorScore: 0, officialWinner: "Francia" }
+  78: { localScore: 3, visitorScore: 0, officialWinner: "Francia" },
+  93: { localScore: 1, visitorScore: 0, officialWinner: "España" }
 };
 
 const OFFICIAL_MATCHUP_OVERRIDES: Record<number, { local: string; visitor: string }> = {
+  93: { local: "España", visitor: "Portugal" },
   95: { local: "Argentina", visitor: "Egipto" },
   96: { local: "Suiza", visitor: "Colombia" }
 };

@@ -870,7 +870,10 @@ const KNOCKOUT_FIXTURE_IDS_BY_STAGE: Partial<Record<KnockoutFixture["stage"], nu
   "Final": [104]
 };
 
-const KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS: Record<number, Pick<Match, "local" | "visitor">> = {
+type KnownOfficialKnockoutCorrection = Pick<Match, "local" | "visitor"> & Partial<Pick<Match, "status" | "localScore" | "visitorScore" | "officialWinner">>;
+
+const KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS: Record<number, KnownOfficialKnockoutCorrection> = {
+  93: { local: "España", visitor: "Portugal", status: "finished", localScore: 1, visitorScore: 0, officialWinner: "España" },
   95: { local: "Argentina", visitor: "Egipto" },
   96: { local: "Suiza", visitor: "Colombia" }
 };
@@ -1675,16 +1678,34 @@ function applyKnownOfficialResultCorrections(db: DatabaseSchema) {
   db.matches.forEach((match) => {
     const officialMatchup = KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS[match.id];
     if (!officialMatchup) return;
-    if (
-      normalizeFixtureTeamName(match.local) === normalizeFixtureTeamName(officialMatchup.local) &&
-      normalizeFixtureTeamName(match.visitor) === normalizeFixtureTeamName(officialMatchup.visitor)
-    ) {
-      return;
+    if (hasSwappedTeams(match, officialMatchup)) {
+      swapPredictionsForMatch(db, match.id);
+      corrected = true;
     }
-
-    match.local = officialMatchup.local;
-    match.visitor = officialMatchup.visitor;
-    corrected = true;
+    if (normalizeFixtureTeamName(match.local) !== normalizeFixtureTeamName(officialMatchup.local)) {
+      match.local = officialMatchup.local;
+      corrected = true;
+    }
+    if (normalizeFixtureTeamName(match.visitor) !== normalizeFixtureTeamName(officialMatchup.visitor)) {
+      match.visitor = officialMatchup.visitor;
+      corrected = true;
+    }
+    if (officialMatchup.status && match.status !== officialMatchup.status) {
+      match.status = officialMatchup.status;
+      corrected = true;
+    }
+    if (typeof officialMatchup.localScore === "number" && match.localScore !== officialMatchup.localScore) {
+      match.localScore = officialMatchup.localScore;
+      corrected = true;
+    }
+    if (typeof officialMatchup.visitorScore === "number" && match.visitorScore !== officialMatchup.visitorScore) {
+      match.visitorScore = officialMatchup.visitorScore;
+      corrected = true;
+    }
+    if (officialMatchup.officialWinner && match.officialWinner !== officialMatchup.officialWinner) {
+      match.officialWinner = officialMatchup.officialWinner;
+      corrected = true;
+    }
   });
 
   if (corrected) saveDb(db);
