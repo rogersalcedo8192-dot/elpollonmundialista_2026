@@ -102,14 +102,16 @@ const BRACKET_RESULT_CORRECTIONS: Record<number, BracketResultCorrection> = {
   77: { localScore: 1, visitorScore: 2, officialWinner: "Noruega" },
   78: { localScore: 3, visitorScore: 0, officialWinner: "Francia" },
   93: { localScore: 1, visitorScore: 0, officialWinner: "España" },
-  94: { localScore: 4, visitorScore: 1, officialWinner: "Bélgica" }
+  94: { localScore: 4, visitorScore: 1, officialWinner: "Bélgica" },
+  97: { localScore: 2, visitorScore: 0, officialWinner: "Francia" }
 };
 
 const OFFICIAL_MATCHUP_OVERRIDES: Record<number, { local: string; visitor: string }> = {
   93: { local: "España", visitor: "Portugal" },
   94: { local: "Bélgica", visitor: "Estados Unidos" },
   95: { local: "Argentina", visitor: "Egipto" },
-  96: { local: "Suiza", visitor: "Colombia" }
+  96: { local: "Suiza", visitor: "Colombia" },
+  97: { local: "Francia", visitor: "Marruecos" }
 };
 
 const STAGE_META: Record<KnockoutFixture["stage"], { title: string; short: string; count: string }> = {

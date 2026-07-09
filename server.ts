@@ -876,7 +876,8 @@ const KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS: Record<number, KnownOfficialKnockoutCorr
   93: { local: "España", visitor: "Portugal", status: "finished", localScore: 1, visitorScore: 0, officialWinner: "España" },
   94: { local: "Bélgica", visitor: "Estados Unidos", status: "finished", localScore: 4, visitorScore: 1, officialWinner: "Bélgica" },
   95: { local: "Argentina", visitor: "Egipto" },
-  96: { local: "Suiza", visitor: "Colombia" }
+  96: { local: "Suiza", visitor: "Colombia" },
+  97: { local: "Francia", visitor: "Marruecos", status: "finished", localScore: 2, visitorScore: 0, officialWinner: "Francia" }
 };
 
 const FOOTBALL_DATA_TEAM_NAME_MAP: Record<string, string> = {
