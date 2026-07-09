@@ -345,11 +345,27 @@ const getStatusLabel = (match?: Match) => {
   return "Programado";
 };
 
+const getCorrectedRealMatch = (match: Match | undefined, fixtureId: number): Match | undefined => {
+  if (!match) return undefined;
+  const officialMatchup = OFFICIAL_MATCHUP_OVERRIDES[fixtureId];
+  const correction = BRACKET_RESULT_CORRECTIONS[fixtureId];
+  if (!officialMatchup && !correction) return match;
+
+  return {
+    ...match,
+    local: officialMatchup?.local ?? match.local,
+    visitor: officialMatchup?.visitor ?? match.visitor,
+    localScore: correction ? correction.localScore : match.localScore,
+    visitorScore: correction ? correction.visitorScore : match.visitorScore,
+    officialWinner: correction?.officialWinner ?? match.officialWinner
+  };
+};
+
 const buildBracketMatches = (fixtures: KnockoutFixture[], matches: Match[]) => {
   const matchesById = new Map(matches.map((match) => [match.id, match]));
 
   return fixtures.map((fixture): BracketMatch => {
-    const realMatch = matchesById.get(fixture.id);
+    const realMatch = getCorrectedRealMatch(matchesById.get(fixture.id), fixture.id);
     const officialMatchup = OFFICIAL_MATCHUP_OVERRIDES[fixture.id];
     const parsedLocal = parseSourceSlot(fixture.localSlot);
     const parsedVisitor = parseSourceSlot(fixture.visitorSlot);
