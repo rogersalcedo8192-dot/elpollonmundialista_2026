@@ -874,6 +874,7 @@ type KnownOfficialKnockoutCorrection = Pick<Match, "local" | "visitor"> & Partia
 
 const KNOWN_OFFICIAL_KNOCKOUT_MATCHUPS: Record<number, KnownOfficialKnockoutCorrection> = {
   93: { local: "España", visitor: "Portugal", status: "finished", localScore: 1, visitorScore: 0, officialWinner: "España" },
+  94: { local: "Bélgica", visitor: "Estados Unidos", status: "finished", localScore: 4, visitorScore: 1, officialWinner: "Bélgica" },
   95: { local: "Argentina", visitor: "Egipto" },
   96: { local: "Suiza", visitor: "Colombia" }
 };
