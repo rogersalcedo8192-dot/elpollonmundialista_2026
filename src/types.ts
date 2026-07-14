@@ -48,6 +48,9 @@ export interface User {
   favoritesAccessOverrideUntil?: string;
   favoriteMatchIds?: number[];
   groupPoints?: number;
+  octavosPoints?: number;
+  cuartosPoints?: number;
+  semifinalPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
   subchampionPoints?: number;
@@ -159,6 +162,22 @@ export interface PublicPredictionMatch {
   predictions: PublicPredictionEntry[];
 }
 
+export interface PublicTournamentFavoriteEntry {
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userCountry?: string;
+  position?: number;
+  groupWinners: Record<string, string>;
+  octavosTeams: string[];
+  cuartosTeams: string[];
+  semifinalTeams: string[];
+  finalists: string[];
+  subchampion: string;
+  champion: string;
+  lastUpdated: string;
+}
+
 export interface WorldCupStandingRow {
   position: number;
   team: string;
@@ -224,6 +243,9 @@ export interface Ranking {
   prevPosition: number;
   shift: "up" | "down" | "equal";
   groupPoints?: number;
+  octavosPoints?: number;
+  cuartosPoints?: number;
+  semifinalPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
   subchampionPoints?: number;

@@ -50,7 +50,7 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { User, Match, Prediction, PublicPredictionMatch, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, PublicPrizePool, Company, CompanyInvitation } from "./types";
+import { User, Match, Prediction, PublicPredictionMatch, PublicTournamentFavoriteEntry, Ranking, Announcement, AppNotification, TorneoConfig, DashboardStats, TournamentPredictions, TournamentOutcomes, UploadedAsset, SponsorBanner, PublicPrizePool, Company, CompanyInvitation } from "./types";
 import { TournamentPredictionsView } from "./components/TournamentPredictionsView";
 import { AdminTournamentOutcomes } from "./components/AdminTournamentOutcomes";
 import { MatchResultsTicker } from "./components/MatchResultsTicker";
@@ -96,7 +96,14 @@ type RankingColumnHelpKey =
   | "outcome"
   | "exactScore"
   | "exactDraw"
+  | "groupFavorites"
+  | "octavos"
+  | "cuartos"
+  | "semifinal"
   | "knockout"
+  | "finalist"
+  | "subchampion"
+  | "champion"
   | "favorites"
   | "total"
   | "matches"
@@ -139,10 +146,45 @@ const RANKING_COLUMN_HELP: Record<RankingColumnHelpKey, { title: string; descrip
     description: "Acumula un bono adicional de 10 puntos cuando aciertas exactamente un empate.",
     example: "Ejemplo: pronosticas 0-0 y termina 0-0: 10 PTS de bono + 10 PTS exacto + 10 PTS 1X2 + 5 PTS = 35 PTS."
   },
+  groupFavorites: {
+    title: "PTS grupos",
+    description: "Acumula 100 puntos por cada ganador de grupo acertado en Favoritos del Torneo.",
+    example: "Ejemplo: si aciertas 4 ganadores de grupo, sumas 400 PTS."
+  },
+  octavos: {
+    title: "PTS 16 a octavos",
+    description: "Acumula 200 puntos por cada equipo acertado entre los 16 clasificados a octavos.",
+    example: "Ejemplo: si aciertas 5 equipos clasificados a octavos, sumas 1.000 PTS."
+  },
+  cuartos: {
+    title: "PTS 8 a cuartos",
+    description: "Acumula 200 puntos por cada equipo acertado entre los 8 clasificados a cuartos.",
+    example: "Ejemplo: si aciertas 3 equipos clasificados a cuartos, sumas 600 PTS."
+  },
+  semifinal: {
+    title: "PTS 4 semifinalistas",
+    description: "Acumula 200 puntos por cada equipo acertado entre los 4 clasificados a semifinales.",
+    example: "Ejemplo: si aciertas 2 semifinalistas, sumas 400 PTS."
+  },
   knockout: {
     title: "PTS X clasificados",
     description: "Acumula 200 puntos por cada equipo acertado que clasifica a octavos, cuartos o semifinales.",
     example: "Ejemplo: si aciertas 3 clasificados entre octavos, cuartos y semifinales, sumas 600 PTS en esta columna."
+  },
+  finalist: {
+    title: "PTS finalistas",
+    description: "Acumula 300 puntos por cada finalista acertado.",
+    example: "Ejemplo: si aciertas los 2 finalistas, sumas 600 PTS."
+  },
+  subchampion: {
+    title: "PTS subcampeon",
+    description: "Suma 500 puntos si aciertas el subcampeon oficial del Mundial.",
+    example: "Ejemplo: si tu subcampeon coincide con el oficial, sumas 500 PTS."
+  },
+  champion: {
+    title: "PTS campeon",
+    description: "Suma 1.000 puntos si aciertas el campeon oficial del Mundial.",
+    example: "Ejemplo: acertar el campeon suma 1.000 PTS."
   },
   favorites: {
     title: "Favoritos",
@@ -1728,6 +1770,10 @@ export default function App() {
   const [selectedPublicMatchId, setSelectedPublicMatchId] = useState<number | null>(null);
   const [publicPredictionsLoading, setPublicPredictionsLoading] = useState(false);
   const [publicPredictionsError, setPublicPredictionsError] = useState("");
+  const [publicTournamentFavorites, setPublicTournamentFavorites] = useState<PublicTournamentFavoriteEntry[]>([]);
+  const [publicFavoritesLoading, setPublicFavoritesLoading] = useState(false);
+  const [publicFavoritesError, setPublicFavoritesError] = useState("");
+  const [publicFavoritesSection, setPublicFavoritesSection] = useState<"groups" | "octavos" | "cuartos" | "semis" | "finalists" | "podium">("octavos");
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [sponsorBanners, setSponsorBanners] = useState<SponsorBanner[]>([]);
@@ -2196,6 +2242,22 @@ export default function App() {
       setPublicPredictionsError(err.message || "No se pudieron cargar los pronósticos públicos.");
     } finally {
       setPublicPredictionsLoading(false);
+    }
+  };
+
+  const fetchPublicTournamentFavorites = async () => {
+    if (!currentUser) return;
+    setPublicFavoritesLoading(true);
+    setPublicFavoritesError("");
+    try {
+      const res = await fetch("/api/public-tournament-favorites", { headers: getHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudieron cargar los favoritos pÃºblicos.");
+      setPublicTournamentFavorites(data.favorites || []);
+    } catch (err: any) {
+      setPublicFavoritesError(err.message || "No se pudieron cargar los favoritos pÃºblicos.");
+    } finally {
+      setPublicFavoritesLoading(false);
     }
   };
 
@@ -3016,9 +3078,9 @@ export default function App() {
   const handleExportRankingCSV = () => {
     try {
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "Posicion,Nombre,Pais,Puntos Totales,Puntos por Participar,Puntos por Resultado 1X2,Puntos por Marcador Exacto,Bono Empate Exacto,Puntos Clasificados 200,Puntos Favoritos,Partidos Predichos\n";
+      csvContent += "Posicion,Nombre,Pais,Puntos Totales,Puntos por Participar,Puntos por Resultado 1X2,Puntos por Marcador Exacto,Bono Empate Exacto,Puntos Grupos,Puntos 16 a Octavos,Puntos 8 a Cuartos,Puntos 4 Semifinalistas,Puntos Finalistas,Puntos Subcampeon,Puntos Campeon,Puntos Favoritos,Partidos Predichos\n";
       rankings.forEach((r) => {
-        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.participationPoints || 0},${r.outcomePoints || 0},${r.exactScorePoints || 0},${r.exactDrawBonusPoints || 0},${r.knockoutPoints || 0},${r.totalBonusPoints || 0},${r.predictCount}\n`;
+        csvContent += `${r.position},"${r.userName}","${normalizeCountryName(r.userCountry)}",${r.points},${r.participationPoints || 0},${r.outcomePoints || 0},${r.exactScorePoints || 0},${r.exactDrawBonusPoints || 0},${r.groupPoints || 0},${r.octavosPoints || 0},${r.cuartosPoints || 0},${r.semifinalPoints || 0},${r.finalistPoints || 0},${r.subchampionPoints || 0},${r.championPoints || 0},${r.totalBonusPoints || 0},${r.predictCount}\n`;
       });
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -3956,10 +4018,34 @@ export default function App() {
       setPredictionCorrectionMode(false);
       setActiveTab(key);
       if (key === "public-predictions") void fetchPublicPredictions();
+      if (key === "public-favorites") void fetchPublicTournamentFavorites();
     }
     setMobileMenuOpen(false);
   };
   const selectedPublicPredictionMatch = publicPredictionMatches.find((match) => match.id === selectedPublicMatchId) || null;
+  const publicFavoriteSections: Array<{ key: typeof publicFavoritesSection; label: string }> = [
+    { key: "groups", label: "Grupos" },
+    { key: "octavos", label: "16 a octavos" },
+    { key: "cuartos", label: "8 a cuartos" },
+    { key: "semis", label: "4 semifinalistas" },
+    { key: "finalists", label: "Finalistas" },
+    { key: "podium", label: "Subcampeon y campeon" }
+  ];
+  const getPublicFavoriteTeams = (entry: PublicTournamentFavoriteEntry) => {
+    if (publicFavoritesSection === "groups") {
+      return Object.entries(entry.groupWinners || {})
+        .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
+        .map(([group, team]) => ({ label: `Grupo ${group}`, team }));
+    }
+    if (publicFavoritesSection === "octavos") return entry.octavosTeams.map((team) => ({ label: "Octavos", team }));
+    if (publicFavoritesSection === "cuartos") return entry.cuartosTeams.map((team) => ({ label: "Cuartos", team }));
+    if (publicFavoritesSection === "semis") return entry.semifinalTeams.map((team) => ({ label: "Semis", team }));
+    if (publicFavoritesSection === "finalists") return entry.finalists.map((team) => ({ label: "Final", team }));
+    return [
+      { label: "Subcampeon", team: entry.subchampion },
+      { label: "Campeon", team: entry.champion }
+    ].filter((item) => Boolean(item.team));
+  };
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
   const hasFreshCompanyInviteSummary = companyInvitationSummary.companyId === selectedCompanyId;
   const companyInviteSlots = {
@@ -4572,6 +4658,7 @@ export default function App() {
               { key: "llaves", label: "Llaves", icon: GitBranch, isNew: true },
               { key: "trivia", label: "Trivia", icon: CircleHelp, isNew: true },
               { key: "public-predictions", label: "Pronósticos Públicos", icon: Eye },
+              { key: "public-favorites", label: "Favoritos Públicos", icon: Star },
               { key: "rules-prizes", label: "Premios", icon: Info },
               ...(isSuperAdminUser ? [{ key: "admin-stats", label: "Métricas", icon: BarChart3 }] : []),
               ...(canManageUsers ? [{ key: "admin-users", label: "Usuarios", icon: Users }] : []),
@@ -5001,6 +5088,15 @@ export default function App() {
                   >
                     <Eye className="w-4 h-4 shrink-0" />
                     <span>Pronósticos Públicos</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateToMenuItem("public-favorites")}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "public-favorites" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
+                  >
+                    <Star className="w-4 h-4 shrink-0" />
+                    <span>Favoritos Publicos</span>
                   </button>
 
                   <button
@@ -6683,7 +6779,7 @@ export default function App() {
                       Desliza la tabla para consultar el detalle. Toca el icono de hoja de una columna para ver su explicación y ejemplo.
                     </p>
                     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                      <table className="min-w-[840px] border-collapse text-left text-[10px]">
+                      <table className="min-w-[1120px] border-collapse text-left text-[10px]">
                         <thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                           <tr>
                             {([
@@ -6694,8 +6790,14 @@ export default function App() {
                               ["outcome", <>PTS Resultado<br />1X2</>, "w-20"],
                               ["exactScore", <>PTS X marcador<br />exacto (L o V)</>, "w-20"],
                               ["exactDraw", <>PTS X marcador<br />exacto empate</>, "w-24"],
-                              ["knockout", <>PTS X clasificados<br />200 c/u</>, "w-20"],
-                              ["favorites", <>Favoritos</>, "w-16"],
+                              ["groupFavorites", <>PTS<br />Grupos</>, "w-16"],
+                              ["octavos", <>PTS 16 a<br />octavos</>, "w-20"],
+                              ["cuartos", <>PTS 8 a<br />cuartos</>, "w-20"],
+                              ["semifinal", <>PTS 4<br />semis</>, "w-20"],
+                              ["finalist", <>PTS<br />finalistas</>, "w-20"],
+                              ["subchampion", <>PTS<br />subcampeon</>, "w-20"],
+                              ["champion", <>PTS<br />campeon</>, "w-20"],
+                              ["favorites", <>Total<br />favoritos</>, "w-20"],
                               ["matches", <>Partidos</>, "w-14"],
                               ["certificate", <>Certificado<br />ganador</>, "w-24"]
                             ] as Array<[RankingColumnHelpKey, React.ReactNode, string]>).map(([key, label, extraClass]) => (
@@ -6772,7 +6874,13 @@ export default function App() {
                                 <td className="px-2 py-3 text-center font-bold text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
-                                <td className="px-2 py-3 text-center font-bold text-fuchsia-700 dark:text-fuchsia-400">{r.knockoutPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-lime-700 dark:text-lime-400">{r.groupPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-fuchsia-700 dark:text-fuchsia-400">{r.octavosPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-pink-700 dark:text-pink-400">{r.cuartosPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-rose-700 dark:text-rose-400">{r.semifinalPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-cyan-700 dark:text-cyan-400">{r.finalistPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-orange-700 dark:text-orange-400">{r.subchampionPoints || 0}</td>
+                                <td className="px-2 py-3 text-center font-bold text-yellow-700 dark:text-yellow-400">{r.championPoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
                                 <td className="px-2 py-3 text-center font-bold text-slate-500 dark:text-slate-400">{r.predictCount}</td>
                                 <td className="px-2 py-2 text-center">
@@ -6817,8 +6925,14 @@ export default function App() {
                               ["outcome", "PTS Resultado 1X2", "text-center"],
                               ["exactScore", "PTS X marcador exacto (L o V)", "text-center"],
                               ["exactDraw", "PTS X marcador exacto empate", "text-center"],
-                              ["knockout", "PTS X clasificados 200 c/u", "text-center"],
-                              ["favorites", "Favoritos", "text-center"],
+                              ["groupFavorites", "PTS grupos", "text-center"],
+                              ["octavos", "PTS 16 a octavos", "text-center"],
+                              ["cuartos", "PTS 8 a cuartos", "text-center"],
+                              ["semifinal", "PTS 4 semifinalistas", "text-center"],
+                              ["finalist", "PTS finalistas", "text-center"],
+                              ["subchampion", "PTS subcampeon", "text-center"],
+                              ["champion", "PTS campeon", "text-center"],
+                              ["favorites", "Total favoritos", "text-center"],
                               ["total", "Total PTS", "text-center"],
                               ["matches", t("rank_col_matches", "Partidos"), "text-center"],
                               ["trend", t("rank_col_trend", "Tendencia"), "text-center"],
@@ -6880,7 +6994,13 @@ export default function App() {
                                 <td className="py-2.5 px-3 text-center text-indigo-700 dark:text-indigo-400">{r.outcomePoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center text-emerald-700 dark:text-emerald-400">{r.exactScorePoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center text-amber-700 dark:text-amber-400">{r.exactDrawBonusPoints || 0}</td>
-                                <td className="py-2.5 px-3 text-center text-fuchsia-700 dark:text-fuchsia-400">{r.knockoutPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-lime-700 dark:text-lime-400">{r.groupPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-fuchsia-700 dark:text-fuchsia-400">{r.octavosPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-pink-700 dark:text-pink-400">{r.cuartosPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-rose-700 dark:text-rose-400">{r.semifinalPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-cyan-700 dark:text-cyan-400">{r.finalistPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-orange-700 dark:text-orange-400">{r.subchampionPoints || 0}</td>
+                                <td className="py-2.5 px-3 text-center text-yellow-700 dark:text-yellow-400">{r.championPoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center text-violet-700 dark:text-violet-400">{r.totalBonusPoints || 0}</td>
                                 <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">{r.points}</td>
                                 <td className="py-2.5 px-3 text-center text-slate-500 dark:text-slate-400">{r.predictCount}</td>
@@ -7137,6 +7257,118 @@ export default function App() {
                         </div>
                       )}
                     </>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "public-favorites" && (
+                <div className="space-y-5">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Star className="text-amber-500 w-5 h-5" /> Favoritos Publicos
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Consulta los favoritos del torneo guardados por los participantes visibles en tu modalidad.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void fetchPublicTournamentFavorites()}
+                      disabled={publicFavoritesLoading}
+                      className="min-h-10 px-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-black inline-flex items-center gap-2 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${publicFavoritesLoading ? "animate-spin" : ""}`} />
+                      Actualizar
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 text-xs text-amber-900 dark:text-amber-200">
+                    Esta pantalla es solo lectura y muestra datos publicos de favoritos. No muestra correos, pagos ni datos privados.
+                  </div>
+
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {publicFavoriteSections.map((section) => (
+                      <button
+                        key={section.key}
+                        type="button"
+                        onClick={() => setPublicFavoritesSection(section.key)}
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-black transition-colors ${
+                          publicFavoritesSection === section.key
+                            ? "border-emerald-600 bg-emerald-600 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                        }`}
+                      >
+                        {section.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {publicFavoritesError ? (
+                    <div className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/20 p-4 text-sm text-rose-700 dark:text-rose-300">
+                      {publicFavoritesError}
+                    </div>
+                  ) : publicFavoritesLoading && publicTournamentFavorites.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
+                      Cargando favoritos publicos...
+                    </div>
+                  ) : publicTournamentFavorites.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-8 text-center">
+                      <Star className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                      <p className="font-bold text-slate-700 dark:text-slate-200">Todavia no hay favoritos disponibles.</p>
+                      <p className="text-xs text-slate-500 mt-1">Apareceran cuando los participantes visibles hayan guardado sus favoritos del torneo.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {publicTournamentFavorites.map((entry) => {
+                        const teams = getPublicFavoriteTeams(entry);
+                        return (
+                          <div key={entry.userId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <img
+                                  src={entry.userAvatar}
+                                  alt={entry.userName}
+                                  className="h-10 w-10 shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-black text-slate-900 dark:text-white">
+                                    {entry.userName}
+                                    {entry.userId === currentUser.id && <span className="ml-1 text-[9px] text-emerald-600">(Tu)</span>}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500">
+                                    {entry.userCountry ? `${getCountryFlag(entry.userCountry)} ` : ""}
+                                    {entry.position ? `Puesto #${entry.position}` : "Participante"}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {teams.length} picks
+                              </span>
+                            </div>
+
+                            {teams.length === 0 ? (
+                              <p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                                Sin selecciones en esta seccion.
+                              </p>
+                            ) : (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {teams.map((item, index) => (
+                                  <span key={`${entry.userId}-${item.label}-${item.team}-${index}`} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    <span className="text-sm leading-none">{getTeamFlag(item.team)}</span>
+                                    <span>{item.team}</span>
+                                    {publicFavoritesSection === "groups" || publicFavoritesSection === "podium" ? (
+                                      <span className="text-[9px] font-black uppercase text-slate-400">{item.label}</span>
+                                    ) : null}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}

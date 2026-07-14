@@ -58,6 +58,9 @@ interface User {
   favoritesAccessOverrideUntil?: string;
   favoriteMatchIds?: number[];
   groupPoints?: number;
+  octavosPoints?: number;
+  cuartosPoints?: number;
+  semifinalPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
   subchampionPoints?: number;
@@ -176,6 +179,9 @@ interface Ranking {
   prevPosition: number;
   shift: "up" | "down" | "equal";
   groupPoints?: number;
+  octavosPoints?: number;
+  cuartosPoints?: number;
+  semifinalPoints?: number;
   knockoutPoints?: number;
   finalistPoints?: number;
   subchampionPoints?: number;
@@ -706,6 +712,53 @@ function getVisibleRankingUserIds(db: DatabaseSchema, viewer: User | null, compa
   );
 }
 
+function getTournamentFavoritePointBreakdown(db: DatabaseSchema, userId: string) {
+  const outcomes = db.tournamentOutcomes;
+  const prediction = db.tournamentPredictions?.find((item) => item.userId === userId);
+  const matchesTeam = (team: string, realTeams?: string[]) =>
+    Boolean(team && realTeams?.map((item) => item.toLowerCase().trim()).includes(team.toLowerCase().trim()));
+  const scoreTeamList = (teams: string[] = [], realTeams?: string[], pointsPerHit = 200) =>
+    teams.reduce((sum, team) => sum + (matchesTeam(team, realTeams) ? pointsPerHit : 0), 0);
+
+  if (!outcomes || !prediction) {
+    return {
+      groupPoints: 0,
+      octavosPoints: 0,
+      cuartosPoints: 0,
+      semifinalPoints: 0,
+      knockoutPoints: 0,
+      finalistPoints: 0,
+      subchampionPoints: 0,
+      championPoints: 0,
+      totalBonusPoints: 0
+    };
+  }
+
+  const groupPoints = Object.entries(prediction.groupWinners || {}).reduce((sum, [group, team]) => {
+    const realWinner = outcomes.groupWinners?.[group];
+    return sum + (team && realWinner && team.trim().toLowerCase() === realWinner.trim().toLowerCase() ? 100 : 0);
+  }, 0);
+  const octavosPoints = scoreTeamList(prediction.octavosTeams, outcomes.octavosTeams, 200);
+  const cuartosPoints = scoreTeamList(prediction.cuartosTeams, outcomes.cuartosTeams, 200);
+  const semifinalPoints = scoreTeamList(prediction.semifinalTeams, outcomes.semifinalTeams, 200);
+  const knockoutPoints = octavosPoints + cuartosPoints + semifinalPoints;
+  const finalistPoints = scoreTeamList(prediction.finalists, outcomes.finalists, 300);
+  const subchampionPoints = prediction.subchampion && outcomes.subchampion && prediction.subchampion.trim().toLowerCase() === outcomes.subchampion.trim().toLowerCase() ? 500 : 0;
+  const championPoints = prediction.champion && outcomes.champion && prediction.champion.trim().toLowerCase() === outcomes.champion.trim().toLowerCase() ? 1000 : 0;
+
+  return {
+    groupPoints,
+    octavosPoints,
+    cuartosPoints,
+    semifinalPoints,
+    knockoutPoints,
+    finalistPoints,
+    subchampionPoints,
+    championPoints,
+    totalBonusPoints: groupPoints + knockoutPoints + finalistPoints + subchampionPoints + championPoints
+  };
+}
+
 function buildVisibleRanking(db: DatabaseSchema, viewer: User | null, companyId?: string) {
   const visibleUserIds = getVisibleRankingUserIds(db, viewer, companyId);
   const usersById = new Map(db.users.map((user) => [user.id, user]));
@@ -717,11 +770,24 @@ function buildVisibleRanking(db: DatabaseSchema, viewer: User | null, companyId?
       if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
       return b.drawCount - a.drawCount;
     })
-    .map((ranking, index) => ({
-      ...ranking,
-      position: index + 1,
-      userCountry: normalizeCountryName(ranking.userCountry || usersById.get(ranking.userId)?.country)
-    }));
+    .map((ranking, index) => {
+      const dbUser = usersById.get(ranking.userId);
+      const fallback = getTournamentFavoritePointBreakdown(db, ranking.userId);
+      return {
+        ...ranking,
+        position: index + 1,
+        userCountry: normalizeCountryName(ranking.userCountry || dbUser?.country),
+        groupPoints: ranking.groupPoints ?? dbUser?.groupPoints ?? fallback.groupPoints,
+        octavosPoints: ranking.octavosPoints ?? dbUser?.octavosPoints ?? fallback.octavosPoints,
+        cuartosPoints: ranking.cuartosPoints ?? dbUser?.cuartosPoints ?? fallback.cuartosPoints,
+        semifinalPoints: ranking.semifinalPoints ?? dbUser?.semifinalPoints ?? fallback.semifinalPoints,
+        knockoutPoints: ranking.knockoutPoints ?? dbUser?.knockoutPoints ?? fallback.knockoutPoints,
+        finalistPoints: ranking.finalistPoints ?? dbUser?.finalistPoints ?? fallback.finalistPoints,
+        subchampionPoints: ranking.subchampionPoints ?? dbUser?.subchampionPoints ?? fallback.subchampionPoints,
+        championPoints: ranking.championPoints ?? dbUser?.championPoints ?? fallback.championPoints,
+        totalBonusPoints: ranking.totalBonusPoints ?? dbUser?.totalBonusPoints ?? fallback.totalBonusPoints
+      };
+    });
 }
 
 function getRequestOrigin(req: express.Request) {
@@ -2061,6 +2127,9 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       favoritesAccessOverrideUntil: dateToIso((u as any).favoritesAccessOverrideUntil) || undefined,
       favoriteMatchIds: Array.isArray((u as any).favoriteMatchIds) ? ((u as any).favoriteMatchIds as number[]) : [],
       groupPoints: u.groupPoints || undefined,
+      octavosPoints: (u as any).octavosPoints || undefined,
+      cuartosPoints: (u as any).cuartosPoints || undefined,
+      semifinalPoints: (u as any).semifinalPoints || undefined,
       knockoutPoints: u.knockoutPoints || undefined,
       finalistPoints: u.finalistPoints || undefined,
       subchampionPoints: u.subchampionPoints || undefined,
@@ -2104,6 +2173,9 @@ async function loadDbFromPostgres(): Promise<DatabaseSchema | null> {
       prevPosition: r.prevPosition,
       shift: r.shift as Ranking["shift"],
       groupPoints: r.groupPoints || undefined,
+      octavosPoints: (r as any).octavosPoints || undefined,
+      cuartosPoints: (r as any).cuartosPoints || undefined,
+      semifinalPoints: (r as any).semifinalPoints || undefined,
       knockoutPoints: r.knockoutPoints || undefined,
       finalistPoints: r.finalistPoints || undefined,
       subchampionPoints: r.subchampionPoints || undefined,
@@ -2280,6 +2352,9 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           favoritesAccessOverrideUntil: u.favoritesAccessOverrideUntil ? new Date(u.favoritesAccessOverrideUntil) : null,
           favoriteMatchIds: Array.isArray(u.favoriteMatchIds) ? u.favoriteMatchIds : [],
           groupPoints: u.groupPoints ?? null,
+          octavosPoints: u.octavosPoints ?? null,
+          cuartosPoints: u.cuartosPoints ?? null,
+          semifinalPoints: u.semifinalPoints ?? null,
           knockoutPoints: u.knockoutPoints ?? null,
           finalistPoints: u.finalistPoints ?? null,
           subchampionPoints: u.subchampionPoints ?? null,
@@ -2365,6 +2440,9 @@ async function persistDbToPostgres(schema: DatabaseSchema) {
           prevPosition: r.prevPosition,
           shift: r.shift,
           groupPoints: r.groupPoints ?? null,
+          octavosPoints: r.octavosPoints ?? null,
+          cuartosPoints: r.cuartosPoints ?? null,
+          semifinalPoints: r.semifinalPoints ?? null,
           knockoutPoints: r.knockoutPoints ?? null,
           finalistPoints: r.finalistPoints ?? null,
           subchampionPoints: r.subchampionPoints ?? null,
@@ -3009,6 +3087,9 @@ function recalculateScoresAndRankings() {
 
     // Calculate tournament bonus points
     let groupPoints = 0;
+    let octavosPoints = 0;
+    let cuartosPoints = 0;
+    let semifinalPoints = 0;
     let knockoutPoints = 0;
     let finalistPoints = 0;
     let subchampionPoints = 0;
@@ -3030,21 +3111,21 @@ function recalculateScoresAndRankings() {
       if (ut.octavosTeams && outcomes.octavosTeams) {
         ut.octavosTeams.forEach((t) => {
           if (outcomes.octavosTeams.map(o => o.toLowerCase().trim()).includes(t.toLowerCase().trim())) {
-            knockoutPoints += 200;
+            octavosPoints += 200;
           }
         });
       }
       if (ut.cuartosTeams && outcomes.cuartosTeams) {
         ut.cuartosTeams.forEach((t) => {
           if (outcomes.cuartosTeams.map(o => o.toLowerCase().trim()).includes(t.toLowerCase().trim())) {
-            knockoutPoints += 200;
+            cuartosPoints += 200;
           }
         });
       }
       if (ut.semifinalTeams && outcomes.semifinalTeams) {
         ut.semifinalTeams.forEach((t) => {
           if (outcomes.semifinalTeams.map(o => o.toLowerCase().trim()).includes(t.toLowerCase().trim())) {
-            knockoutPoints += 200;
+            semifinalPoints += 200;
           }
         });
       }
@@ -3069,6 +3150,7 @@ function recalculateScoresAndRankings() {
       }
     }
 
+    knockoutPoints = octavosPoints + cuartosPoints + semifinalPoints;
     const totalBonusPoints = groupPoints + knockoutPoints + finalistPoints + subchampionPoints + championPoints;
     totalPoints += totalBonusPoints;
 
@@ -3077,6 +3159,9 @@ function recalculateScoresAndRankings() {
     u.drawCount = drawHits;
     u.predictCount = totalPredicted;
     u.groupPoints = groupPoints;
+    u.octavosPoints = octavosPoints;
+    u.cuartosPoints = cuartosPoints;
+    u.semifinalPoints = semifinalPoints;
     u.knockoutPoints = knockoutPoints;
     u.finalistPoints = finalistPoints;
     u.subchampionPoints = subchampionPoints;
@@ -3098,6 +3183,9 @@ function recalculateScoresAndRankings() {
       exactScorePoints,
       exactDrawBonusPoints,
       groupPoints,
+      octavosPoints,
+      cuartosPoints,
+      semifinalPoints,
       knockoutPoints,
       finalistPoints,
       subchampionPoints,
@@ -3176,6 +3264,9 @@ function recalculateScoresAndRankings() {
       prevPosition: oldPos,
       shift,
       groupPoints: ru.groupPoints,
+      octavosPoints: ru.octavosPoints,
+      cuartosPoints: ru.cuartosPoints,
+      semifinalPoints: ru.semifinalPoints,
       knockoutPoints: ru.knockoutPoints,
       finalistPoints: ru.finalistPoints,
       subchampionPoints: ru.subchampionPoints,
@@ -5389,6 +5480,41 @@ app.get("/api/public-predictions", (req, res) => {
     });
 
   res.json({ matches: visibleMatches });
+});
+
+app.get("/api/public-tournament-favorites", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+
+  const db = loadDb();
+  const visibleUserIds = getVisibleRankingUserIds(db, user);
+  const visibleRankings = buildVisibleRanking(db, user);
+  const positionsByUserId = new Map(visibleRankings.map((ranking) => [ranking.userId, ranking.position]));
+  const usersById = new Map(db.users.map((dbUser) => [dbUser.id, dbUser]));
+
+  const favorites = (db.tournamentPredictions || [])
+    .filter((prediction) => visibleUserIds.has(prediction.userId))
+    .map((prediction) => {
+      const predictionUser = usersById.get(prediction.userId);
+      return {
+        userId: prediction.userId,
+        userName: predictionUser?.name || "Participante",
+        userAvatar: predictionUser?.avatar || "",
+        userCountry: normalizeCountryName(predictionUser?.country),
+        position: positionsByUserId.get(prediction.userId),
+        groupWinners: prediction.groupWinners || {},
+        octavosTeams: prediction.octavosTeams || [],
+        cuartosTeams: prediction.cuartosTeams || [],
+        semifinalTeams: prediction.semifinalTeams || [],
+        finalists: prediction.finalists || [],
+        subchampion: prediction.subchampion || "",
+        champion: prediction.champion || "",
+        lastUpdated: prediction.lastUpdated || ""
+      };
+    })
+    .sort((a, b) => (a.position || Number.MAX_SAFE_INTEGER) - (b.position || Number.MAX_SAFE_INTEGER));
+
+  res.json({ favorites });
 });
 
 // Input/Modify forecasts
