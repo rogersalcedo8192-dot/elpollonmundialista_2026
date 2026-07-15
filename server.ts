@@ -762,9 +762,16 @@ function getTournamentFavoritePointBreakdown(db: DatabaseSchema, userId: string)
 function buildVisibleRanking(db: DatabaseSchema, viewer: User | null, companyId?: string) {
   const visibleUserIds = getVisibleRankingUserIds(db, viewer, companyId);
   const usersById = new Map(db.users.map((user) => [user.id, user]));
+  const visibleRankings = db.rankings.filter((ranking) => visibleUserIds.has(ranking.userId));
+  const previousVisiblePositionByUserId = new Map<string, number>();
 
-  return db.rankings
-    .filter((ranking) => visibleUserIds.has(ranking.userId))
+  [...visibleRankings]
+    .sort((a, b) => (a.prevPosition || a.position) - (b.prevPosition || b.position))
+    .forEach((ranking, index) => {
+      previousVisiblePositionByUserId.set(ranking.userId, index + 1);
+    });
+
+  return visibleRankings
     .sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
@@ -773,9 +780,15 @@ function buildVisibleRanking(db: DatabaseSchema, viewer: User | null, companyId?
     .map((ranking, index) => {
       const dbUser = usersById.get(ranking.userId);
       const fallback = getTournamentFavoritePointBreakdown(db, ranking.userId);
+      const position = index + 1;
+      const prevPosition = previousVisiblePositionByUserId.get(ranking.userId) || position;
+      const shift: Ranking["shift"] = prevPosition > position ? "up" : prevPosition < position ? "down" : "equal";
+
       return {
         ...ranking,
-        position: index + 1,
+        position,
+        prevPosition,
+        shift,
         userCountry: normalizeCountryName(ranking.userCountry || dbUser?.country),
         groupPoints: ranking.groupPoints ?? dbUser?.groupPoints ?? fallback.groupPoints,
         octavosPoints: ranking.octavosPoints ?? dbUser?.octavosPoints ?? fallback.octavosPoints,
