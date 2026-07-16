@@ -4940,6 +4940,98 @@ function buildLocalGroupStandings(matches: Match[]) {
   });
 }
 
+type WorldCupDataPayloads = {
+  standingsPayload: any;
+  scorersPayload: any;
+  capturedAt: string | null;
+  warnings: string[];
+};
+
+async function getWorldCupDataPayloads(): Promise<WorldCupDataPayloads> {
+  const token = process.env.FOOTBALL_DATA_API_TOKEN;
+  const competitionCode = process.env.FOOTBALL_DATA_COMPETITION || "WC";
+  const season = process.env.FOOTBALL_DATA_SEASON || "2026";
+  const warnings: string[] = [];
+  let standingsPayload: any = null;
+  let scorersPayload: any = null;
+  let capturedAt: string | null = null;
+
+  if (prisma) {
+    try {
+      const snapshot = await prisma.worldCupDataSnapshot.findUnique({ where: { id: "default" } });
+      if (snapshot) {
+        standingsPayload = snapshot.standingsPayload;
+        scorersPayload = snapshot.scorersPayload;
+        capturedAt = snapshot.capturedAt.toISOString();
+      }
+    } catch (err) {
+      console.error("Error reading World Cup data snapshot:", err);
+    }
+  }
+
+  if (!token) {
+    warnings.push("Football-data.org no esta configurado; se muestra el ultimo snapshot disponible.");
+    return { standingsPayload, scorersPayload, capturedAt, warnings };
+  }
+
+  const headers = { "X-Auth-Token": token, "Accept": "application/json" };
+  const standingsUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/standings`);
+  standingsUrl.searchParams.set("season", season);
+  const scorersUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/scorers`);
+  scorersUrl.searchParams.set("season", season);
+  scorersUrl.searchParams.set("limit", "10");
+
+  const [standingsResult, scorersResult] = await Promise.allSettled([
+    fetch(standingsUrl, { headers }),
+    fetch(scorersUrl, { headers })
+  ]);
+  let receivedFreshData = false;
+
+  if (standingsResult.status === "fulfilled" && standingsResult.value.ok) {
+    standingsPayload = await standingsResult.value.json();
+    receivedFreshData = true;
+  } else {
+    warnings.push("La tabla oficial de grupos no esta disponible; se usa el ultimo snapshot.");
+  }
+
+  if (scorersResult.status === "fulfilled" && scorersResult.value.ok) {
+    scorersPayload = await scorersResult.value.json();
+    receivedFreshData = true;
+  } else {
+    warnings.push("La tabla de goleadores no esta disponible; se usa el ultimo snapshot.");
+  }
+
+  if (receivedFreshData) {
+    capturedAt = new Date().toISOString();
+    if (prisma) {
+      try {
+        await prisma.worldCupDataSnapshot.upsert({
+          where: { id: "default" },
+          create: {
+            id: "default",
+            competitionCode,
+            season,
+            standingsPayload: standingsPayload || {},
+            scorersPayload: scorersPayload || {},
+            capturedAt: new Date(capturedAt)
+          },
+          update: {
+            competitionCode,
+            season,
+            standingsPayload: standingsPayload || {},
+            scorersPayload: scorersPayload || {},
+            capturedAt: new Date(capturedAt)
+          }
+        });
+      } catch (err) {
+        console.error("Error saving World Cup data snapshot:", err);
+      }
+    }
+  }
+
+  return { standingsPayload, scorersPayload, capturedAt, warnings };
+}
+
 app.get("/api/world-cup-overview", async (_req, res) => {
   const now = Date.now();
   if (worldCupOverviewCache && worldCupOverviewCache.expiresAt > now) {
@@ -4947,40 +5039,12 @@ app.get("/api/world-cup-overview", async (_req, res) => {
   }
 
   const db = loadDb();
-  const token = process.env.FOOTBALL_DATA_API_TOKEN;
-  const competitionCode = process.env.FOOTBALL_DATA_COMPETITION || "WC";
-  const season = process.env.FOOTBALL_DATA_SEASON || "2026";
-  const warnings: string[] = [];
-  let standingsPayload: any = null;
-  let scorersPayload: any = null;
-
-  if (token) {
-    const headers = { "X-Auth-Token": token, "Accept": "application/json" };
-    const standingsUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/standings`);
-    standingsUrl.searchParams.set("season", season);
-    const scorersUrl = new URL(`https://api.football-data.org/v4/competitions/${competitionCode}/scorers`);
-    scorersUrl.searchParams.set("season", season);
-    scorersUrl.searchParams.set("limit", "10");
-
-    const [standingsResult, scorersResult] = await Promise.allSettled([
-      fetch(standingsUrl, { headers }),
-      fetch(scorersUrl, { headers })
-    ]);
-
-    if (standingsResult.status === "fulfilled" && standingsResult.value.ok) {
-      standingsPayload = await standingsResult.value.json();
-    } else {
-      warnings.push("La tabla oficial de grupos no está disponible temporalmente.");
-    }
-
-    if (scorersResult.status === "fulfilled" && scorersResult.value.ok) {
-      scorersPayload = await scorersResult.value.json();
-    } else {
-      warnings.push("La tabla de goleadores todavía no está disponible para esta competición.");
-    }
-  } else {
-    warnings.push("Football-data.org no está configurado; se muestran únicamente los partidos sincronizados.");
-  }
+  const {
+    standingsPayload,
+    scorersPayload,
+    capturedAt: overviewCapturedAt,
+    warnings
+  } = await getWorldCupDataPayloads();
 
   let groups = (Array.isArray(standingsPayload?.standings) ? standingsPayload.standings : [])
     .filter((standing: any) => standing?.type === "TOTAL" && standing?.group)
@@ -5034,7 +5098,7 @@ app.get("/api/world-cup-overview", async (_req, res) => {
 
   const data = {
     source: FOOTBALL_DATA_SOURCE,
-    updatedAt: new Date().toISOString(),
+    updatedAt: overviewCapturedAt || new Date().toISOString(),
     warnings,
     summary: {
       totalMatches: WORLD_CUP_2026_TOTAL_MATCHES,
@@ -6052,6 +6116,7 @@ async function runFootballDataSyncScheduler() {
 
   footballDataSyncRunning = true;
   try {
+    await getWorldCupDataPayloads();
     const result = await syncMatchesFromFootballData(false, true);
     if (result.created > 0 || result.recalculated) {
       console.info(

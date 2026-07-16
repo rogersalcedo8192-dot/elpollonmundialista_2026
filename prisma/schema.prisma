@@ -127,6 +127,18 @@ model Match {
   predictions Prediction[]
 }
 
+// Isolated cache for public football-data.org information.
+// It does not participate in predictions, scoring, or rankings.
+model WorldCupDataSnapshot {
+  id               String   @id @default("default")
+  competitionCode  String
+  season            String
+  standingsPayload Json
+  scorersPayload   Json
+  capturedAt        DateTime
+  updatedAt         DateTime @updatedAt
+}
+
 model Prediction {
   id           String   @id
   userId       String
