@@ -1784,6 +1784,7 @@ export default function App() {
   const [winnerEmailPreviewPosition, setWinnerEmailPreviewPosition] = useState<1 | 2 | 3>(1);
   const [winnerEmailPosterByPosition, setWinnerEmailPosterByPosition] = useState<Record<1 | 2 | 3, string>>({ 1: "", 2: "", 3: "" });
   const [winnerEmailSendingPosition, setWinnerEmailSendingPosition] = useState<1 | 2 | 3 | null>(null);
+  const [finalRecapEmailBusy, setFinalRecapEmailBusy] = useState(false);
   const [rankingShareBusy, setRankingShareBusy] = useState(false);
   const [matchShareBusyId, setMatchShareBusyId] = useState<number | null>(null);
   const [rankingColumnHelp, setRankingColumnHelp] = useState<RankingColumnHelpKey | null>(null);
@@ -3277,6 +3278,55 @@ export default function App() {
       if (err?.name !== "AbortError") showToast(err.message || "No se pudo compartir el ranking.", "error");
     } finally {
       setRankingShareBusy(false);
+    }
+  };
+
+  const handleSendFinalRecapEmail = async () => {
+    setFinalRecapEmailBusy(true);
+    try {
+      const previewRes = await fetch("/api/admin/final-recap-email", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({})
+      });
+      const preview = await previewRes.json();
+      if (!previewRes.ok) throw new Error(preview.error || "No se pudo preparar el correo final.");
+
+      if (preview.pendingRecipients === 0) {
+        showToast("Todos los participantes ya recibieron el correo final.", "success");
+        return;
+      }
+
+      const podiumText = (preview.podium || [])
+        .map((winner: { position: number; name: string; points: number }) => `${winner.position}. ${winner.name} (${winner.points} PTS)`)
+        .join("\n");
+      const confirmed = window.confirm(
+        `Se enviara el correo final a ${preview.pendingRecipients} participante(s), pagos y gratuitos.\n\n` +
+        `Campeon del Mundial: ${preview.champion}\n\nPodio del Pollon:\n${podiumText}\n\n` +
+        "El poster ira adjunto y cada usuario recibira sus estadisticas. ¿Deseas enviarlo ahora?"
+      );
+      if (!confirmed) return;
+
+      const sendRes = await fetch("/api/admin/final-recap-email", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ confirm: "ENVIAR CIERRE 2026" })
+      });
+      const result = await sendRes.json();
+      if (!sendRes.ok && sendRes.status !== 207) {
+        throw new Error(result.error || result.detail || "No se pudo enviar el correo final.");
+      }
+      const failedCount = Array.isArray(result.failed) ? result.failed.length : 0;
+      showToast(
+        failedCount > 0
+          ? `Se enviaron ${result.sent?.length || 0} correos y ${failedCount} fallaron. Puedes volver a intentarlo.`
+          : result.message,
+        failedCount > 0 ? "error" : "success"
+      );
+    } catch (err: any) {
+      showToast(err.message || "No se pudo enviar el correo final.", "error");
+    } finally {
+      setFinalRecapEmailBusy(false);
     }
   };
 
@@ -9082,6 +9132,32 @@ export default function App() {
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">Personaliza el nombre, descripciones, zona horaria base, mensaje de bienvenida y habilitación de notificaciones</p>
                   </div>
+
+                  <section className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/20 p-4 md:p-5">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-emerald-700 dark:text-emerald-300">
+                          <Mail className="w-4 h-4" /> Cierre del torneo
+                        </span>
+                        <h3 className="text-lg font-black text-slate-950 dark:text-white mt-1">Enviar correo final a todos</h3>
+                        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 mt-1 max-w-2xl">
+                          Envía el agradecimiento, el póster, el podio y las estadísticas personales a todos los participantes activos, tanto pagos como gratuitos. Antes de enviar verás una confirmación con la cantidad de destinatarios.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleSendFinalRecapEmail()}
+                        disabled={finalRecapEmailBusy}
+                        className="min-h-12 shrink-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 text-sm font-black text-white shadow-lg shadow-emerald-900/10 disabled:cursor-wait disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                      >
+                        <Mail className="w-5 h-5" />
+                        {finalRecapEmailBusy ? "Procesando correos..." : "Revisar y enviar correo final"}
+                      </button>
+                    </div>
+                    <p className="mt-3 text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
+                      Los correos ya enviados no se repiten. Si alguno falla, puedes pulsar el botón nuevamente para reintentarlo.
+                    </p>
+                  </section>
 
                   <section className="rounded-2xl border border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/10 p-4 md:p-5 space-y-4">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
