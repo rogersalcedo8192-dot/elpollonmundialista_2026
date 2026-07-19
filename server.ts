@@ -418,7 +418,13 @@ function formatEmailMessage(message: string) {
     .join("");
 }
 
-async function sendEmail(to: string, subject: string, html: string, text?: string) {
+interface EmailAttachment {
+  filename: string;
+  content: string;
+  contentId?: string;
+}
+
+async function sendEmail(to: string, subject: string, html: string, text?: string, attachments?: EmailAttachment[]) {
   const normalizedTo = to.trim().toLowerCase();
   if (!isEmailEnabled()) {
     const error = "Missing RESEND_API_KEY or EMAIL_FROM";
@@ -440,6 +446,13 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
         subject,
         html,
         text,
+        ...(attachments?.length ? {
+          attachments: attachments.map((attachment) => ({
+            filename: attachment.filename,
+            content: attachment.content,
+            ...(attachment.contentId ? { content_id: attachment.contentId } : {})
+          }))
+        } : {}),
         ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {})
       })
     });
@@ -3479,6 +3492,137 @@ app.post("/api/admin/email-test", async (req, res) => {
   }
 
   res.json({ message: "Correo de prueba enviado.", result });
+});
+
+const FINAL_RECAP_EMAIL_PREFIX = "final-recap-2026:";
+const FINAL_RECAP_CONFIRMATION = "ENVIAR CIERRE 2026";
+const FINAL_RECAP_POSTER_FILENAME = "cierre-pollon-mundialista-2026.png";
+
+function getFinalRecapPosterPath() {
+  const candidates = [
+    path.join(process.cwd(), "public", "posters", FINAL_RECAP_POSTER_FILENAME),
+    path.join(process.cwd(), "dist", "posters", FINAL_RECAP_POSTER_FILENAME)
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || "";
+}
+
+function buildFinalRankingTable(rows: Ranking[], highlightedUserId?: string) {
+  const body = rows.slice(0, 10).map((row) => {
+    const highlighted = row.userId === highlightedUserId;
+    return `<tr style="${highlighted ? "background:#ecfdf5;font-weight:800" : "background:#ffffff"}">
+      <td style="padding:9px;border-bottom:1px solid #e2e8f0;text-align:center">${row.position}</td>
+      <td style="padding:9px;border-bottom:1px solid #e2e8f0">${escapeHtml(row.userName)}</td>
+      <td style="padding:9px;border-bottom:1px solid #e2e8f0;text-align:right">${row.points}</td>
+      <td style="padding:9px;border-bottom:1px solid #e2e8f0;text-align:right">${row.exactCount}</td>
+    </tr>`;
+  }).join("");
+  return `<table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px;margin:18px 0">
+    <thead><tr style="background:#0f172a;color:#ffffff">
+      <th style="padding:9px">Puesto</th><th style="padding:9px;text-align:left">Participante</th>
+      <th style="padding:9px;text-align:right">PTS</th><th style="padding:9px;text-align:right">Exactos</th>
+    </tr></thead><tbody>${body}</tbody>
+  </table>`;
+}
+
+app.post("/api/admin/final-recap-email", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+
+  const db = loadDb();
+  const champion = String(db.tournamentOutcomes?.champion || "").trim();
+  if (!champion) {
+    return res.status(409).json({ error: "Primero debes registrar y validar al campeon oficial del Mundial." });
+  }
+
+  const posterPath = getFinalRecapPosterPath();
+  if (!posterPath) return res.status(500).json({ error: "No se encontro el poster final para adjuntarlo." });
+
+  const rankingUserIds = new Set(db.rankings.map((row) => row.userId));
+  const recipients = db.users.filter((user) =>
+    user.status === "active" &&
+    !isSuperAdmin(user) &&
+    rankingUserIds.has(user.id) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)
+  );
+  const pending = recipients.filter((user) => !db.sentReminders.includes(`${FINAL_RECAP_EMAIL_PREFIX}${user.id}`));
+  const paidPodium = buildVisibleRanking(db, admin).slice(0, 3);
+  const fallbackPodium = [...db.rankings]
+    .filter((row) => recipients.some((user) => user.id === row.userId))
+    .sort((a, b) => b.points - a.points || b.exactCount - a.exactCount || b.drawCount - a.drawCount)
+    .slice(0, 3)
+    .map((row, index) => ({ ...row, position: index + 1 }));
+  const podium = paidPodium.length ? paidPodium : fallbackPodium;
+
+  if (req.body?.confirm !== FINAL_RECAP_CONFIRMATION) {
+    return res.json({
+      preview: true,
+      champion,
+      totalRecipients: recipients.length,
+      pendingRecipients: pending.length,
+      alreadySent: recipients.length - pending.length,
+      podium: podium.map((row) => ({ position: row.position, name: row.userName, points: row.points })),
+      confirmationRequired: FINAL_RECAP_CONFIRMATION
+    });
+  }
+
+  const posterContent = fs.readFileSync(posterPath).toString("base64");
+  const sent: Array<{ userId: string; email: string; id?: string }> = [];
+  const failed: Array<{ userId: string; email: string; error: string }> = [];
+
+  for (const user of pending) {
+    const userRanking = buildVisibleRanking(db, user);
+    const row = userRanking.find((ranking) => ranking.userId === user.id) || db.rankings.find((ranking) => ranking.userId === user.id);
+    if (!row) continue;
+    const modeLabel = isRealMoneyPaidParticipant(user)
+      ? "ranking general de participantes pagos"
+      : user.companyId ? "ranking gratuito de tu grupo" : "ranking gratuito";
+    const podiumHtml = podium.map((winner, index) =>
+      `<div style="padding:10px 12px;margin:6px 0;border-radius:10px;background:${index === 0 ? "#fef3c7" : "#f8fafc"};border:1px solid ${index === 0 ? "#f59e0b" : "#e2e8f0"}">
+        <strong>${winner.position}. ${escapeHtml(winner.userName)}</strong> · ${winner.points} PTS
+      </div>`
+    ).join("");
+    const subject = `Gracias por participar: tu resumen final del Pollon Mundialista 2026`;
+    const text = `Hola ${user.name}. Gracias por participar. ${champion} es campeon del Mundial 2026. Terminaste en el puesto ${row.position} del ${modeLabel}, con ${row.points} puntos, ${row.predictCount} pronosticos y ${row.exactCount} marcadores exactos.`;
+    const html = buildEmailLayout(
+      "Gracias por vivir el Mundial con nosotros",
+      `<p style="font-size:16px;line-height:1.7;margin:0">Hola <strong>${escapeHtml(user.name)}</strong>,</p>
+       <p style="font-size:15px;line-height:1.7">Gracias por cada pronostico y por ser parte de El Pollon Mundialista 2026. <strong>${escapeHtml(champion)}</strong> se corono campeon del mundo y hoy celebramos tambien a toda nuestra comunidad.</p>
+       <img src="cid:poster-cierre-2026" alt="Poster final El Pollon Mundialista 2026" style="display:block;width:100%;max-width:560px;height:auto;margin:22px auto;border-radius:14px;border:1px solid #e2e8f0" />
+       <div style="background:#020617;color:#ffffff;border-radius:12px;padding:18px;margin:20px 0">
+         <div style="font-size:11px;color:#6ee7b7;text-transform:uppercase;font-weight:800">Tu resultado · ${escapeHtml(modeLabel)}</div>
+         <div style="font-size:28px;font-weight:900;margin-top:6px">Puesto #${row.position} · ${row.points} PTS</div>
+         <div style="font-size:13px;color:#cbd5e1;margin-top:10px">${row.predictCount} pronosticos · ${row.exactCount} marcadores exactos · ${row.drawCount} resultados acertados · ${row.totalBonusPoints || 0} PTS en favoritos</div>
+       </div>
+       <h2 style="font-size:18px;margin:24px 0 10px">Campeones del Pollon</h2>
+       ${podiumHtml}
+       <h2 style="font-size:18px;margin:24px 0 8px">Tu ranking final</h2>
+       ${buildFinalRankingTable(userRanking, user.id)}
+       <p style="font-size:15px;line-height:1.7">Felicitaciones a quienes llegaron al podio y gracias a todos por la pasion, la inteligencia y el corazon. Nos vemos en la proxima edicion.</p>`,
+      appLink() ? { label: "Ver el ranking final", href: appLink() } : undefined
+    );
+    const result = await sendEmail(user.email, subject, html, text, [{
+      filename: FINAL_RECAP_POSTER_FILENAME,
+      content: posterContent,
+      contentId: "poster-cierre-2026"
+    }]);
+    if (result.ok) {
+      db.sentReminders.push(`${FINAL_RECAP_EMAIL_PREFIX}${user.id}`);
+      saveDb(db);
+      sent.push({ userId: user.id, email: user.email, id: result.id });
+    } else {
+      failed.push({ userId: user.id, email: user.email, error: String(result.error || "Error desconocido") });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 550));
+  }
+
+  const status = failed.length ? 207 : 200;
+  return res.status(status).json({
+    message: `Cierre enviado a ${sent.length} participantes; ${failed.length} envios fallaron.`,
+    champion,
+    sent,
+    failed,
+    skippedAlreadySent: recipients.length - pending.length
+  });
 });
 
 app.post("/api/admin/winner-email", async (req, res) => {
