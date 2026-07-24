@@ -615,6 +615,10 @@ function buildLigaMillonariosRanking(state: LigaMillonariosState, users: User[])
       let cumulativeScoreError = 0;
       let exactTeamScores = 0;
       let predictCount = 0;
+      let participationPoints = 0;
+      let outcomePoints = 0;
+      let exactScorePoints = 0;
+      let exactDrawPoints = 0;
       for (const prediction of predictions) {
         const match = state.matches.find((candidate) => candidate.id === prediction.matchId);
         if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) continue;
@@ -629,6 +633,10 @@ function buildLigaMillonariosRanking(state: LigaMillonariosState, users: User[])
         prediction.reason = score.reason;
         prediction.goalDifferenceBonus = score.goalDifferenceBonus;
         points += score.points;
+        participationPoints += score.points === 5 ? 5 : 0;
+        outcomePoints += score.points === 15 ? 15 : 0;
+        exactScorePoints += score.points === 25 ? 25 : 0;
+        exactDrawPoints += score.points === 35 ? 35 : 0;
         if (score.exactHit) exactCount += 1;
         if (score.outcomeHit) outcomeCount += 1;
         if (score.goalDifferenceHit) goalDifferenceHits += 1;
@@ -665,6 +673,10 @@ function buildLigaMillonariosRanking(state: LigaMillonariosState, users: User[])
         goalDifferenceHits,
         cumulativeScoreError,
         exactTeamScores,
+        participationPoints,
+        outcomePoints,
+        exactScorePoints,
+        exactDrawPoints,
         positionBonusPoints,
         leaguePointsBonusPoints,
         scorerPlayerBonusPoints,

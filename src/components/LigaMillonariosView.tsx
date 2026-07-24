@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BarChart3, Bell, Calendar, Check, Eraser, RefreshCw, Trophy } from "lucide-react";
+import { BarChart3, Bell, Calendar, Check, Eraser, FileSpreadsheet, RefreshCw, Trophy } from "lucide-react";
 import type { User } from "../types";
 import { MatchResultsTicker } from "./MatchResultsTicker";
 import { LigaMillonariosTrivia } from "./LigaMillonariosTrivia";
@@ -29,6 +29,8 @@ type LigaPrediction = {
 type LigaRanking = {
   userId: string;
   userName: string;
+  userAvatar?: string;
+  userCountry?: string;
   points: number;
   exactCount: number;
   outcomeCount: number;
@@ -37,6 +39,14 @@ type LigaRanking = {
   cumulativeScoreError: number;
   exactTeamScores: number;
   seasonBonusPoints: number;
+  participationPoints: number;
+  outcomePoints: number;
+  exactScorePoints: number;
+  exactDrawPoints: number;
+  positionBonusPoints: number;
+  leaguePointsBonusPoints: number;
+  scorerPlayerBonusPoints: number;
+  scorerGoalsBonusPoints: number;
   position: number;
 };
 
@@ -82,6 +92,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   const [ligaGroups, setLigaGroups] = useState<Array<{ id: string; name: string; code: string; ownerId: string; memberIds: string[] }>>([]);
   const [groupName, setGroupName] = useState("");
   const [groupCode, setGroupCode] = useState("");
+  const [rankingHelpOpen, setRankingHelpOpen] = useState(false);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -304,6 +315,21 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
     const crest = match?.local === teamName ? match.localCrest : match?.visitorCrest;
     return crest ? <img src={crest} alt="" className="h-6 w-6 object-contain" /> : <span>⚽</span>;
   };
+  const exportLigaRanking = () => {
+    const headers = ["Posición", "Participante", "Total", "5 puntos", "1X2", "Exacto ganador", "Empate exacto", "Bono posición", "Bono puntos", "Bono goleador", "Bono goles", "DG exacta", "Error", "Partidos"];
+    const rows = ranking.map((row) => [row.position, row.userName, row.points, row.participationPoints, row.outcomePoints, row.exactScorePoints, row.exactDrawPoints, row.positionBonusPoints, row.leaguePointsBonusPoints, row.scorerPlayerBonusPoints, row.scorerGoalsBonusPoints, row.goalDifferenceHits, row.cumulativeScoreError, row.predictCount]);
+    const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    link.download = "polloranking-liga-ii-2026.csv";
+    link.click(); URL.revokeObjectURL(link.href);
+  };
+  const shareMyLigaRanking = async () => {
+    if (!myRanking) return;
+    const text = `Voy #${myRanking.position} con ${myRanking.points} puntos en el Pollón Liga II de Millonarios.`;
+    if (navigator.share) await navigator.share({ title: "Mi PolloRanking Liga II", text, url: window.location.origin }).catch(() => undefined);
+    else await navigator.clipboard.writeText(`${text} ${window.location.origin}`);
+  };
 
   return (
     <section className="space-y-5">
@@ -459,9 +485,11 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
             </div>
           )}
           <div id="liga-ranking" className={`${activeSection === "ranking" ? "space-y-5" : "hidden"}`}>
-            <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-amber-500" /> PolloRanking · Liga II</h2><p className="mt-1 text-xs text-slate-500">Clasificación exclusiva de participantes pagos del Pollón de Liga.</p></div>
-            {myRanking && <div className="grid gap-3 rounded-2xl bg-slate-950 p-5 text-white shadow-sm sm:grid-cols-[1fr_auto_auto]"><div><span className="text-[10px] font-black uppercase tracking-widest text-blue-300">Tu posición actual</span><strong className="mt-1 block text-lg">{currentUser.name}</strong></div><div><span className="text-[10px] text-slate-400">Posición</span><strong className="block text-2xl">#{myRanking.position}</strong></div><div><span className="text-[10px] text-slate-400">Puntos</span><strong className="block text-2xl text-amber-400">{myRanking.points}</strong></div></div>}
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="overflow-x-auto"><table className="w-full min-w-[660px] text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 dark:bg-slate-800"><tr><th className="p-3 text-center">Pos.</th><th className="p-3 text-left">Participante</th><th className="p-3 text-center">Puntos</th><th className="p-3 text-center">Exactos</th><th className="p-3 text-center">DG</th><th className="p-3 text-center">Error</th><th className="p-3 text-center">Bonos</th></tr></thead><tbody>{ranking.map((row) => <tr key={row.userId} className={`border-t border-slate-100 dark:border-slate-800 ${row.userId === currentUser.id ? "bg-blue-50 font-bold text-blue-950 dark:bg-blue-950 dark:text-blue-100" : ""}`}><td className="p-3 text-center font-black">#{row.position}</td><td className="p-3">{row.userName}</td><td className="p-3 text-center font-black">{row.points}</td><td className="p-3 text-center">{row.exactCount}</td><td className="p-3 text-center">{row.goalDifferenceHits}</td><td className="p-3 text-center">{row.cumulativeScoreError}</td><td className="p-3 text-center">{row.seasonBonusPoints || 0}</td></tr>)}</tbody></table></div>{!ranking.length && <p className="p-6 text-center text-sm text-slate-500">El ranking aparecerá cuando haya participantes pagos.</p>}</div>
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800"><div><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> PolloRanking · Liga II</h2><p className="mt-1 text-xs text-slate-500"><strong>Usuarios pagos:</strong> clasificación exclusiva de este Pollón, ordenada con los desempates de Liga.</p></div><div className="flex gap-2"><button type="button" onClick={() => setRankingHelpOpen((current) => !current)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold dark:border-slate-700">¿Cómo se ordena?</button><button type="button" onClick={exportLigaRanking} className="flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white"><FileSpreadsheet className="h-4 w-4" /> Exportar CSV</button></div></div>
+            {myRanking && <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-amber-50 p-5 shadow-sm dark:border-blue-900 dark:from-blue-950/30 dark:to-amber-950/20"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><img src={currentUser.avatar} alt="" className="h-14 w-14 shrink-0 rounded-full border-2 border-amber-400 object-cover" /><div className="min-w-0"><span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-300">Tu avance en Liga II</span><h3 className="truncate text-base font-black">Puesto #{myRanking.position} · {myRanking.points} puntos</h3><p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">{myRanking.exactCount} exactos · {myRanking.goalDifferenceHits} diferencias exactas · {myRanking.seasonBonusPoints} puntos en bonos</p></div></div><button type="button" onClick={() => void shareMyLigaRanking()} className="rounded-xl bg-blue-700 px-4 py-3 text-xs font-black text-white">Compartir avance</button></div></div>}
+            {rankingHelpOpen && <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-xs text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-100"><h3 className="font-black">Orden y desempates</h3><p className="mt-2 leading-relaxed">1. Puntos totales · 2. Marcadores exactos · 3. Diferencias de gol exactas · 4. Menor error acumulado · 5. Marcadores exactos por equipo · 6. Aciertos 1X2 · 7. Pronósticos especiales · 8. Nombre.</p><p className="mt-2 font-semibold">DG no suma puntos: únicamente resuelve empates. “Error” es la distancia acumulada entre los goles pronosticados y los reales; gana quien tenga el número menor.</p></div>}
+            <p className="text-[11px] font-semibold text-slate-500 md:hidden">Desliza la tabla horizontalmente para consultar todo el detalle.</p>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="overflow-x-auto"><table className="min-w-[1240px] w-full text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800"><tr><th className="sticky left-0 z-20 w-12 bg-slate-50 p-3 text-center dark:bg-slate-800">Pos.</th><th className="sticky left-12 z-20 min-w-44 bg-slate-50 p-3 text-left dark:bg-slate-800">Participante</th><th className="p-3 text-center">Total</th><th className="p-3 text-center">5 pts</th><th className="p-3 text-center">1X2</th><th className="p-3 text-center">Exacto ganador</th><th className="p-3 text-center">Empate exacto</th><th className="p-3 text-center">Posición final</th><th className="p-3 text-center">Puntos Millos</th><th className="p-3 text-center">Goleador</th><th className="p-3 text-center">Goles goleador</th><th className="p-3 text-center">DG</th><th className="p-3 text-center">Error</th><th className="p-3 text-center">Partidos</th></tr></thead><tbody>{ranking.map((row) => { const self = row.userId === currentUser.id; const sticky = self ? "bg-blue-50 dark:bg-blue-950" : "bg-white dark:bg-slate-900"; return <tr key={row.userId} className={`border-t border-slate-100 dark:border-slate-800 ${self ? "bg-blue-50 font-bold text-blue-950 dark:bg-blue-950 dark:text-blue-100" : ""}`}><td className={`sticky left-0 z-10 p-3 text-center ${sticky}`}><span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 font-black ${row.position === 1 ? "bg-amber-400 text-amber-950" : row.position === 2 ? "bg-slate-300 text-slate-900" : row.position === 3 ? "bg-amber-700 text-white" : ""}`}>{row.position}</span></td><td className={`sticky left-12 z-10 p-3 ${sticky}`}><div className="flex items-center gap-2"><img src={row.userAvatar || currentUser.avatar} alt="" className="h-8 w-8 rounded-full border object-cover" /><div><strong className="block">{row.userName}{self ? " · TÚ" : ""}</strong><span className="text-[9px] text-slate-400">{row.userCountry || "Colombia"}</span></div></div></td><td className="p-3 text-center text-sm font-black text-blue-700 dark:text-blue-300">{row.points}</td><td className="p-3 text-center">{row.participationPoints || 0}</td><td className="p-3 text-center">{row.outcomePoints || 0}</td><td className="p-3 text-center">{row.exactScorePoints || 0}</td><td className="p-3 text-center">{row.exactDrawPoints || 0}</td><td className="p-3 text-center">{row.positionBonusPoints || 0}</td><td className="p-3 text-center">{row.leaguePointsBonusPoints || 0}</td><td className="p-3 text-center">{row.scorerPlayerBonusPoints || 0}</td><td className="p-3 text-center">{row.scorerGoalsBonusPoints || 0}</td><td className="p-3 text-center font-bold">{row.goalDifferenceHits}</td><td className="p-3 text-center">{row.cumulativeScoreError}</td><td className="p-3 text-center">{row.predictCount}</td></tr>; })}</tbody></table></div>{!ranking.length && <p className="p-8 text-center text-sm text-slate-500">El ranking aparecerá cuando haya participantes pagos.</p>}</div>
           </div>
           <div id="liga-notificaciones" className={`${activeSection === "notificaciones" ? "space-y-5" : "hidden"}`}>
             <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Bell className="h-5 w-5 text-blue-600" /> Notificaciones · Liga II</h2><p className="mt-1 text-xs text-slate-500">Resultados, recordatorios y novedades únicamente de este Pollón.</p></div>
