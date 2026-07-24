@@ -6292,6 +6292,8 @@ app.delete("/api/liga-millonarios/predictions/:matchId", (req, res) => {
   if (!user) return res.status(401).json({ error: "No autenticado." });
   const matchId = Number(req.params.matchId);
   const state = loadLigaMillonariosState();
+  const hasLigaAccess = isSuperAdmin(user) || state.memberships.some((membership) => membership.userId === user.id && membership.status === "paid");
+  if (!hasLigaAccess) return res.status(402).json({ error: "Debes pagar la inscripción independiente de Liga II para editar pronósticos." });
   const match = state.matches.find((candidate) => candidate.id === matchId);
   if (!match) return res.status(404).json({ error: "Partido no encontrado." });
   if (match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - PREDICTION_LOCK_MINUTES * 60_000) {

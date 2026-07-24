@@ -311,6 +311,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   };
 
   const savePrediction = async (matchId: number) => {
+    if (!hasLigaAccess) return setMessage("Debes pagar la inscripción independiente de Liga II para editar pronósticos.");
     const draft = drafts[matchId];
     if (!draft || draft.local === "" || draft.visitor === "") return setMessage("Ingresa ambos marcadores.");
     setBusy(true);
@@ -326,6 +327,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   };
 
   const clearPrediction = async (matchId: number) => {
+    if (!hasLigaAccess) return setMessage("Debes pagar la inscripción independiente de Liga II para editar pronósticos.");
     const response = await fetch(`/api/liga-millonarios/predictions/${matchId}`, { method: "DELETE", headers: getHeaders() });
     const data = await response.json();
     setMessage(data.message || data.error);
@@ -336,6 +338,17 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   const myRanking = ranking.find((row) => row.userId === currentUser.id);
   const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
   const hasLigaAccess = isAdmin || membership?.status === "paid";
+  const updateDraftScore = (matchId: number, side: "local" | "visitor", delta: number) => {
+    if (!hasLigaAccess) {
+      setMessage("Debes pagar la inscripción independiente de Liga II para editar pronósticos.");
+      return;
+    }
+    setDrafts((current) => {
+      const draft = current[matchId] || { local: "", visitor: "" };
+      const value = draft[side] === "" ? 0 : Number(draft[side]);
+      return { ...current, [matchId]: { ...draft, [side]: Math.max(0, Math.min(30, value + delta)) } };
+    });
+  };
   const formatCop = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value || 0);
   const registeredPredictions = predictions.length;
   const pendingPredictions = matches.filter((match) => match.status === "pending" && !predictionByMatch.has(match.id)).length;
@@ -468,10 +481,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
                 {match.status === "finished" ? (
                   <div className="text-center"><strong className="text-2xl">{match.localScore} - {match.visitorScore}</strong><p className="mt-1 text-xs text-slate-500">Tu puntaje: {prediction?.pointsEarned ?? 0} · La diferencia de gol solo desempata</p></div>
                 ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <input disabled={closed} type="number" min="0" value={draft.local} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, local: event.target.value === "" ? "" : Number(event.target.value) } }))} className="h-11 w-16 rounded-xl border text-center font-black dark:bg-slate-950" />
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                    <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "local", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.local}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "local", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.local}`}>-</button></div>
+                    <input disabled={closed} type="number" inputMode="numeric" min="0" max="30" value={draft.local} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, local: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
                     <span>-</span>
-                    <input disabled={closed} type="number" min="0" value={draft.visitor} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, visitor: event.target.value === "" ? "" : Number(event.target.value) } }))} className="h-11 w-16 rounded-xl border text-center font-black dark:bg-slate-950" />
+                    <input disabled={closed} type="number" inputMode="numeric" min="0" max="30" value={draft.visitor} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, visitor: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
+                    <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.visitor}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.visitor}`}>-</button></div>
                     <button disabled={closed || busy} onClick={() => void savePrediction(match.id)} className="ml-2 rounded-xl bg-blue-700 p-3 text-white disabled:opacity-40" title="Guardar"><Check className="h-5 w-5" /></button>
                     {prediction && <button disabled={closed || busy} onClick={() => void clearPrediction(match.id)} className="rounded-xl bg-slate-100 p-3 text-slate-700 disabled:opacity-40" title="Borrar"><Eraser className="h-5 w-5" /></button>}
                   </div>
