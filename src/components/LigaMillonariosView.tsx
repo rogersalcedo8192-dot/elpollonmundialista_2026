@@ -39,6 +39,11 @@ type LigaRanking = {
 };
 
 type Props = { currentUser: User; getHeaders: () => Record<string, string> };
+type LigaMembership = { userId: string; status: "pending" | "paid" | "suspended"; paymentMethod?: string; paidAt?: string; user?: User };
+type FinancialConfig = { entryFeeCop: number; prizePoolPercent: number; bankCommissionPercent: number; administrationPercent: number; firstPlacePercent: number; secondPlacePercent: number; thirdPlacePercent: number };
+type Finances = { paidParticipants: number; grossRevenue: number; prizePool: number; bankCommission: number; administrationCosts: number; payouts: { first: number; second: number; third: number } };
+type Standing = { position: number; team: string; crest: string; played: number; won: number; drawn: number; lost: number; goalDifference: number; points: number };
+type Scorer = { position: number; player: string; team: string; crest: string; goals: number };
 
 export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
   const [matches, setMatches] = useState<LigaMatch[]>([]);
@@ -51,21 +56,33 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
   const [now, setNow] = useState(Date.now());
   const [special, setSpecial] = useState({ finalPosition: "", totalGoals: "", totalLeaguePoints: "" });
   const [scorer, setScorer] = useState({ playerName: "", exactGoals: "" });
+  const [membership, setMembership] = useState<LigaMembership | null>(null);
+  const [adminMemberships, setAdminMemberships] = useState<LigaMembership[]>([]);
+  const [financialConfig, setFinancialConfig] = useState<FinancialConfig>({ entryFeeCop: 20000, prizePoolPercent: 80, bankCommissionPercent: 3, administrationPercent: 17, firstPlacePercent: 80, secondPlacePercent: 15, thirdPlacePercent: 5 });
+  const [finances, setFinances] = useState<Finances | null>(null);
+  const [standings, setStandings] = useState<Standing[]>([]);
+  const [scorers, setScorers] = useState<Scorer[]>([]);
 
   const load = useCallback(async () => {
     setBusy(true);
     try {
       const headers = getHeaders();
-      const [moduleRes, predictionsRes, rankingRes, notificationsRes, specialRes, scorerRes] = await Promise.all([
+      const [moduleRes, predictionsRes, rankingRes, notificationsRes, specialRes, scorerRes, membershipRes, adminMembershipsRes] = await Promise.all([
         fetch("/api/liga-millonarios"),
         fetch("/api/liga-millonarios/predictions", { headers }),
         fetch("/api/liga-millonarios/rankings", { headers }),
         fetch("/api/liga-millonarios/notifications", { headers }),
         fetch("/api/liga-millonarios/tiebreak-prediction", { headers }),
-        fetch("/api/liga-millonarios/scorer-prediction", { headers })
+        fetch("/api/liga-millonarios/scorer-prediction", { headers }),
+        fetch("/api/liga-millonarios/membership", { headers }),
+        currentUser.role === "admin" || currentUser.role === "superadmin" ? fetch("/api/liga-millonarios/admin/memberships", { headers }) : Promise.resolve(null)
       ]);
       if (!moduleRes.ok) throw new Error("No se pudo cargar el módulo de Liga II.");
       const moduleData = await moduleRes.json();
+      setFinancialConfig(moduleData.financialConfig);
+      setFinances(moduleData.finances);
+      setStandings(moduleData.standings || []);
+      setScorers(moduleData.scorers || []);
       const predictionData: LigaPrediction[] = predictionsRes.ok ? await predictionsRes.json() : [];
       setMatches(moduleData.matches || []);
       setPredictions(predictionData);
@@ -79,6 +96,8 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
         const savedScorer = await scorerRes.json();
         if (savedScorer) setScorer({ playerName: savedScorer.playerName, exactGoals: String(savedScorer.exactGoals) });
       }
+      if (membershipRes.ok) setMembership(await membershipRes.json());
+      if (adminMembershipsRes?.ok) setAdminMemberships(await adminMembershipsRes.json());
       setDrafts(Object.fromEntries(predictionData.map((prediction) => [prediction.matchId, { local: prediction.localScore, visitor: prediction.visitorScore }])));
     } catch (error: any) {
       setMessage(error.message || "No se pudo cargar el módulo.");
@@ -92,6 +111,20 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference");
+    if (params.get("ligaPayment") !== "success" || !reference) return;
+    void fetch("/api/liga-millonarios/payments/confirm", { method: "POST", headers: getHeaders(), body: JSON.stringify({ reference }) })
+      .then(async (response) => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        setMessage(data.message || data.error);
+        if (ok) void load();
+        params.delete("ligaPayment"); params.delete("reference");
+        window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params}` : ""}`);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.id]);
 
   const countdown = (date: string) => {
     const remaining = new Date(date).getTime() - 5 * 60_000 - now;
@@ -113,6 +146,34 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
     const response = await fetch("/api/liga-millonarios/scorer-prediction", { method: "POST", headers: getHeaders(), body: JSON.stringify({ playerName: scorer.playerName, exactGoals: Number(scorer.exactGoals) }) });
     const data = await response.json();
     setMessage(data.message || data.error);
+  };
+
+  const joinLiga = async () => {
+    const response = await fetch("/api/liga-millonarios/join", { method: "POST", headers: getHeaders() });
+    const data = await response.json();
+    setMessage(data.message || data.error);
+    if (response.ok) { setMembership(data.membership); void load(); }
+  };
+
+  const payLiga = async () => {
+    const response = await fetch("/api/liga-millonarios/payments/create", { method: "POST", headers: getHeaders() });
+    const data = await response.json();
+    if (!response.ok) return setMessage(data.error);
+    window.location.href = data.url;
+  };
+
+  const updateManualPayment = async (userId: string, status: "paid" | "pending", paymentMethod = "cash") => {
+    const response = await fetch(`/api/liga-millonarios/admin/memberships/${userId}/payment`, { method: "PUT", headers: getHeaders(), body: JSON.stringify({ status, paymentMethod }) });
+    const data = await response.json();
+    setMessage(data.message || data.error);
+    if (response.ok) void load();
+  };
+
+  const saveFinancialConfig = async () => {
+    const response = await fetch("/api/liga-millonarios/admin/financial-config", { method: "PUT", headers: getHeaders(), body: JSON.stringify(financialConfig) });
+    const data = await response.json();
+    setMessage(data.message || data.error);
+    if (response.ok) { setFinancialConfig(data.financialConfig); setFinances(data.finances); }
   };
 
   const closeSeasonBonuses = async () => {
@@ -171,6 +232,9 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
 
   const predictionByMatch = new Map<number, LigaPrediction>(predictions.map((prediction) => [prediction.matchId, prediction]));
   const myRanking = ranking.find((row) => row.userId === currentUser.id);
+  const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
+  const hasLigaAccess = isAdmin || membership?.status === "paid";
+  const formatCop = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value || 0);
 
   return (
     <section className="space-y-5">
@@ -190,14 +254,45 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
         </div>
       </div>
 
+      <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 text-xs font-black shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        {[['liga-resumen','Resumen'],['liga-pronosticos','Pronósticos'],['liga-asi-va','Así va la Liga'],['liga-ranking','PolloRanking'],['liga-notificaciones','Notificaciones'],['liga-reglas','Reglas y premios'],...(isAdmin ? [['liga-admin','Administrador']] : [])].map(([id, label]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })} className="shrink-0 rounded-xl bg-slate-100 px-3 py-2 hover:bg-blue-100 hover:text-blue-800 dark:bg-slate-800">{label}</button>)}
+      </nav>
+
       {message && <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm font-semibold text-sky-900">{message}</div>}
 
+      <div id="liga-resumen" />
+      {!isAdmin && !hasLigaAccess && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 shadow-sm">
+          <h3 className="text-lg font-black">Inscripción independiente de Liga II</h3>
+          <p className="mt-1 text-sm">Tu cuenta sigue siendo la misma, pero este Pollón requiere una inscripción y pago propios de <strong>{formatCop(financialConfig.entryFeeCop)}</strong>.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {!membership && <button type="button" onClick={() => void joinLiga()} className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white">Inscribirme en Liga</button>}
+            {membership?.status === "pending" && <button type="button" onClick={() => void payLiga()} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white">Pagar con Wompi</button>}
+            {membership?.status === "pending" && <span className="self-center text-xs">También puedes pagar por efectivo o transferencia y solicitar activación al administrador.</span>}
+          </div>
+        </div>
+      )}
+
+      <section id="liga-asi-va" className="scroll-mt-4 space-y-4">
+        <h3 className="text-xl font-black">Así va la Liga BetPlay II 2026</h3>
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="border-b p-4 font-black dark:border-slate-800">Tabla de posiciones</div>
+            <div className="max-h-96 overflow-auto"><table className="w-full text-xs"><thead className="sticky top-0 bg-slate-100 dark:bg-slate-800"><tr><th className="p-2">#</th><th className="p-2 text-left">Equipo</th><th>PJ</th><th>DG</th><th>PTS</th></tr></thead><tbody>{standings.map((row) => <tr key={row.team} className={row.team === "Millonarios" ? "bg-blue-50 font-black text-blue-900 dark:bg-blue-950 dark:text-blue-100" : "border-t dark:border-slate-800"}><td className="p-2 text-center">{row.position}</td><td className="flex items-center gap-2 p-2"><img src={row.crest} alt="" className="h-6 w-6 object-contain" />{row.team}</td><td className="text-center">{row.played}</td><td className="text-center">{row.goalDifference}</td><td className="text-center font-black">{row.points}</td></tr>)}</tbody></table></div>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="border-b p-4 font-black dark:border-slate-800">Tabla de goleadores</div>
+            <div className="max-h-96 overflow-auto">{scorers.length ? scorers.map((row) => <div key={`${row.player}-${row.team}`} className="grid grid-cols-[2rem_2rem_1fr_auto] items-center gap-2 border-b p-3 text-xs last:border-0 dark:border-slate-800"><strong>#{row.position}</strong><img src={row.crest} alt="" className="h-7 w-7 object-contain" /><span><strong className="block">{row.player}</strong><small>{row.team}</small></span><strong>{row.goals} goles</strong></div>) : <p className="p-5 text-sm text-slate-500">La tabla de goleadores se habilitará cuando comience el torneo.</p>}</div>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
-        <div className="space-y-3">
+        <div id="liga-pronosticos" className="space-y-3 scroll-mt-4">
           <h3 className="flex items-center gap-2 text-lg font-black"><Calendar className="h-5 w-5 text-blue-600" /> Calendario y pronósticos</h3>
           {matches.map((match) => {
             const prediction = predictionByMatch.get(match.id);
-            const closed = match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
+            const closed = !hasLigaAccess || match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
             const draft = drafts[match.id] || { local: "", visitor: "" };
             return (
               <article key={match.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -226,6 +321,26 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
         </div>
 
         <div className="space-y-5">
+          {isAdmin && (
+            <div id="liga-admin" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 scroll-mt-4 dark:border-emerald-900 dark:bg-emerald-950">
+              <h3 className="font-black">Administración financiera · Liga II</h3>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-xl bg-white/70 p-2">Pagos confirmados<strong className="block text-lg">{finances?.paidParticipants || 0}</strong></div>
+                <div className="rounded-xl bg-white/70 p-2">Bolsa de premios<strong className="block text-lg">{formatCop(finances?.prizePool || 0)}</strong></div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {([
+                  ["entryFeeCop", "Inscripción COP"], ["prizePoolPercent", "% premios"], ["bankCommissionPercent", "% comisión bancaria"], ["administrationPercent", "% administración"],
+                  ["firstPlacePercent", "% primer puesto"], ["secondPlacePercent", "% segundo puesto"], ["thirdPlacePercent", "% tercer puesto"]
+                ] as Array<[keyof FinancialConfig, string]>).map(([key, label]) => <label key={key} className="text-[10px] font-bold">{label}<input type="number" min="0" value={financialConfig[key]} onChange={(event) => setFinancialConfig((current) => ({ ...current, [key]: Number(event.target.value) }))} className="mt-1 w-full rounded-lg border p-2 text-sm dark:bg-slate-900" /></label>)}
+              </div>
+              <p className="mt-2 text-[10px]">Premios + comisión + administración deben sumar 100%. La distribución de puestos también debe sumar 100%.</p>
+              <button type="button" onClick={() => void saveFinancialConfig()} className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white">Guardar finanzas de Liga</button>
+              <div className="mt-4 max-h-64 space-y-2 overflow-auto">
+                {adminMemberships.map((item) => <div key={item.userId} className="flex items-center justify-between gap-2 rounded-xl bg-white/70 p-2 text-xs"><span className="min-w-0 truncate"><strong className="block truncate">{item.user?.name || item.userId}</strong>{item.status} {item.paymentMethod ? `· ${item.paymentMethod}` : ""}</span><button type="button" onClick={() => void updateManualPayment(item.userId, item.status === "paid" ? "pending" : "paid", "cash")} className={`shrink-0 rounded-lg px-2 py-1 font-black ${item.status === "paid" ? "bg-slate-200" : "bg-emerald-600 text-white"}`}>{item.status === "paid" ? "Revertir" : "Marcar pago efectivo"}</button></div>)}
+              </div>
+            </div>
+          )}
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
             <h3 className="font-black text-blue-950 dark:text-blue-100">Pronósticos especiales de desempate</h3>
             <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">La posición final exacta vale 100 puntos y los puntos exactos de Millonarios valen otros 100. Los goles totales solo desempatan.</p>
@@ -246,16 +361,24 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
             <button type="button" onClick={() => void saveScorer()} className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2 text-sm font-black text-white">Guardar goleador</button>
           </div>
           {(currentUser.role === "admin" || currentUser.role === "superadmin") && <button type="button" onClick={() => void closeSeasonBonuses()} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Cerrar bonos finales de temporada</button>}
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div id="liga-ranking" className="rounded-2xl border border-slate-200 bg-white p-4 scroll-mt-4 dark:border-slate-800 dark:bg-slate-900">
             <h3 className="mb-3 flex items-center gap-2 font-black"><Trophy className="h-5 w-5 text-amber-500" /> Ranking Liga II</h3>
             <div className="space-y-2">{ranking.map((row) => <div key={row.userId} className={`rounded-xl p-2 text-sm ${row.userId === currentUser.id ? "bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100" : "bg-slate-50 dark:bg-slate-800"}`}><div className="grid grid-cols-[2rem_1fr_auto] items-center gap-2"><strong>#{row.position}</strong><span className="truncate">{row.userName}</span><strong>{row.points} pts</strong></div><p className="mt-1 pl-8 text-[10px] opacity-70">Exactos {row.exactCount} · DG {row.goalDifferenceHits} · Error {row.cumulativeScoreError} · Bonos {row.seasonBonusPoints || 0}</p></div>)}</div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div id="liga-notificaciones" className="rounded-2xl border border-slate-200 bg-white p-4 scroll-mt-4 dark:border-slate-800 dark:bg-slate-900">
             <h3 className="mb-3 flex items-center gap-2 font-black"><Bell className="h-5 w-5 text-blue-600" /> Notificaciones Liga II</h3>
             {notifications.length ? notifications.slice(0, 8).map((notification) => <div key={notification.id} className="border-b border-slate-100 py-3 last:border-0 dark:border-slate-800"><strong className="text-sm">{notification.title}</strong><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{notification.message}</p></div>) : <p className="text-sm text-slate-500">Todavía no hay notificaciones de este módulo.</p>}
           </div>
         </div>
       </div>
+
+      <section id="liga-reglas" className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="text-lg font-black">Reglas y premios · Liga II</h3>
+        <div className="mt-3 grid gap-4 md:grid-cols-2 text-sm">
+          <div className="space-y-1"><p><strong>5 pts</strong> por participar.</p><p><strong>15 pts</strong> por acertar el resultado 1X2.</p><p><strong>25 pts</strong> por marcador exacto con ganador.</p><p><strong>35 pts</strong> por empate exacto.</p><p>La diferencia exacta de gol no suma puntos; desempata.</p></div>
+          <div className="space-y-1"><p><strong>100 pts</strong> por posición final exacta.</p><p><strong>100 pts</strong> por puntos finales exactos.</p><p><strong>50 pts</strong> por goleador y <strong>50 pts</strong> por sus goles exactos.</p><p className="pt-2"><strong>Bolsa actual:</strong> {formatCop(finances?.prizePool || 0)}</p><p>1.º {formatCop(finances?.payouts.first || 0)} · 2.º {formatCop(finances?.payouts.second || 0)} · 3.º {formatCop(finances?.payouts.third || 0)}</p></div>
+        </div>
+      </section>
     </section>
   );
 }

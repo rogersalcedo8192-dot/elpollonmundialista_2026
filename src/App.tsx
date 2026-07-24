@@ -4455,8 +4455,8 @@ export default function App() {
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 w-full md:flex-1">
             <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl shadow-inner border border-emerald-400 overflow-hidden flex items-center justify-center shrink-0">
               <img
-                src="/favicon.png"
-                alt="El Pollon Mundialista"
+                src={activeTab === "liga-millonarios" ? "/team-crests/millonarios.png" : "/favicon.png"}
+                alt={activeTab === "liga-millonarios" ? "Escudo de Millonarios" : "El Pollon Mundialista"}
                 className="w-full h-full object-contain p-1"
                 id="header_trophy_icon"
               />
@@ -4464,17 +4464,17 @@ export default function App() {
             <div className="min-w-0 flex-1">
               <h1 className="text-[11px] min-[390px]:text-xs sm:text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2 leading-tight uppercase whitespace-nowrap">
                 <span className="sm:hidden block truncate">
-                  EL POLLÓN MUNDIALISTA FIFA 2026
+                  {activeTab === "liga-millonarios" ? "POLLÓN LIGA BETPLAY II 2026" : "EL POLLÓN MUNDIALISTA FIFA 2026"}
                 </span>
                 <span className="hidden sm:block truncate">
-                  {torneo?.title || t("title", "Polla Mundialista 2026")}
+                  {activeTab === "liga-millonarios" ? "Pollón Liga BetPlay II 2026 · Millonarios" : (torneo?.title || t("title", "Polla Mundialista 2026"))}
                 </span>
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal hidden sm:inline">
-                  Mundial FIFA 2026
+                  {activeTab === "liga-millonarios" ? "Liga II 2026" : "Mundial FIFA 2026"}
                 </span>
               </h1>
               <span className="mt-1 inline-flex sm:hidden w-fit text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold leading-none">
-                Mundial FIFA 2026
+                {activeTab === "liga-millonarios" ? "Liga II 2026" : "Mundial FIFA 2026"}
               </span>
               <p className="hidden sm:block text-[11px] md:text-[13px] text-slate-200 leading-snug max-w-2xl xl:max-w-3xl">
                 {torneo?.description || t("subtitle", "Consigue puntos prediciendo resultados reales")}
@@ -4689,6 +4689,15 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {currentUser && (
+        <div className="border-b border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="mx-auto flex max-w-7xl gap-2" aria-label="Seleccionar Pollón">
+            <button type="button" onClick={() => navigateToMenuItem("dashboard")} className={`flex-1 rounded-xl px-3 py-2 text-xs font-black transition-colors ${activeTab !== "liga-millonarios" ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>🌎 Pollón Mundialista 2026</button>
+            <button type="button" onClick={() => navigateToMenuItem("liga-millonarios")} className={`flex-1 rounded-xl px-3 py-2 text-xs font-black transition-colors ${activeTab === "liga-millonarios" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>⚽ Pollón Liga II · Millonarios</button>
+          </div>
+        </div>
+      )}
 
       {currentUser && mobileMenuOpen && (
         <nav
@@ -4956,7 +4965,7 @@ export default function App() {
           /* Logged In Portal Layout */
           <>
             {/* Sidebar Navigation */}
-            <aside className="hidden md:flex w-full md:w-64 shrink-0 flex-col gap-4">
+            {activeTab !== "liga-millonarios" && <aside className="hidden md:flex w-full md:w-64 shrink-0 flex-col gap-4">
               
               {/* Soccer Ball Toggle Button (Only visible on responsive mobile viewports) */}
               <button
@@ -5348,7 +5357,7 @@ export default function App() {
                 )}
                 
               </div>
-            </aside>
+            </aside>}
 
             {/* Content Area */}
             <section className="flex-1 min-w-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 md:p-6 overflow-hidden transition-colors">

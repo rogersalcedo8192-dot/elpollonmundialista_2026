@@ -294,6 +294,26 @@ interface LigaMillonariosState {
   }>;
   finalTiebreakOutcome?: { finalPosition: number; totalGoals: number; totalLeaguePoints: number };
   scorerOutcome?: { playerNames: string[]; exactGoals: number };
+  memberships: Array<{
+    userId: string;
+    status: "pending" | "paid" | "suspended";
+    paymentMethod?: "wompi" | "cash" | "transfer" | "other";
+    paymentReference?: string;
+    paidAt?: string;
+    markedPaidBy?: string;
+    joinedAt: string;
+  }>;
+  financialConfig: {
+    entryFeeCop: number;
+    prizePoolPercent: number;
+    bankCommissionPercent: number;
+    administrationPercent: number;
+    firstPlacePercent: number;
+    secondPlacePercent: number;
+    thirdPlacePercent: number;
+  };
+  standings: Array<{ position: number; team: string; crest: string; played: number; won: number; drawn: number; lost: number; goalsFor: number; goalsAgainst: number; goalDifference: number; points: number }>;
+  scorers: Array<{ position: number; player: string; team: string; crest: string; goals: number }>;
   notifications: AppNotification[];
   sentReminders: string[];
 }
@@ -488,6 +508,18 @@ function createLigaMillonariosState(): LigaMillonariosState {
     predictions: [],
     tiebreakPredictions: [],
     scorerPredictions: [],
+    memberships: [],
+    financialConfig: {
+      entryFeeCop: 20000,
+      prizePoolPercent: 80,
+      bankCommissionPercent: 3,
+      administrationPercent: 17,
+      firstPlacePercent: 80,
+      secondPlacePercent: 15,
+      thirdPlacePercent: 5
+    },
+    standings: Object.keys(LIGA_TEAM_CRESTS).map((team, index) => ({ position: index + 1, team, crest: LIGA_TEAM_CRESTS[team], played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })),
+    scorers: [],
     notifications: [],
     sentReminders: []
   };
@@ -500,6 +532,10 @@ function loadLigaMillonariosState(): LigaMillonariosState {
       if (parsed?.config?.id === "liga-betplay-ii-2026-millonarios") {
         parsed.tiebreakPredictions ||= [];
         parsed.scorerPredictions ||= [];
+        parsed.memberships ||= [];
+        parsed.financialConfig ||= createLigaMillonariosState().financialConfig;
+        parsed.standings ||= createLigaMillonariosState().standings;
+        parsed.scorers ||= [];
         const existingById = new Map(parsed.matches.map((match) => [match.id, match]));
         parsed.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
           const existing = existingById.get(official.id);
@@ -538,6 +574,10 @@ async function initializeLigaMillonariosState() {
         const state = stored.state as unknown as LigaMillonariosState;
         state.tiebreakPredictions ||= [];
         state.scorerPredictions ||= [];
+        state.memberships ||= [];
+        state.financialConfig ||= createLigaMillonariosState().financialConfig;
+        state.standings ||= createLigaMillonariosState().standings;
+        state.scorers ||= [];
         const existingById = new Map((state.matches || []).map((match) => [match.id, match]));
         state.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
           const existing = existingById.get(official.id);
@@ -557,8 +597,9 @@ async function initializeLigaMillonariosState() {
 }
 
 function buildLigaMillonariosRanking(state: LigaMillonariosState, users: User[]) {
+  const paidUserIds = new Set(state.memberships.filter((membership) => membership.status === "paid").map((membership) => membership.userId));
   const stats = users
-    .filter((user) => user.status === "active" && !isSuperAdmin(user))
+    .filter((user) => user.status === "active" && !isSuperAdmin(user) && paidUserIds.has(user.id))
     .map((user) => {
       const predictions = state.predictions.filter((prediction) => prediction.userId === user.id);
       let points = 0;
@@ -639,6 +680,26 @@ function buildLigaMillonariosRanking(state: LigaMillonariosState, users: User[])
       a.userName.localeCompare(b.userName)
     );
   return stats.map((row, index) => ({ ...row, position: index + 1 }));
+}
+
+function calculateLigaMillonariosFinances(state: LigaMillonariosState) {
+  const paidParticipants = state.memberships.filter((membership) => membership.status === "paid").length;
+  const grossRevenue = paidParticipants * state.financialConfig.entryFeeCop;
+  const prizePool = roundMoney(grossRevenue * state.financialConfig.prizePoolPercent / 100);
+  const bankCommission = roundMoney(grossRevenue * state.financialConfig.bankCommissionPercent / 100);
+  const administrationCosts = roundMoney(grossRevenue * state.financialConfig.administrationPercent / 100);
+  return {
+    paidParticipants,
+    grossRevenue,
+    prizePool,
+    bankCommission,
+    administrationCosts,
+    payouts: {
+      first: roundMoney(prizePool * state.financialConfig.firstPlacePercent / 100),
+      second: roundMoney(prizePool * state.financialConfig.secondPlacePercent / 100),
+      third: roundMoney(prizePool * state.financialConfig.thirdPlacePercent / 100)
+    }
+  };
 }
 
 function roundMoney(value: number) {
@@ -5934,7 +5995,146 @@ app.post("/api/matches/:id/simulate", async (req, res) => {
 // Independent module: Liga BetPlay Dimayor II 2026, Millonarios matches only.
 app.get("/api/liga-millonarios", (_req, res) => {
   const state = loadLigaMillonariosState();
-  res.json({ config: state.config, matches: state.matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) });
+  res.json({ config: state.config, financialConfig: state.financialConfig, finances: calculateLigaMillonariosFinances(state), standings: state.standings, scorers: state.scorers, matches: state.matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) });
+});
+
+app.get("/api/liga-millonarios/membership", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  res.json(state.memberships.find((membership) => membership.userId === user.id) || null);
+});
+
+app.post("/api/liga-millonarios/join", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (isSuperAdmin(user)) return res.status(400).json({ error: "El administrador gestiona la Liga sin ocupar un cupo del ranking." });
+  const state = loadLigaMillonariosState();
+  let membership = state.memberships.find((candidate) => candidate.userId === user.id);
+  if (!membership) {
+    membership = { userId: user.id, status: "pending", joinedAt: new Date().toISOString() };
+    state.memberships.push(membership);
+    saveLigaMillonariosState(state);
+  }
+  res.json({ message: membership.status === "paid" ? "Ya estás inscrito y pago en Liga II." : "Inscripción creada. Completa el pago para pronosticar.", membership });
+});
+
+app.post("/api/liga-millonarios/payments/create", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const publicKey = process.env.WOMPI_PUBLIC_KEY;
+  if (!publicKey) return res.status(500).json({ error: "Falta configurar WOMPI_PUBLIC_KEY." });
+  const state = loadLigaMillonariosState();
+  let membership = state.memberships.find((candidate) => candidate.userId === user.id);
+  if (!membership) {
+    membership = { userId: user.id, status: "pending", joinedAt: new Date().toISOString() };
+    state.memberships.push(membership);
+  }
+  if (membership.status === "paid") return res.status(400).json({ error: "Tu inscripción de Liga ya está pagada." });
+  const amountInCents = state.financialConfig.entryFeeCop * 100;
+  const reference = `liga2-${user.id}-${Date.now()}`;
+  membership.paymentMethod = "wompi";
+  membership.paymentReference = reference;
+  saveLigaMillonariosState(state);
+  const origin = getRequestOrigin(req);
+  const checkoutParams = new URLSearchParams();
+  checkoutParams.set("public-key", publicKey);
+  checkoutParams.set("currency", WOMPI_CURRENCY);
+  checkoutParams.set("amount-in-cents", String(amountInCents));
+  checkoutParams.set("reference", reference);
+  checkoutParams.set("signature:integrity", createWompiIntegritySignature(reference, amountInCents, WOMPI_CURRENCY));
+  checkoutParams.set("redirect-url", `${origin}/?pollon=liga&ligaPayment=success&reference=${encodeURIComponent(reference)}`);
+  checkoutParams.set("customer-email", user.email);
+  res.json({ url: `https://checkout.wompi.co/p/?${checkoutParams.toString()}`, reference });
+});
+
+app.post("/api/liga-millonarios/payments/confirm", async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const reference = String(req.body?.reference || "");
+  const state = loadLigaMillonariosState();
+  const membership = state.memberships.find((candidate) => candidate.userId === user.id);
+  if (!membership || !reference || membership.paymentReference !== reference) return res.status(403).json({ error: "La referencia no pertenece a tu inscripción de Liga." });
+  try {
+    const transaction = await getWompiTransaction(String(req.body?.transactionId || ""), reference);
+    if (!transaction || transaction.status !== "APPROVED") return res.status(400).json({ error: "El pago todavía no aparece aprobado en Wompi." });
+    if (transaction.reference && transaction.reference !== reference) return res.status(403).json({ error: "La transacción no corresponde a esta inscripción." });
+    membership.status = "paid";
+    membership.paymentMethod = "wompi";
+    membership.paymentReference = transaction.id || reference;
+    membership.paidAt = new Date().toISOString();
+    saveLigaMillonariosState(state);
+    res.json({ message: "Pago de Liga II confirmado.", membership });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo confirmar el pago de Liga." });
+  }
+});
+
+app.get("/api/liga-millonarios/admin/memberships", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  const state = loadLigaMillonariosState();
+  const users = loadDb().users.filter((user) => !isSuperAdmin(user));
+  res.json(users.map((user) => {
+    const membership = state.memberships.find((candidate) => candidate.userId === user.id);
+    return membership ? { ...membership, user } : { userId: user.id, status: "pending", joinedAt: "", user };
+  }));
+});
+
+app.put("/api/liga-millonarios/admin/memberships/:userId/payment", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  const state = loadLigaMillonariosState();
+  const user = loadDb().users.find((candidate) => candidate.id === req.params.userId);
+  if (!user) return res.status(404).json({ error: "Usuario no encontrado." });
+  let membership = state.memberships.find((candidate) => candidate.userId === user.id);
+  if (!membership) {
+    membership = { userId: user.id, status: "pending", joinedAt: new Date().toISOString() };
+    state.memberships.push(membership);
+  }
+  const status = req.body?.status === "paid" ? "paid" : req.body?.status === "suspended" ? "suspended" : "pending";
+  const method = ["cash", "transfer", "other", "wompi"].includes(req.body?.paymentMethod) ? req.body.paymentMethod : "other";
+  membership.status = status;
+  membership.paymentMethod = method;
+  membership.paymentReference = String(req.body?.paymentReference || "").trim() || undefined;
+  membership.paidAt = status === "paid" ? new Date().toISOString() : undefined;
+  membership.markedPaidBy = status === "paid" ? admin.id : undefined;
+  saveLigaMillonariosState(state);
+  res.json({ message: `Estado de ${user.name} actualizado para Liga II.`, membership, finances: calculateLigaMillonariosFinances(state) });
+});
+
+app.put("/api/liga-millonarios/admin/financial-config", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  const values = {
+    entryFeeCop: Number(req.body?.entryFeeCop),
+    prizePoolPercent: Number(req.body?.prizePoolPercent),
+    bankCommissionPercent: Number(req.body?.bankCommissionPercent),
+    administrationPercent: Number(req.body?.administrationPercent),
+    firstPlacePercent: Number(req.body?.firstPlacePercent),
+    secondPlacePercent: Number(req.body?.secondPlacePercent),
+    thirdPlacePercent: Number(req.body?.thirdPlacePercent)
+  };
+  if (!Number.isInteger(values.entryFeeCop) || values.entryFeeCop < 0 || Object.entries(values).some(([key, value]) => key !== "entryFeeCop" && (!Number.isFinite(value) || value < 0 || value > 100))) {
+    return res.status(400).json({ error: "Valores financieros inválidos." });
+  }
+  if (Math.abs(values.prizePoolPercent + values.bankCommissionPercent + values.administrationPercent - 100) > 0.001) return res.status(400).json({ error: "Premios, comisión bancaria y administración deben sumar 100%." });
+  if (Math.abs(values.firstPlacePercent + values.secondPlacePercent + values.thirdPlacePercent - 100) > 0.001) return res.status(400).json({ error: "La distribución de los tres premios debe sumar 100%." });
+  const state = loadLigaMillonariosState();
+  state.financialConfig = values;
+  saveLigaMillonariosState(state);
+  res.json({ message: "Configuración financiera de Liga guardada.", financialConfig: values, finances: calculateLigaMillonariosFinances(state) });
+});
+
+app.put("/api/liga-millonarios/admin/overview", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  if (!Array.isArray(req.body?.standings) || !Array.isArray(req.body?.scorers)) return res.status(400).json({ error: "Tabla y goleadores deben ser listas válidas." });
+  const state = loadLigaMillonariosState();
+  state.standings = req.body.standings;
+  state.scorers = req.body.scorers;
+  saveLigaMillonariosState(state);
+  res.json({ message: "Así va la Liga actualizado.", standings: state.standings, scorers: state.scorers });
 });
 
 app.get("/api/liga-millonarios/predictions", (req, res) => {
@@ -5947,7 +6147,9 @@ app.get("/api/liga-millonarios/predictions", (req, res) => {
 app.post("/api/liga-millonarios/predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
-  if (requirePaidParticipant(user, res)) return;
+  const accessState = loadLigaMillonariosState();
+  const hasLigaAccess = isSuperAdmin(user) || accessState.memberships.some((membership) => membership.userId === user.id && membership.status === "paid");
+  if (!hasLigaAccess) return res.status(402).json({ error: "Debes pagar la inscripción independiente de Liga II para pronosticar." });
   const matchId = Number(req.body?.matchId);
   const localScore = Number(req.body?.localScore);
   const visitorScore = Number(req.body?.visitorScore);
@@ -6015,6 +6217,7 @@ app.post("/api/liga-millonarios/tiebreak-prediction", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
   const state = loadLigaMillonariosState();
+  if (!isSuperAdmin(user) && !state.memberships.some((membership) => membership.userId === user.id && membership.status === "paid")) return res.status(402).json({ error: "Debes pagar la inscripción de Liga II." });
   const firstKickoff = Math.min(...state.matches.map((match) => new Date(match.date).getTime()));
   if (Date.now() >= firstKickoff - PREDICTION_LOCK_MINUTES * 60_000) {
     return res.status(400).json({ error: "Los pronósticos especiales cerraron antes del primer partido." });
@@ -6044,6 +6247,7 @@ app.post("/api/liga-millonarios/scorer-prediction", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
   const state = loadLigaMillonariosState();
+  if (!isSuperAdmin(user) && !state.memberships.some((membership) => membership.userId === user.id && membership.status === "paid")) return res.status(402).json({ error: "Debes pagar la inscripción de Liga II." });
   const firstKickoff = Math.min(...state.matches.map((match) => new Date(match.date).getTime()));
   if (Date.now() >= firstKickoff - PREDICTION_LOCK_MINUTES * 60_000) {
     return res.status(400).json({ error: "El pronóstico de goleador cerró antes del primer partido." });
