@@ -6166,6 +6166,21 @@ app.put("/api/liga-millonarios/admin/overview", (req, res) => {
   res.json({ message: "Así va la Liga actualizado.", standings: state.standings, scorers: state.scorers });
 });
 
+app.post("/api/liga-millonarios/admin/sync-football-data", async (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  try {
+    const result = await syncLigaMillonariosFromFootballData();
+    res.json({ message: "Liga II sincronizada con football-data.org.", result });
+  } catch (error: any) {
+    const status = Number(error?.status) || 500;
+    res.status(status === 403 || status === 404 || status === 429 ? status : 500).json({
+      error: error?.message || "No se pudo sincronizar la Liga con football-data.org.",
+      hint: status === 403 ? "El token no tiene acceso a la competición CLP; revisa el plan de football-data.org." : undefined
+    });
+  }
+});
+
 app.get("/api/liga-millonarios/predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
@@ -7006,8 +7021,88 @@ app.get("/api/admin/stats", (req, res) => {
 
 let footballDataSyncRunning = false;
 
+const normalizeLigaApiName = (value: unknown) => String(value || "")
+  .toLocaleLowerCase("es")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\b(fc|cd|sa|futbol club|deportivo)\b/g, "")
+  .replace(/[^a-z0-9]/g, "");
+
+const isSameLigaTeam = (left: unknown, right: unknown) => {
+  const a = normalizeLigaApiName(left);
+  const b = normalizeLigaApiName(right);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+};
+
+let ligaFootballDataSyncRunning = false;
+async function syncLigaMillonariosFromFootballData() {
+  const token = process.env.FOOTBALL_DATA_API_TOKEN;
+  if (!token) throw new Error("Falta configurar FOOTBALL_DATA_API_TOKEN.");
+  const competition = process.env.LIGA_FOOTBALL_DATA_COMPETITION || "CLP";
+  const season = process.env.LIGA_FOOTBALL_DATA_SEASON || "2026";
+  const headers = { "X-Auth-Token": token, "Accept": "application/json" };
+  const request = async (resource: "matches" | "standings" | "scorers") => {
+    const url = new URL(`https://api.football-data.org/v4/competitions/${competition}/${resource}`);
+    url.searchParams.set("season", season);
+    if (resource === "scorers") url.searchParams.set("limit", "50");
+    const response = await fetch(url, { headers });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.message || payload.error || `football-data.org respondió ${response.status}.`);
+      (error as Error & { status?: number }).status = response.status;
+      throw error;
+    }
+    return payload;
+  };
+
+  const [matchesPayload, standingsPayload, scorersPayload] = await Promise.all([request("matches"), request("standings"), request("scorers")]);
+  const state = loadLigaMillonariosState();
+  let updatedMatches = 0;
+  let updatedResults = 0;
+  for (const apiMatch of Array.isArray(matchesPayload?.matches) ? matchesPayload.matches : []) {
+    const home = apiMatch?.homeTeam?.name;
+    const away = apiMatch?.awayTeam?.name;
+    if (!isSameLigaTeam(home, "Millonarios") && !isSameLigaTeam(away, "Millonarios")) continue;
+    const apiTime = new Date(apiMatch.utcDate).getTime();
+    const existing = state.matches.find((match) => match.externalSourceId === String(apiMatch.id)) || state.matches
+      .filter((match) => isSameLigaTeam(match.local, home) && isSameLigaTeam(match.visitor, away))
+      .sort((a, b) => Math.abs(new Date(a.date).getTime() - apiTime) - Math.abs(new Date(b.date).getTime() - apiTime))[0];
+    if (!existing) continue;
+    const previousStatus = existing.status;
+    const scores = getFootballDataScore(apiMatch);
+    existing.date = apiMatch.utcDate || existing.date;
+    existing.stadium = apiMatch.venue || existing.stadium;
+    existing.status = mapFootballDataStatus(apiMatch.status, apiMatch.utcDate);
+    existing.localScore = scores.localScore;
+    existing.visitorScore = scores.visitorScore;
+    existing.externalSource = FOOTBALL_DATA_SOURCE;
+    existing.externalSourceId = String(apiMatch.id);
+    updatedMatches += 1;
+    if (previousStatus !== "finished" && existing.status === "finished") updatedResults += 1;
+  }
+
+  const totalStanding = (Array.isArray(standingsPayload?.standings) ? standingsPayload.standings : []).find((standing: any) => standing?.type === "TOTAL");
+  if (Array.isArray(totalStanding?.table) && totalStanding.table.length) {
+    state.standings = totalStanding.table.map((row: any) => ({
+      position: Number(row.position) || 0, team: String(row?.team?.name || ""), crest: row?.team?.crest || "",
+      played: Number(row.playedGames) || 0, won: Number(row.won) || 0, drawn: Number(row.draw) || 0,
+      lost: Number(row.lost) || 0, goalsFor: Number(row.goalsFor) || 0, goalsAgainst: Number(row.goalsAgainst) || 0,
+      goalDifference: Number(row.goalDifference) || 0, points: Number(row.points) || 0
+    }));
+  }
+  if (Array.isArray(scorersPayload?.scorers)) {
+    state.scorers = scorersPayload.scorers.map((entry: any, index: number) => ({
+      position: index + 1, player: String(entry?.player?.name || ""), team: String(entry?.team?.name || ""),
+      crest: entry?.team?.crest || "", goals: Number(entry?.goals) || 0
+    }));
+  }
+  buildLigaMillonariosRanking(state, loadDb().users);
+  saveLigaMillonariosState(state);
+  return { competition, season, updatedMatches, updatedResults, standings: state.standings.length, scorers: state.scorers.length };
+}
+
 async function runFootballDataSyncScheduler() {
-  if (!process.env.FOOTBALL_DATA_API_TOKEN || footballDataSyncRunning) return;
+  if (WORLD_CUP_ARCHIVED || !process.env.FOOTBALL_DATA_API_TOKEN || footballDataSyncRunning) return;
 
   footballDataSyncRunning = true;
   try {
@@ -7028,6 +7123,11 @@ async function runFootballDataSyncScheduler() {
 // Keep API-sourced fixtures and final scores current without deleting manual data.
 setInterval(() => {
   void runFootballDataSyncScheduler();
+  if (!process.env.FOOTBALL_DATA_API_TOKEN || ligaFootballDataSyncRunning) return;
+  ligaFootballDataSyncRunning = true;
+  void syncLigaMillonariosFromFootballData()
+    .catch((error) => console.error("Error syncing Liga with football-data.org:", error))
+    .finally(() => { ligaFootballDataSyncRunning = false; });
 }, FOOTBALL_DATA_SYNC_INTERVAL_MS);
 
 let reminderSchedulerRunning = false;
@@ -7270,6 +7370,9 @@ async function startServer() {
   applyKnownOfficialResultCorrections(loadDb());
   recalculateScoresAndRankings();
   void runFootballDataSyncScheduler();
+  if (process.env.FOOTBALL_DATA_API_TOKEN) {
+    void syncLigaMillonariosFromFootballData().catch((error) => console.error("Initial Liga football-data.org sync failed:", error));
+  }
 
   if (process.env.NODE_ENV !== "production") {
     // Development Mode: Mount Vite in middleware Mode

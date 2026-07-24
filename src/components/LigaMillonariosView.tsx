@@ -201,6 +201,18 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
     if (response.ok) { setFinancialConfig(data.financialConfig); setFinances(data.finances); }
   };
 
+  const syncFootballData = async () => {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/liga-millonarios/admin/sync-football-data", { method: "POST", headers: getHeaders() });
+      const data = await response.json();
+      setMessage(response.ok ? `${data.message} ${data.result?.updatedMatches || 0} partidos revisados.` : `${data.error || "No se pudo sincronizar."}${data.hint ? ` ${data.hint}` : ""}`);
+      if (response.ok) void load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const closeSeasonBonuses = async () => {
     if (!adminOutcome.finalPosition || adminOutcome.totalGoals === "" || adminOutcome.totalLeaguePoints === "" || !adminOutcome.playerNames.length || adminOutcome.exactGoals === "") {
       setMessage("Completa todos los resultados finales antes de cerrar los bonos.");
@@ -359,7 +371,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
         <div className={`${activeSection === "pronosticos" ? "space-y-5" : "xl:col-span-2"}`}>
           {isAdmin && activeSection === "admin" && (
             <div id="liga-admin" className="space-y-5 scroll-mt-4">
-              <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Administración · Pollón Liga II</h2><p className="mt-1 text-xs text-slate-500">Configura la inscripción, la bolsa de premios y los pagos independientes de este torneo.</p></div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"><div><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Administración · Pollón Liga II</h2><p className="mt-1 text-xs text-slate-500">Configura la inscripción, la bolsa de premios y los pagos independientes de este torneo.</p></div><button type="button" disabled={busy} onClick={() => void syncFootballData()} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} /> Sincronizar football-data.org</button></div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">Pagos confirmados<strong className="block text-lg">{finances?.paidParticipants || 0}</strong></div>
