@@ -6225,7 +6225,7 @@ app.post("/api/liga-millonarios/tiebreak-prediction", (req, res) => {
   const finalPosition = Number(req.body?.finalPosition);
   const totalGoals = Number(req.body?.totalGoals);
   const totalLeaguePoints = Number(req.body?.totalLeaguePoints);
-  if (!Number.isInteger(finalPosition) || finalPosition < 1 || finalPosition > 20 || !Number.isInteger(totalGoals) || totalGoals < 0 || !Number.isInteger(totalLeaguePoints) || totalLeaguePoints < 0) {
+  if (!Number.isInteger(finalPosition) || finalPosition < 1 || finalPosition > 19 || !Number.isInteger(totalGoals) || totalGoals < 0 || totalGoals > 50 || !Number.isInteger(totalLeaguePoints) || totalLeaguePoints < 0 || totalLeaguePoints > 57) {
     return res.status(400).json({ error: "Ingresa posición, goles y puntos válidos." });
   }
   const prediction = { userId: user.id, finalPosition, totalGoals, totalLeaguePoints, dateCreated: new Date().toISOString() };
@@ -6254,7 +6254,7 @@ app.post("/api/liga-millonarios/scorer-prediction", (req, res) => {
   }
   const playerName = String(req.body?.playerName || "").trim();
   const exactGoals = Number(req.body?.exactGoals);
-  if (playerName.length < 3 || !Number.isInteger(exactGoals) || exactGoals < 0) {
+  if (playerName.length < 3 || !Number.isInteger(exactGoals) || exactGoals < 0 || exactGoals > 30) {
     return res.status(400).json({ error: "Ingresa el nombre del jugador y una cantidad válida de goles." });
   }
   const prediction = { userId: user.id, playerName, exactGoals, dateCreated: new Date().toISOString() };

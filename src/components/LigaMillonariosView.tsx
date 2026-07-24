@@ -46,6 +46,17 @@ type Finances = { paidParticipants: number; grossRevenue: number; prizePool: num
 type Standing = { position: number; team: string; crest: string; played: number; won: number; drawn: number; lost: number; goalDifference: number; points: number };
 type Scorer = { position: number; player: string; team: string; crest: string; goals: number };
 
+const MILLONARIOS_PLAYERS = [
+  "Alex Castro", "Alex Moreno Paz", "Andrés Llinás", "Bayron García", "Brayan Campaz",
+  "Carlos Sarabia", "Cristian Uparela", "Danovis Banguero", "Darwin Quintero", "David M. Silva",
+  "Dewar Victoria", "Diego Novoa", "Edgar Elizalde", "Falcao García", "Francisco Chaverra",
+  "Guillermo de Amores", "Johan Rodallega", "Jorge Arias", "Jorge Hurtado", "Julián Ángulo",
+  "Leonardo Castro", "Mateo García", "Rodrigo Contreras", "Rodrigo Ureña", "Romario Espín",
+  "Samuel Martin", "Sebastián del Castillo", "Sebastián Valencia", "Sergio Mosquera", "Stiven Vega"
+] as const;
+
+const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, index) => start + index);
+
 export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: Props) {
   const [matches, setMatches] = useState<LigaMatch[]>([]);
   const [predictions, setPredictions] = useState<LigaPrediction[]>([]);
@@ -353,9 +364,9 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
             <h3 className="font-black text-blue-950 dark:text-blue-100">Pronósticos especiales de desempate</h3>
             <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">La posición final exacta vale 100 puntos y los puntos exactos de Millonarios valen otros 100. Los goles totales solo desempatan.</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <label className="text-[10px] font-bold">Posición final<input type="number" min="1" max="20" value={special.finalPosition} onChange={(event) => setSpecial((current) => ({ ...current, finalPosition: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900" /></label>
-              <label className="text-[10px] font-bold">Goles Millos<input type="number" min="0" value={special.totalGoals} onChange={(event) => setSpecial((current) => ({ ...current, totalGoals: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900" /></label>
-              <label className="text-[10px] font-bold">Puntos Millos<input type="number" min="0" value={special.totalLeaguePoints} onChange={(event) => setSpecial((current) => ({ ...current, totalLeaguePoints: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900" /></label>
+              <label className="text-[10px] font-bold">Posición final<select value={special.finalPosition} onChange={(event) => setSpecial((current) => ({ ...current, finalPosition: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900"><option value="">Selecciona</option>{range(1, 19).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+              <label className="text-[10px] font-bold">Goles Millos<select value={special.totalGoals} onChange={(event) => setSpecial((current) => ({ ...current, totalGoals: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900"><option value="">Selecciona</option>{range(0, 50).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+              <label className="text-[10px] font-bold">Puntos Millos<select value={special.totalLeaguePoints} onChange={(event) => setSpecial((current) => ({ ...current, totalLeaguePoints: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900"><option value="">Selecciona</option>{range(0, 57).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
             </div>
             <button type="button" onClick={() => void saveSpecial()} className="mt-3 w-full rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white">Guardar desempates</button>
           </div>
@@ -363,8 +374,8 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
             <h3 className="font-black text-amber-950 dark:text-amber-100">Goleador de Millonarios</h3>
             <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">50 puntos por acertar el jugador y 50 adicionales por acertar también sus goles exactos.</p>
             <div className="mt-3 grid grid-cols-[1fr_7rem] gap-2">
-              <label className="text-[10px] font-bold">Nombre del jugador<input value={scorer.playerName} onChange={(event) => setScorer((current) => ({ ...current, playerName: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900" /></label>
-              <label className="text-[10px] font-bold">Goles exactos<input type="number" min="0" value={scorer.exactGoals} onChange={(event) => setScorer((current) => ({ ...current, exactGoals: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900" /></label>
+              <label className="text-[10px] font-bold">Nombre del jugador<select value={scorer.playerName} onChange={(event) => setScorer((current) => ({ ...current, playerName: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900"><option value="">Selecciona un jugador</option>{scorer.playerName && !MILLONARIOS_PLAYERS.includes(scorer.playerName as typeof MILLONARIOS_PLAYERS[number]) && <option value={scorer.playerName}>{scorer.playerName}</option>}{MILLONARIOS_PLAYERS.map((player) => <option key={player} value={player}>{player}</option>)}</select></label>
+              <label className="text-[10px] font-bold">Goles exactos<select value={scorer.exactGoals} onChange={(event) => setScorer((current) => ({ ...current, exactGoals: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-base dark:bg-slate-900"><option value="">Selecciona</option>{range(0, 30).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
             </div>
             <button type="button" onClick={() => void saveScorer()} className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2 text-sm font-black text-white">Guardar goleador</button>
           </div>
