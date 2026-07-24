@@ -5,6 +5,8 @@ import type { Match } from "../types";
 interface MatchResultsTickerProps {
   matches: Match[];
   getTeamFlag: (teamName: string) => React.ReactNode;
+  label?: string;
+  ariaLabel?: string;
 }
 
 const formatTickerDate = (date: string) => {
@@ -20,7 +22,7 @@ const formatTickerDate = (date: string) => {
   }).format(matchDate);
 };
 
-export function MatchResultsTicker({ matches, getTeamFlag }: MatchResultsTickerProps) {
+export function MatchResultsTicker({ matches, getTeamFlag, label = "Mundial", ariaLabel = "Resultados y próximos partidos del Mundial 2026" }: MatchResultsTickerProps) {
   const [paused, setPaused] = useState(false);
   const tickerMatches = useMemo(() => {
     const now = Date.now();
@@ -82,10 +84,10 @@ export function MatchResultsTicker({ matches, getTeamFlag }: MatchResultsTickerP
   const durationSeconds = Math.max(32, tickerMatches.length * 6);
 
   return (
-    <section className={`match-ticker ${paused ? "is-paused" : ""}`} aria-label="Resultados y próximos partidos del Mundial 2026">
+    <section className={`match-ticker ${paused ? "is-paused" : ""}`} aria-label={ariaLabel}>
       <div className="match-ticker-heading">
         <span className={`match-ticker-live-dot ${hasLiveMatches ? "is-live" : ""}`} aria-hidden="true" />
-        <span>{hasLiveMatches ? "En vivo" : "Mundial"}</span>
+        <span>{hasLiveMatches ? "En vivo" : label}</span>
         <small>{hasLiveMatches ? "ahora" : "resultados"}</small>
         <button
           type="button"

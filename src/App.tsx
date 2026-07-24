@@ -88,6 +88,7 @@ const toDateTimeLocalValue = (value?: string) => {
 };
 
 const fromDateTimeLocalValue = (value: string) => value ? new Date(value).toISOString() : "";
+const WORLD_CUP_ARCHIVED = true;
 
 type RankingColumnHelpKey =
   | "position"
@@ -1883,6 +1884,7 @@ export default function App() {
   const [matchSyncBusy, setMatchSyncBusy] = useState(false);
   const [matchDedupeBusy, setMatchDedupeBusy] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
+  const [worldArchiveModalOpen, setWorldArchiveModalOpen] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [predictionCorrectionMode, setPredictionCorrectionMode] = useState(false);
   const [selectedUserForPredictions, setSelectedUserForPredictions] = useState<User | null>(null);
@@ -2642,6 +2644,10 @@ export default function App() {
   };
 
   const handleStartPayment = async (realUpgrade: boolean | React.MouseEvent = false) => {
+    if (WORLD_CUP_ARCHIVED) {
+      setWorldArchiveModalOpen(true);
+      return;
+    }
     const shouldUpgradeToReal = realUpgrade === true;
     setPaymentBusy(true);
     try {
@@ -4006,7 +4012,7 @@ export default function App() {
       list?.removeEventListener("scroll", updateBackToTopVisibility);
     };
   }, [activeTab, predictionsMode, filteredMatches.length]);
-  const canSubmitPredictions = appMode === "FREE" || Boolean(currentUser?.companyId) || currentUser?.role === "admin" || currentUser?.role === "superadmin" || currentUser?.role === "company_admin" || currentUser?.paymentStatus === "paid";
+  const canSubmitPredictions = !WORLD_CUP_ARCHIVED && (appMode === "FREE" || Boolean(currentUser?.companyId) || currentUser?.role === "admin" || currentUser?.role === "superadmin" || currentUser?.role === "company_admin" || currentUser?.paymentStatus === "paid");
   const matchIds = new Set(matches.map((m) => m.id));
   const registeredPredictionsCount = predictions.filter((p) => matchIds.has(p.matchId)).length;
   const pendingPredictionsCount = Math.max(matches.length - registeredPredictionsCount, 0);
@@ -4018,7 +4024,7 @@ export default function App() {
   const isSuperAdminUser = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdminUser = currentUser?.role === "company_admin";
   const canCreateGroupPool = Boolean(currentUser?.role === "standard" && !currentUser.companyId);
-  const canSaveTournamentFavorites = Boolean(
+  const canSaveTournamentFavorites = !WORLD_CUP_ARCHIVED && Boolean(
     temporaryFavoritesAccessOpen ||
     currentUser?.role === "admin" ||
     currentUser?.role === "superadmin" ||
@@ -7387,6 +7393,8 @@ export default function App() {
                     </button>
                   </div>
 
+                  <button type="button" onClick={() => setWorldArchiveModalOpen(true)} className="w-full rounded-2xl border border-amber-300 bg-amber-50 p-5 text-left text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><span className="flex items-center gap-2 text-sm font-black"><Lock className="h-5 w-5" /> Mundial 2026 finalizado · módulo en consulta</span><span className="mt-2 block text-xs">Los pagos y todas las modificaciones del Mundial están cerrados. Tus datos, puntos, ranking y resultados históricos permanecen disponibles.</span></button>
+
                   <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 text-xs text-amber-900 dark:text-amber-200">
                     Esta pantalla es solo lectura y muestra datos publicos de favoritos. No muestra correos, pagos ni datos privados.
                   </div>
@@ -10115,7 +10123,9 @@ export default function App() {
         </div>
       )}
 
-      <MatchResultsTicker matches={matches} getTeamFlag={getTeamFlag} />
+      {worldArchiveModalOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="world-archive-title"><div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"><div className="flex items-start justify-between gap-4"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"><Lock className="h-5 w-5" /></div><button type="button" onClick={() => setWorldArchiveModalOpen(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar"><X className="h-5 w-5" /></button></div><h2 id="world-archive-title" className="mt-4 text-xl font-black text-slate-950 dark:text-white">El Pollón Mundialista 2026 ya terminó</h2><p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">Por eso la inscripción y el pago están bloqueados. El módulo quedó disponible únicamente para consultar pronósticos, resultados, puntos, ranking y premios históricos.</p><p className="mt-3 rounded-xl bg-blue-50 p-3 text-xs font-semibold text-blue-900 dark:bg-blue-950 dark:text-blue-100">El Pollón Liga BetPlay II es una competencia diferente, con inscripción y pago independientes.</p><div className="mt-5 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setWorldArchiveModalOpen(false)} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-bold dark:border-slate-700">Seguir consultando</button><button type="button" onClick={() => { setWorldArchiveModalOpen(false); setPollonMenu("liga"); setLigaSection("resumen"); }} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-black text-white">Ir al Pollón Liga</button></div></div></div>}
+
+      {pollonMenu !== "liga" && <MatchResultsTicker matches={matches} getTeamFlag={getTeamFlag} />}
 
       {/* Football-inspired high contrast informational footer line */}
       <footer className="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 shrink-0 text-xs">

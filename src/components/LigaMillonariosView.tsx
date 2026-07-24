@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BarChart3, Bell, Calendar, Check, Eraser, RefreshCw, Trophy } from "lucide-react";
 import type { User } from "../types";
+import { MatchResultsTicker } from "./MatchResultsTicker";
 
 type LigaMatch = {
   id: number;
@@ -260,6 +261,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   const formatCop = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value || 0);
   const registeredPredictions = predictions.length;
   const pendingPredictions = matches.filter((match) => match.status === "pending" && !predictionByMatch.has(match.id)).length;
+  const upcomingMatches = [...matches].filter((match) => match.status === "pending").sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 3);
+  const getLigaCrest = (teamName: string) => {
+    const match = matches.find((candidate) => candidate.local === teamName || candidate.visitor === teamName);
+    const crest = match?.local === teamName ? match.localCrest : match?.visitorCrest;
+    return crest ? <img src={crest} alt="" className="h-6 w-6 object-contain" /> : <span>⚽</span>;
+  };
 
   return (
     <section className="space-y-5">
@@ -280,6 +287,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 dark:border-blue-900 dark:bg-blue-950/30"><h3 className="text-sm font-black text-blue-950 dark:text-blue-100">Estado de inscripción</h3><p className="mt-2 text-xs text-blue-800 dark:text-blue-200">{isAdmin ? "Acceso administrativo" : membership?.status === "paid" ? "Tu inscripción está confirmada. Ya puedes registrar pronósticos y competir por premios." : "Debes confirmar la inscripción independiente de Liga para participar."}</p></div>
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-white shadow-sm"><h3 className="flex items-center gap-2 text-sm font-black"><Trophy className="h-4 w-4 text-amber-400" /> Resumen del Premio</h3><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between border-b border-white/10 pb-2"><span>Participantes pagos</span><b>{finances?.paidParticipants || 0}</b></div><div className="flex justify-between border-b border-white/10 pb-2"><span>Total recaudado</span><b>{formatCop(finances?.grossRevenue || 0)}</b></div><div className="flex justify-between"><span>Premio acumulado</span><b className="text-blue-300">{formatCop(finances?.prizePool || 0)}</b></div></div></div>
         </div>
+        <div className="rounded-2xl border border-blue-900/40 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-5 text-white shadow-sm"><div className="flex items-center justify-between"><h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-200"><Calendar className="h-4 w-4" /> Próximos 3 partidos</h3><span className="text-[9px] font-bold uppercase text-emerald-300">Millonarios</span></div><div className="mt-4 grid gap-3 md:grid-cols-3">{upcomingMatches.map((match) => <div key={match.id} className="rounded-xl border border-white/10 bg-white/5 p-3"><div className="flex justify-between text-[9px] text-slate-400"><span>{match.stage}</span><span>{new Date(match.date).toLocaleDateString("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "short" })}</span></div><div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center text-xs font-bold"><span className="flex flex-col items-center gap-1">{getLigaCrest(match.local)}<span>{match.local}</span></span><span className="text-blue-300">VS</span><span className="flex flex-col items-center gap-1">{getLigaCrest(match.visitor)}<span>{match.visitor}</span></span></div><p className="mt-3 text-center text-[10px] text-slate-400">{countdown(match.date)}</p></div>)}</div>{!upcomingMatches.length && <p className="mt-4 text-xs text-slate-400">No hay próximos partidos pendientes.</p>}</div>
       </div>
 
       {message && <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm font-semibold text-sky-900">{message}</div>}
@@ -425,6 +433,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
           <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 text-white"><h3 className="mb-3 flex items-center gap-2 font-black"><Trophy className="h-4 w-4 text-amber-400" /> Bonos y premios</h3><div className="space-y-2"><p><strong>100 pts</strong> por posición final exacta.</p><p><strong>100 pts</strong> por puntos finales exactos.</p><p><strong>50 pts</strong> por goleador y <strong>50 pts</strong> por sus goles exactos.</p><p className="border-t border-white/10 pt-3"><strong>Bolsa actual:</strong> <span className="text-blue-300">{formatCop(finances?.prizePool || 0)}</span></p><p className="text-xs text-slate-300">1.º {formatCop(finances?.payouts.first || 0)} · 2.º {formatCop(finances?.payouts.second || 0)} · 3.º {formatCop(finances?.payouts.third || 0)}</p></div></div>
         </div>
       </section>
+      <MatchResultsTicker matches={matches} getTeamFlag={getLigaCrest} label="Liga II" ariaLabel="Resultados y próximos partidos de Millonarios en la Liga BetPlay II 2026" />
     </section>
   );
 }

@@ -536,6 +536,7 @@ function loadLigaMillonariosState(): LigaMillonariosState {
         parsed.financialConfig ||= createLigaMillonariosState().financialConfig;
         parsed.standings ||= createLigaMillonariosState().standings;
         parsed.scorers ||= [];
+        parsed.sentReminders ||= [];
         const existingById = new Map(parsed.matches.map((match) => [match.id, match]));
         parsed.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
           const existing = existingById.get(official.id);
@@ -578,6 +579,7 @@ async function initializeLigaMillonariosState() {
         state.financialConfig ||= createLigaMillonariosState().financialConfig;
         state.standings ||= createLigaMillonariosState().standings;
         state.scorers ||= [];
+        state.sentReminders ||= [];
         const existingById = new Map((state.matches || []).map((match) => [match.id, match]));
         state.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
           const existing = existingById.get(official.id);
@@ -3711,6 +3713,24 @@ function shouldReceivePredictionReminder(user: User) {
   return user.status === "active" && !isSuperAdmin(user) && canSubmitPredictions(user);
 }
 
+const WORLD_CUP_ARCHIVED = true;
+const WORLD_CUP_ARCHIVE_MESSAGE = "El Pollón Mundialista 2026 terminó y quedó archivado en modo consulta. Ya no admite pagos, pronósticos ni modificaciones. Puedes participar por separado en el Pollón Liga BetPlay II 2026.";
+const WORLD_CUP_MUTATION_PATHS = [
+  "/api/payments/create-checkout-session", "/api/users/me/favorite-matches/", "/api/group-pools",
+  "/api/predictions", "/api/tournament-predictions", "/api/tournament-outcomes",
+  "/api/torneo", "/api/announcements",
+  "/api/admin/predictions/import-excel", "/api/admin/reset-tournament", "/api/matches",
+  "/api/admin/matches/sync-football-data", "/api/admin/matches/dedupe"
+];
+
+app.use((req, res, next) => {
+  if (!WORLD_CUP_ARCHIVED || !["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
+  const blocked = WORLD_CUP_MUTATION_PATHS.some((path) => req.path === path || req.path.startsWith(path.endsWith("/") ? path : `${path}/`))
+    || /^\/api\/admin\/users\/[^/]+\/predictions\/[^/]+$/.test(req.path);
+  if (!blocked) return next();
+  return res.status(423).json({ error: WORLD_CUP_ARCHIVE_MESSAGE, code: "WORLD_CUP_ARCHIVED" });
+});
+
 const TEMPORARY_FAVORITES_ACCESS_DEADLINE = new Date("2026-06-12T18:00:00.000Z").getTime();
 const FINAL_PHASES = [
   "16avos de Final",
@@ -6064,6 +6084,7 @@ app.post("/api/liga-millonarios/payments/confirm", async (req, res) => {
     membership.paymentReference = transaction.id || reference;
     membership.paidAt = new Date().toISOString();
     saveLigaMillonariosState(state);
+    queueEventEmail(user, "Inscripción confirmada · Pollón Liga II", "Ya estás participando en la Liga II", "Tu pago fue confirmado. Ya puedes registrar los pronósticos de los partidos de Millonarios y competir en el ranking de Liga.", true);
     res.json({ message: "Pago de Liga II confirmado.", membership });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "No se pudo confirmar el pago de Liga." });
@@ -6100,6 +6121,7 @@ app.put("/api/liga-millonarios/admin/memberships/:userId/payment", (req, res) =>
   membership.paidAt = status === "paid" ? new Date().toISOString() : undefined;
   membership.markedPaidBy = status === "paid" ? admin.id : undefined;
   saveLigaMillonariosState(state);
+  if (status === "paid") queueEventEmail(user, "Inscripción confirmada · Pollón Liga II", "Ya estás participando en la Liga II", `Tu inscripción de Liga fue confirmada por el administrador mediante ${method}. Ya puedes registrar tus pronósticos.`, true);
   res.json({ message: `Estado de ${user.name} actualizado para Liga II.`, membership, finances: calculateLigaMillonariosFinances(state) });
 });
 
@@ -6319,13 +6341,17 @@ app.put("/api/liga-millonarios/admin/matches/:matchId/result", (req, res) => {
   const db = loadDb();
   buildLigaMillonariosRanking(state, db.users);
   if (state.config.notificationConfig.results) {
-    for (const user of db.users.filter((candidate) => candidate.status === "active" && !isSuperAdmin(candidate))) {
+    const paidUserIds = new Set(state.memberships.filter((membership) => membership.status === "paid").map((membership) => membership.userId));
+    for (const user of db.users.filter((candidate) => candidate.status === "active" && paidUserIds.has(candidate.id))) {
       const prediction = state.predictions.find((candidate) => candidate.userId === user.id && candidate.matchId === match.id);
       const predictedDifference = prediction ? prediction.localScore - prediction.visitorScore : null;
       const realDifference = localScore - visitorScore;
       const differenceDetail = prediction && predictedDifference === realDifference ? " Acertaste la diferencia de gol, que se usará como desempate del ranking." : "";
       const detail = prediction ? `Tu pronóstico fue ${prediction.localScore}-${prediction.visitorScore} y sumaste ${prediction.pointsEarned || 0} puntos.${differenceDetail}` : "No registraste pronóstico para este partido.";
-      state.notifications.push({ id: `liga2_result_${match.id}_${user.id}_${Date.now()}`, userId: user.id, title: "Resultado Liga II · Millonarios", message: `${match.local} ${localScore}-${visitorScore} ${match.visitor}. ${detail}`, type: "result", date: new Date().toISOString(), read: false });
+      const ranking = buildLigaMillonariosRanking(state, db.users).find((row) => row.userId === user.id);
+      const message = `${match.local} ${localScore}-${visitorScore} ${match.visitor}. ${detail}${ranking ? ` Ahora estás en la posición #${ranking.position} con ${ranking.points} puntos.` : ""}`;
+      state.notifications.push({ id: `liga2_result_${match.id}_${user.id}_${Date.now()}`, userId: user.id, title: "Resultado Liga II · Millonarios", message, type: "result", date: new Date().toISOString(), read: false });
+      queueEventEmail(user, `Liga II: resultado ${match.local} vs ${match.visitor}`, "Resultado Pollón Liga II", message);
     }
   }
   saveLigaMillonariosState(state);
@@ -7194,7 +7220,45 @@ async function runReminderScheduler() {
 // Sends one alert to users without a prediction 30 minutes before kick-off.
 setInterval(() => {
   void runReminderScheduler();
+  void runLigaMillonariosReminderScheduler();
 }, 30000);
+
+let ligaReminderSchedulerRunning = false;
+async function runLigaMillonariosReminderScheduler() {
+  if (ligaReminderSchedulerRunning) return;
+  ligaReminderSchedulerRunning = true;
+  try {
+    const state = loadLigaMillonariosState();
+    if (!state.config.notificationConfig.reminders) return;
+    const db = loadDb();
+    const now = Date.now();
+    const paidUserIds = new Set(state.memberships.filter((membership) => membership.status === "paid").map((membership) => membership.userId));
+    let changed = false;
+    for (const match of state.matches) {
+      const remaining = new Date(match.date).getTime() - now;
+      if (match.status !== "pending" || remaining > REMINDER_30M_WINDOW_START_MS || remaining < REMINDER_30M_WINDOW_END_MS) continue;
+      for (const user of db.users.filter((candidate) => candidate.status === "active" && candidate.emailSubscribed && paidUserIds.has(candidate.id))) {
+        if (state.predictions.some((prediction) => prediction.userId === user.id && prediction.matchId === match.id)) continue;
+        const reminderKey = `liga_30m_${user.id}_${match.id}`;
+        if (state.sentReminders.includes(reminderKey)) continue;
+        const message = `Faltan menos de 30 minutos para ${match.local} vs ${match.visitor}. Aún no registras tu marcador de Liga; el pronóstico cierra 5 minutos antes del inicio.`;
+        const result = await sendEventEmail(user, `Liga II: falta tu pronóstico para ${match.local} vs ${match.visitor}`, "Recordatorio Pollón Liga II", message);
+        if (!result.ok && !("skipped" in result && result.skipped)) {
+          logEventEmailFailure(user, "Recordatorio Pollón Liga II", result);
+          continue;
+        }
+        state.sentReminders.push(reminderKey);
+        state.notifications.push({ id: `liga_reminder_${user.id}_${match.id}`, userId: user.id, title: "Falta tu pronóstico de Liga", message, type: "reminder", date: new Date().toISOString(), read: false });
+        changed = true;
+      }
+    }
+    if (changed) saveLigaMillonariosState(state);
+  } catch (error) {
+    console.error("Error running Liga reminder scheduler:", error);
+  } finally {
+    ligaReminderSchedulerRunning = false;
+  }
+}
 
 // Set up server listening and Vite configuration
 async function startServer() {
