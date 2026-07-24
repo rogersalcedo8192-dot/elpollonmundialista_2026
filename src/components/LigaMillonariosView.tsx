@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Bell, Calendar, Check, Eraser, RefreshCw, Trophy } from "lucide-react";
+import { BarChart3, Bell, Calendar, Check, Eraser, RefreshCw, Trophy } from "lucide-react";
 import type { User } from "../types";
 
 type LigaMatch = {
@@ -236,22 +236,27 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
   const hasLigaAccess = isAdmin || membership?.status === "paid";
   const formatCop = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value || 0);
+  const registeredPredictions = predictions.length;
+  const pendingPredictions = matches.filter((match) => match.status === "pending" && !predictionByMatch.has(match.id)).length;
 
   return (
     <section className="space-y-5">
-      <div className={`${activeSection === "resumen" ? "block" : "hidden"} rounded-3xl bg-gradient-to-br from-blue-950 via-blue-800 to-sky-600 p-6 text-white shadow-xl`}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-sky-200">Módulo independiente</p>
-            <h2 className="mt-2 text-2xl font-black">Pollón Liga BetPlay II 2026</h2>
-            <p className="mt-2 text-sm text-blue-100">Solo partidos de Millonarios FC · misma puntuación base; la diferencia exacta de gol se usa únicamente para desempatar.</p>
-          </div>
-          <button type="button" onClick={() => void load()} className="rounded-xl bg-white/10 p-3 hover:bg-white/20" aria-label="Actualizar"><RefreshCw className={`h-5 w-5 ${busy ? "animate-spin" : ""}`} /></button>
+      <div className={`${activeSection === "resumen" ? "space-y-6" : "hidden"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
+          <div><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Mi Resumen & Evolución de Puntos</h2><p className="mt-1 text-xs text-slate-500">Sigue tu progreso, aciertos y estadísticas en el Pollón de Millonarios.</p></div>
+          <button type="button" onClick={() => void load()} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900" aria-label="Actualizar"><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} /></button>
         </div>
-        <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-white/10 p-3"><span className="block text-[10px] uppercase text-blue-200">Puesto</span><strong className="text-xl">#{myRanking?.position || "-"}</strong></div>
-          <div className="rounded-2xl bg-white/10 p-3"><span className="block text-[10px] uppercase text-blue-200">Puntos</span><strong className="text-xl">{myRanking?.points || 0}</strong></div>
-          <div className="rounded-2xl bg-white/10 p-3"><span className="block text-[10px] uppercase text-blue-200">Aciertos DG</span><strong className="text-xl">{myRanking?.goalDifferenceHits || 0}</strong></div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            { label: "Puntos totales", value: myRanking?.points || 0, detail: `Bonos: ${myRanking?.seasonBonusPoints || 0}`, icon: Trophy, color: "text-amber-600" },
+            { label: "Posición", value: `#${myRanking?.position || "-"}`, detail: `${ranking.length} participantes`, icon: BarChart3, color: "text-blue-600" },
+            { label: "Marcadores exactos", value: myRanking?.exactCount || 0, detail: `DG exactas: ${myRanking?.goalDifferenceHits || 0}`, icon: Check, color: "text-emerald-600" },
+            { label: "Pronósticos", value: registeredPredictions, detail: `${pendingPredictions} pendientes`, icon: Calendar, color: "text-violet-600" }
+          ].map((card) => { const Icon = card.icon; return <div key={card.label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{card.label}</span><Icon className={`h-4 w-4 ${card.color}`} /></div><strong className="mt-3 block text-2xl font-black text-slate-950 dark:text-white">{card.value}</strong><span className="mt-1 block text-[10px] text-slate-500">{card.detail}</span></div>; })}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 dark:border-blue-900 dark:bg-blue-950/30"><h3 className="text-sm font-black text-blue-950 dark:text-blue-100">Estado de inscripción</h3><p className="mt-2 text-xs text-blue-800 dark:text-blue-200">{isAdmin ? "Acceso administrativo" : membership?.status === "paid" ? "Tu inscripción está confirmada. Ya puedes registrar pronósticos y competir por premios." : "Debes confirmar la inscripción independiente de Liga para participar."}</p></div>
+          <div className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-white shadow-sm"><h3 className="flex items-center gap-2 text-sm font-black"><Trophy className="h-4 w-4 text-amber-400" /> Resumen del Premio</h3><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between border-b border-white/10 pb-2"><span>Participantes pagos</span><b>{finances?.paidParticipants || 0}</b></div><div className="flex justify-between border-b border-white/10 pb-2"><span>Total recaudado</span><b>{formatCop(finances?.grossRevenue || 0)}</b></div><div className="flex justify-between"><span>Premio acumulado</span><b className="text-blue-300">{formatCop(finances?.prizePool || 0)}</b></div></div></div>
         </div>
       </div>
 
@@ -271,7 +276,10 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
       )}
 
       <section id="liga-asi-va" className={`${activeSection === "asi-va" ? "space-y-4" : "hidden"}`}>
-        <h3 className="text-xl font-black">Así va la Liga BetPlay II 2026</h3>
+        <div className="border-b border-slate-100 pb-4 dark:border-slate-800">
+          <h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Así va la Liga BetPlay II 2026</h2>
+          <p className="mt-1 text-xs text-slate-500">Consulta la clasificación oficial y los goleadores del campeonato.</p>
+        </div>
         <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             <div className="border-b p-4 font-black dark:border-slate-800">Tabla de posiciones</div>
@@ -286,7 +294,8 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
 
       <div className={`${["pronosticos", "ranking", "notificaciones", "admin"].includes(activeSection) ? "grid" : "hidden"} gap-5 xl:grid-cols-[1.6fr_1fr]`}>
         <div id="liga-pronosticos" className={activeSection === "pronosticos" ? "space-y-3" : "hidden"}>
-          <h3 className="flex items-center gap-2 text-lg font-black"><Calendar className="h-5 w-5 text-blue-600" /> Calendario y pronósticos</h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3 dark:border-slate-800"><div><h2 className="flex items-center gap-2 text-xl font-bold"><Calendar className="h-5 w-5 text-blue-600" /> Calendario & Pronósticos</h2><p className="mt-1 text-xs text-slate-500">Introduce marcadores. El registro cierra cinco minutos antes de cada partido.</p></div><div className="flex gap-4 rounded-xl bg-slate-100 px-3 py-1.5 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300"><span>Registrados: <b>{registeredPredictions}</b></span><span>Pendientes: <b>{pendingPredictions}</b></span></div></div>
+          {!hasLigaAccess && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">Para guardar o modificar pronósticos debes confirmar el pago de inscripción de Liga.</div>}
           {matches.map((match) => {
             const prediction = predictionByMatch.get(match.id);
             const closed = !hasLigaAccess || match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
@@ -319,11 +328,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
 
         <div className={`${activeSection === "pronosticos" ? "space-y-5" : "xl:col-span-2"}`}>
           {isAdmin && activeSection === "admin" && (
-            <div id="liga-admin" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 scroll-mt-4 dark:border-emerald-900 dark:bg-emerald-950">
-              <h3 className="font-black">Administración financiera · Liga II</h3>
+            <div id="liga-admin" className="space-y-5 scroll-mt-4">
+              <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Administración · Pollón Liga II</h2><p className="mt-1 text-xs text-slate-500">Configura la inscripción, la bolsa de premios y los pagos independientes de este torneo.</p></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl bg-white/70 p-2">Pagos confirmados<strong className="block text-lg">{finances?.paidParticipants || 0}</strong></div>
-                <div className="rounded-xl bg-white/70 p-2">Bolsa de premios<strong className="block text-lg">{formatCop(finances?.prizePool || 0)}</strong></div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">Pagos confirmados<strong className="block text-lg">{finances?.paidParticipants || 0}</strong></div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">Bolsa de premios<strong className="block text-lg">{formatCop(finances?.prizePool || 0)}</strong></div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {([
@@ -332,9 +342,10 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
                 ] as Array<[keyof FinancialConfig, string]>).map(([key, label]) => <label key={key} className="text-[10px] font-bold">{label}<input type="number" min="0" value={financialConfig[key]} onChange={(event) => setFinancialConfig((current) => ({ ...current, [key]: Number(event.target.value) }))} className="mt-1 w-full rounded-lg border p-2 text-sm dark:bg-slate-900" /></label>)}
               </div>
               <p className="mt-2 text-[10px]">Premios + comisión + administración deben sumar 100%. La distribución de puestos también debe sumar 100%.</p>
-              <button type="button" onClick={() => void saveFinancialConfig()} className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white">Guardar finanzas de Liga</button>
+              <button type="button" onClick={() => void saveFinancialConfig()} className="mt-3 w-full rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white">Guardar finanzas de Liga</button>
               <div className="mt-4 max-h-64 space-y-2 overflow-auto">
-                {adminMemberships.map((item) => <div key={item.userId} className="flex items-center justify-between gap-2 rounded-xl bg-white/70 p-2 text-xs"><span className="min-w-0 truncate"><strong className="block truncate">{item.user?.name || item.userId}</strong>{item.status} {item.paymentMethod ? `· ${item.paymentMethod}` : ""}</span><button type="button" onClick={() => void updateManualPayment(item.userId, item.status === "paid" ? "pending" : "paid", "cash")} className={`shrink-0 rounded-lg px-2 py-1 font-black ${item.status === "paid" ? "bg-slate-200" : "bg-emerald-600 text-white"}`}>{item.status === "paid" ? "Revertir" : "Marcar pago efectivo"}</button></div>)}
+                {adminMemberships.map((item) => <div key={item.userId} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800"><span className="min-w-0 truncate"><strong className="block truncate">{item.user?.name || item.userId}</strong>{item.status} {item.paymentMethod ? `· ${item.paymentMethod}` : ""}</span><button type="button" onClick={() => void updateManualPayment(item.userId, item.status === "paid" ? "pending" : "paid", "cash")} className={`shrink-0 rounded-lg px-2 py-1 font-black ${item.status === "paid" ? "bg-slate-200" : "bg-emerald-600 text-white"}`}>{item.status === "paid" ? "Revertir" : "Marcar pago efectivo"}</button></div>)}
+              </div>
               </div>
             </div>
           )}
@@ -358,22 +369,23 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
             <button type="button" onClick={() => void saveScorer()} className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2 text-sm font-black text-white">Guardar goleador</button>
           </div>
           {activeSection === "admin" && (currentUser.role === "admin" || currentUser.role === "superadmin") && <button type="button" onClick={() => void closeSeasonBonuses()} className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Cerrar bonos finales de temporada</button>}
-          <div id="liga-ranking" className={`${activeSection === "ranking" ? "block" : "hidden"} rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900`}>
-            <h3 className="mb-3 flex items-center gap-2 font-black"><Trophy className="h-5 w-5 text-amber-500" /> Ranking Liga II</h3>
-            <div className="space-y-2">{ranking.map((row) => <div key={row.userId} className={`rounded-xl p-2 text-sm ${row.userId === currentUser.id ? "bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100" : "bg-slate-50 dark:bg-slate-800"}`}><div className="grid grid-cols-[2rem_1fr_auto] items-center gap-2"><strong>#{row.position}</strong><span className="truncate">{row.userName}</span><strong>{row.points} pts</strong></div><p className="mt-1 pl-8 text-[10px] opacity-70">Exactos {row.exactCount} · DG {row.goalDifferenceHits} · Error {row.cumulativeScoreError} · Bonos {row.seasonBonusPoints || 0}</p></div>)}</div>
+          <div id="liga-ranking" className={`${activeSection === "ranking" ? "space-y-5" : "hidden"}`}>
+            <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-amber-500" /> PolloRanking · Liga II</h2><p className="mt-1 text-xs text-slate-500">Clasificación exclusiva de participantes pagos del Pollón de Liga.</p></div>
+            {myRanking && <div className="grid gap-3 rounded-2xl bg-slate-950 p-5 text-white shadow-sm sm:grid-cols-[1fr_auto_auto]"><div><span className="text-[10px] font-black uppercase tracking-widest text-blue-300">Tu posición actual</span><strong className="mt-1 block text-lg">{currentUser.name}</strong></div><div><span className="text-[10px] text-slate-400">Posición</span><strong className="block text-2xl">#{myRanking.position}</strong></div><div><span className="text-[10px] text-slate-400">Puntos</span><strong className="block text-2xl text-amber-400">{myRanking.points}</strong></div></div>}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="overflow-x-auto"><table className="w-full min-w-[660px] text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 dark:bg-slate-800"><tr><th className="p-3 text-center">Pos.</th><th className="p-3 text-left">Participante</th><th className="p-3 text-center">Puntos</th><th className="p-3 text-center">Exactos</th><th className="p-3 text-center">DG</th><th className="p-3 text-center">Error</th><th className="p-3 text-center">Bonos</th></tr></thead><tbody>{ranking.map((row) => <tr key={row.userId} className={`border-t border-slate-100 dark:border-slate-800 ${row.userId === currentUser.id ? "bg-blue-50 font-bold text-blue-950 dark:bg-blue-950 dark:text-blue-100" : ""}`}><td className="p-3 text-center font-black">#{row.position}</td><td className="p-3">{row.userName}</td><td className="p-3 text-center font-black">{row.points}</td><td className="p-3 text-center">{row.exactCount}</td><td className="p-3 text-center">{row.goalDifferenceHits}</td><td className="p-3 text-center">{row.cumulativeScoreError}</td><td className="p-3 text-center">{row.seasonBonusPoints || 0}</td></tr>)}</tbody></table></div>{!ranking.length && <p className="p-6 text-center text-sm text-slate-500">El ranking aparecerá cuando haya participantes pagos.</p>}</div>
           </div>
-          <div id="liga-notificaciones" className={`${activeSection === "notificaciones" ? "block" : "hidden"} rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900`}>
-            <h3 className="mb-3 flex items-center gap-2 font-black"><Bell className="h-5 w-5 text-blue-600" /> Notificaciones Liga II</h3>
-            {notifications.length ? notifications.slice(0, 8).map((notification) => <div key={notification.id} className="border-b border-slate-100 py-3 last:border-0 dark:border-slate-800"><strong className="text-sm">{notification.title}</strong><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{notification.message}</p></div>) : <p className="text-sm text-slate-500">Todavía no hay notificaciones de este módulo.</p>}
+          <div id="liga-notificaciones" className={`${activeSection === "notificaciones" ? "space-y-5" : "hidden"}`}>
+            <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Bell className="h-5 w-5 text-blue-600" /> Notificaciones · Liga II</h2><p className="mt-1 text-xs text-slate-500">Resultados, recordatorios y novedades únicamente de este Pollón.</p></div>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900">{notifications.length ? notifications.slice(0, 8).map((notification) => <div key={notification.id} className="border-b border-slate-100 py-4 last:border-0 dark:border-slate-800"><strong className="text-sm">{notification.title}</strong><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{notification.message}</p></div>) : <p className="py-8 text-center text-sm text-slate-500">Todavía no hay notificaciones de este módulo.</p>}</div>
           </div>
         </div>
       </div>
 
-      <section id="liga-reglas" className={`${activeSection === "reglas" ? "block" : "hidden"} rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900`}>
-        <h3 className="text-lg font-black">Reglas y premios · Liga II</h3>
-        <div className="mt-3 grid gap-4 md:grid-cols-2 text-sm">
-          <div className="space-y-1"><p><strong>5 pts</strong> por participar.</p><p><strong>15 pts</strong> por acertar el resultado 1X2.</p><p><strong>25 pts</strong> por marcador exacto con ganador.</p><p><strong>35 pts</strong> por empate exacto.</p><p>La diferencia exacta de gol no suma puntos; desempata.</p></div>
-          <div className="space-y-1"><p><strong>100 pts</strong> por posición final exacta.</p><p><strong>100 pts</strong> por puntos finales exactos.</p><p><strong>50 pts</strong> por goleador y <strong>50 pts</strong> por sus goles exactos.</p><p className="pt-2"><strong>Bolsa actual:</strong> {formatCop(finances?.prizePool || 0)}</p><p>1.º {formatCop(finances?.payouts.first || 0)} · 2.º {formatCop(finances?.payouts.second || 0)} · 3.º {formatCop(finances?.payouts.third || 0)}</p></div>
+      <section id="liga-reglas" className={`${activeSection === "reglas" ? "space-y-5" : "hidden"}`}>
+        <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-amber-500" /> Cómo jugar, reglas y premios</h2><p className="mt-1 text-xs text-slate-500">La misma lógica base del Pollón Mundialista, adaptada al torneo de Millonarios.</p></div>
+        <div className="grid gap-4 md:grid-cols-2 text-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 className="mb-3 font-black">Puntuación por partido</h3><div className="space-y-2"><p><strong>5 pts</strong> por participar.</p><p><strong>15 pts</strong> por acertar el resultado 1X2.</p><p><strong>25 pts</strong> por marcador exacto con ganador.</p><p><strong>35 pts</strong> por empate exacto.</p><p className="border-t pt-3 text-xs text-slate-500 dark:border-slate-700">La diferencia exacta de gol no suma puntos; se utiliza para desempatar el ranking.</p></div></div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 text-white"><h3 className="mb-3 flex items-center gap-2 font-black"><Trophy className="h-4 w-4 text-amber-400" /> Bonos y premios</h3><div className="space-y-2"><p><strong>100 pts</strong> por posición final exacta.</p><p><strong>100 pts</strong> por puntos finales exactos.</p><p><strong>50 pts</strong> por goleador y <strong>50 pts</strong> por sus goles exactos.</p><p className="border-t border-white/10 pt-3"><strong>Bolsa actual:</strong> <span className="text-blue-300">{formatCop(finances?.prizePool || 0)}</span></p><p className="text-xs text-slate-300">1.º {formatCop(finances?.payouts.first || 0)} · 2.º {formatCop(finances?.payouts.second || 0)} · 3.º {formatCop(finances?.payouts.third || 0)}</p></div></div>
         </div>
       </section>
     </section>
