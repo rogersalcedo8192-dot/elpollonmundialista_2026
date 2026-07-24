@@ -1756,6 +1756,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>("predictions");
   const [pollonMenu, setPollonMenu] = useState<"mundial" | "liga" | null>("mundial");
+  const [ligaSection, setLigaSection] = useState<"resumen" | "pronosticos" | "asi-va" | "ranking" | "notificaciones" | "reglas" | "admin">("resumen");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
   const [rulesFlyerPreviewLang, setRulesFlyerPreviewLang] = useState<"es" | "en">("es");
   const [managedPopupOpen, setManagedPopupOpen] = useState(false);
@@ -4078,7 +4079,16 @@ export default function App() {
   const navigateToLigaSection = (sectionId: string) => {
     setPollonMenu("liga");
     setActiveTab("liga-millonarios");
-    window.setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    const sectionMap: Record<string, typeof ligaSection> = {
+      "liga-resumen": "resumen",
+      "liga-pronosticos": "pronosticos",
+      "liga-asi-va": "asi-va",
+      "liga-ranking": "ranking",
+      "liga-notificaciones": "notificaciones",
+      "liga-reglas": "reglas",
+      "liga-admin": "admin"
+    };
+    setLigaSection(sectionMap[sectionId] || "resumen");
   };
   const selectedPublicPredictionMatch = publicPredictionMatches.find((match) => match.id === selectedPublicMatchId) || null;
   const publicFavoriteSections: Array<{ key: typeof publicFavoritesSection; label: string }> = [
@@ -5279,11 +5289,13 @@ export default function App() {
                       { id: "liga-reglas", label: "Reglas y premios", icon: Info }
                     ].map((item) => {
                       const Icon = item.icon;
-                      return <button key={item.id} type="button" onClick={() => navigateToLigaSection(item.id)} className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-blue-950"><Icon className="h-4 w-4 shrink-0" /><span>{item.label}</span></button>;
+                      const activeId = `liga-${ligaSection}`;
+                      const isActive = item.id === activeId;
+                      return <button key={item.id} type="button" onClick={() => navigateToLigaSection(item.id)} className={`flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-colors ${isActive ? "bg-blue-50 font-black text-blue-800 dark:bg-blue-950 dark:text-blue-200" : "text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-blue-950"}`}><Icon className="h-4 w-4 shrink-0" /><span>{item.label}</span></button>;
                     })}
                     {isSuperAdminUser && <>
                       <span className="hidden md:block text-[9px] font-bold text-slate-400 px-3 pt-3 pb-1 uppercase tracking-wider border-t border-slate-200 dark:border-slate-800">Administración Liga</span>
-                      <button type="button" onClick={() => navigateToLigaSection("liga-admin")} className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-blue-950"><Settings className="h-4 w-4" />Pagos y configuración</button>
+                      <button type="button" onClick={() => navigateToLigaSection("liga-admin")} className={`flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold ${ligaSection === "admin" ? "bg-blue-50 font-black text-blue-800 dark:bg-blue-950 dark:text-blue-200" : "text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-blue-950"}`}><Settings className="h-4 w-4" />Pagos y configuración</button>
                     </>}
                   </div>}
                 </nav>
@@ -6253,7 +6265,7 @@ export default function App() {
               )}
 
               {activeTab === "liga-millonarios" && currentUser && (
-                <LigaMillonariosView currentUser={currentUser} getHeaders={getHeaders} />
+                <LigaMillonariosView currentUser={currentUser} getHeaders={getHeaders} activeSection={ligaSection} />
               )}
 
               {activeTab === "predictions" && (

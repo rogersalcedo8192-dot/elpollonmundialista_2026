@@ -38,14 +38,15 @@ type LigaRanking = {
   position: number;
 };
 
-type Props = { currentUser: User; getHeaders: () => Record<string, string> };
+type LigaSection = "resumen" | "pronosticos" | "asi-va" | "ranking" | "notificaciones" | "reglas" | "admin";
+type Props = { currentUser: User; getHeaders: () => Record<string, string>; activeSection: LigaSection };
 type LigaMembership = { userId: string; status: "pending" | "paid" | "suspended"; paymentMethod?: string; paidAt?: string; user?: User };
 type FinancialConfig = { entryFeeCop: number; prizePoolPercent: number; bankCommissionPercent: number; administrationPercent: number; firstPlacePercent: number; secondPlacePercent: number; thirdPlacePercent: number };
 type Finances = { paidParticipants: number; grossRevenue: number; prizePool: number; bankCommission: number; administrationCosts: number; payouts: { first: number; second: number; third: number } };
 type Standing = { position: number; team: string; crest: string; played: number; won: number; drawn: number; lost: number; goalDifference: number; points: number };
 type Scorer = { position: number; player: string; team: string; crest: string; goals: number };
 
-export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
+export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: Props) {
   const [matches, setMatches] = useState<LigaMatch[]>([]);
   const [predictions, setPredictions] = useState<LigaPrediction[]>([]);
   const [ranking, setRanking] = useState<LigaRanking[]>([]);
@@ -238,7 +239,7 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
 
   return (
     <section className="space-y-5">
-      <div className="rounded-3xl bg-gradient-to-br from-blue-950 via-blue-800 to-sky-600 p-6 text-white shadow-xl">
+      <div className={`${activeSection === "resumen" ? "block" : "hidden"} rounded-3xl bg-gradient-to-br from-blue-950 via-blue-800 to-sky-600 p-6 text-white shadow-xl`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-sky-200">Módulo independiente</p>
@@ -257,7 +258,7 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
       {message && <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm font-semibold text-sky-900">{message}</div>}
 
       <div id="liga-resumen" />
-      {!isAdmin && !hasLigaAccess && (
+      {activeSection === "resumen" && !isAdmin && !hasLigaAccess && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 shadow-sm">
           <h3 className="text-lg font-black">Inscripción independiente de Liga II</h3>
           <p className="mt-1 text-sm">Tu cuenta sigue siendo la misma, pero este Pollón requiere una inscripción y pago propios de <strong>{formatCop(financialConfig.entryFeeCop)}</strong>.</p>
@@ -269,7 +270,7 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
         </div>
       )}
 
-      <section id="liga-asi-va" className="scroll-mt-4 space-y-4">
+      <section id="liga-asi-va" className={`${activeSection === "asi-va" ? "space-y-4" : "hidden"}`}>
         <h3 className="text-xl font-black">Así va la Liga BetPlay II 2026</h3>
         <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -283,8 +284,8 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
-        <div id="liga-pronosticos" className="space-y-3 scroll-mt-4">
+      <div className={`${["pronosticos", "ranking", "notificaciones", "admin"].includes(activeSection) ? "grid" : "hidden"} gap-5 xl:grid-cols-[1.6fr_1fr]`}>
+        <div id="liga-pronosticos" className={activeSection === "pronosticos" ? "space-y-3" : "hidden"}>
           <h3 className="flex items-center gap-2 text-lg font-black"><Calendar className="h-5 w-5 text-blue-600" /> Calendario y pronósticos</h3>
           {matches.map((match) => {
             const prediction = predictionByMatch.get(match.id);
@@ -316,8 +317,8 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
           })}
         </div>
 
-        <div className="space-y-5">
-          {isAdmin && (
+        <div className={`${activeSection === "pronosticos" ? "space-y-5" : "xl:col-span-2"}`}>
+          {isAdmin && activeSection === "admin" && (
             <div id="liga-admin" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 scroll-mt-4 dark:border-emerald-900 dark:bg-emerald-950">
               <h3 className="font-black">Administración financiera · Liga II</h3>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -337,7 +338,7 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
               </div>
             </div>
           )}
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+          <div className={`${activeSection === "pronosticos" ? "block" : "hidden"} rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950`}>
             <h3 className="font-black text-blue-950 dark:text-blue-100">Pronósticos especiales de desempate</h3>
             <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">La posición final exacta vale 100 puntos y los puntos exactos de Millonarios valen otros 100. Los goles totales solo desempatan.</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -347,7 +348,7 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
             </div>
             <button type="button" onClick={() => void saveSpecial()} className="mt-3 w-full rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white">Guardar desempates</button>
           </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
+          <div className={`${activeSection === "pronosticos" ? "block" : "hidden"} rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950`}>
             <h3 className="font-black text-amber-950 dark:text-amber-100">Goleador de Millonarios</h3>
             <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">50 puntos por acertar el jugador y 50 adicionales por acertar también sus goles exactos.</p>
             <div className="mt-3 grid grid-cols-[1fr_7rem] gap-2">
@@ -356,19 +357,19 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
             </div>
             <button type="button" onClick={() => void saveScorer()} className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2 text-sm font-black text-white">Guardar goleador</button>
           </div>
-          {(currentUser.role === "admin" || currentUser.role === "superadmin") && <button type="button" onClick={() => void closeSeasonBonuses()} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Cerrar bonos finales de temporada</button>}
-          <div id="liga-ranking" className="rounded-2xl border border-slate-200 bg-white p-4 scroll-mt-4 dark:border-slate-800 dark:bg-slate-900">
+          {activeSection === "admin" && (currentUser.role === "admin" || currentUser.role === "superadmin") && <button type="button" onClick={() => void closeSeasonBonuses()} className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Cerrar bonos finales de temporada</button>}
+          <div id="liga-ranking" className={`${activeSection === "ranking" ? "block" : "hidden"} rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900`}>
             <h3 className="mb-3 flex items-center gap-2 font-black"><Trophy className="h-5 w-5 text-amber-500" /> Ranking Liga II</h3>
             <div className="space-y-2">{ranking.map((row) => <div key={row.userId} className={`rounded-xl p-2 text-sm ${row.userId === currentUser.id ? "bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100" : "bg-slate-50 dark:bg-slate-800"}`}><div className="grid grid-cols-[2rem_1fr_auto] items-center gap-2"><strong>#{row.position}</strong><span className="truncate">{row.userName}</span><strong>{row.points} pts</strong></div><p className="mt-1 pl-8 text-[10px] opacity-70">Exactos {row.exactCount} · DG {row.goalDifferenceHits} · Error {row.cumulativeScoreError} · Bonos {row.seasonBonusPoints || 0}</p></div>)}</div>
           </div>
-          <div id="liga-notificaciones" className="rounded-2xl border border-slate-200 bg-white p-4 scroll-mt-4 dark:border-slate-800 dark:bg-slate-900">
+          <div id="liga-notificaciones" className={`${activeSection === "notificaciones" ? "block" : "hidden"} rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900`}>
             <h3 className="mb-3 flex items-center gap-2 font-black"><Bell className="h-5 w-5 text-blue-600" /> Notificaciones Liga II</h3>
             {notifications.length ? notifications.slice(0, 8).map((notification) => <div key={notification.id} className="border-b border-slate-100 py-3 last:border-0 dark:border-slate-800"><strong className="text-sm">{notification.title}</strong><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{notification.message}</p></div>) : <p className="text-sm text-slate-500">Todavía no hay notificaciones de este módulo.</p>}
           </div>
         </div>
       </div>
 
-      <section id="liga-reglas" className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <section id="liga-reglas" className={`${activeSection === "reglas" ? "block" : "hidden"} rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900`}>
         <h3 className="text-lg font-black">Reglas y premios · Liga II</h3>
         <div className="mt-3 grid gap-4 md:grid-cols-2 text-sm">
           <div className="space-y-1"><p><strong>5 pts</strong> por participar.</p><p><strong>15 pts</strong> por acertar el resultado 1X2.</p><p><strong>25 pts</strong> por marcador exacto con ganador.</p><p><strong>35 pts</strong> por empate exacto.</p><p>La diferencia exacta de gol no suma puntos; desempata.</p></div>
