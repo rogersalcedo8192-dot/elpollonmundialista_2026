@@ -3399,6 +3399,10 @@ function saveDb(schema: DatabaseSchema) {
 
 // Recalculates all scores and rankings
 function recalculateScoresAndRankings() {
+  // The World Cup is an immutable historical archive. Keeping this guard here,
+  // instead of relying only on HTTP middleware, also blocks startup jobs and
+  // internal callers from changing rankings or emailing participants.
+  if (WORLD_CUP_ARCHIVED) return;
   const db = loadDb();
   applyAutomaticTournamentOutcomes(db, [], null);
   const nowMs = Date.now();
@@ -3735,6 +3739,7 @@ const WORLD_CUP_MUTATION_PATHS = [
   "/api/payments/create-checkout-session", "/api/users/me/favorite-matches/", "/api/group-pools",
   "/api/predictions", "/api/tournament-predictions", "/api/tournament-outcomes",
   "/api/torneo", "/api/announcements",
+  "/api/admin/final-recap-email", "/api/admin/winner-email",
   "/api/admin/predictions/import-excel", "/api/admin/reset-tournament", "/api/matches",
   "/api/admin/matches/sync-football-data", "/api/admin/matches/dedupe"
 ];
@@ -7211,6 +7216,8 @@ setInterval(() => {
 let reminderSchedulerRunning = false;
 
 async function runReminderScheduler() {
+  // World Cup reminders must remain permanently silent after archival.
+  if (WORLD_CUP_ARCHIVED) return;
   if (reminderSchedulerRunning) {
     console.warn("Reminder scheduler skipped because the previous run is still active.");
     return;
@@ -7445,8 +7452,10 @@ async function startServer() {
   validateFootballDataTournamentAutomation();
   await initializeDb();
   await initializeLigaMillonariosState();
-  applyKnownOfficialResultCorrections(loadDb());
-  recalculateScoresAndRankings();
+  if (!WORLD_CUP_ARCHIVED) {
+    applyKnownOfficialResultCorrections(loadDb());
+    recalculateScoresAndRankings();
+  }
   void runFootballDataSyncScheduler();
   if (process.env.FOOTBALL_DATA_API_TOKEN) {
     void syncLigaMillonariosFromFootballData().catch((error) => console.error("Initial Liga football-data.org sync failed:", error));
