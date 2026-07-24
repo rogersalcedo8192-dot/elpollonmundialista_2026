@@ -257,7 +257,107 @@ interface DatabaseSchema {
   companyInvitations?: CompanyInvitation[];
 }
 
+interface LigaMillonariosMatch extends Match {
+  id: number;
+  localCrest: string;
+  visitorCrest: string;
+}
+
+interface LigaMillonariosPrediction extends Prediction {
+  goalDifferenceBonus: number; // Legacy field kept at zero; goal difference is a tiebreaker, not points.
+}
+
+interface LigaMillonariosState {
+  config: {
+    id: "liga-betplay-ii-2026-millonarios";
+    title: string;
+    description: string;
+    timezone: string;
+    team: "Millonarios";
+    goalDifferenceBonusPoints: 0;
+    notificationConfig: TorneoConfig["notificationConfig"];
+  };
+  matches: LigaMillonariosMatch[];
+  predictions: LigaMillonariosPrediction[];
+  tiebreakPredictions: Array<{
+    userId: string;
+    finalPosition: number;
+    totalGoals: number;
+    totalLeaguePoints: number;
+    dateCreated: string;
+  }>;
+  scorerPredictions: Array<{
+    userId: string;
+    playerName: string;
+    exactGoals: number;
+    dateCreated: string;
+  }>;
+  finalTiebreakOutcome?: { finalPosition: number; totalGoals: number; totalLeaguePoints: number };
+  scorerOutcome?: { playerNames: string[]; exactGoals: number };
+  notifications: AppNotification[];
+  sentReminders: string[];
+}
+
+const LIGA_TEAM_CRESTS: Record<string, string> = {
+  "Millonarios": "/team-crests/millonarios.png",
+  "Atlético Bucaramanga": "/team-crests/atletico-bucaramanga.png",
+  "Junior": "/team-crests/junior.png",
+  "Deportivo Pasto": "/team-crests/deportivo-pasto.png",
+  "Independiente Medellín": "/team-crests/independiente-medellin.png",
+  "Deportivo Cali": "/team-crests/deportivo-cali.png",
+  "Águilas Doradas": "/team-crests/aguilas-doradas.png",
+  "Llaneros": "/team-crests/llaneros.png",
+  "Internacional de Bogotá": "/team-crests/internacional-bogota.png",
+  "Santa Fe": "/team-crests/santa-fe.png",
+  "Deportivo Pereira": "/team-crests/deportivo-pereira.png",
+  "Cúcuta Deportivo": "/team-crests/cucuta.png",
+  "Boyacá Chicó": "/team-crests/boyaca-chico.png",
+  "Atlético Nacional": "/team-crests/atletico-nacional.png",
+  "Fortaleza": "/team-crests/fortaleza.png",
+  "Once Caldas": "/team-crests/once-caldas.png",
+  "Jaguares": "/team-crests/jaguares.png",
+  "América de Cali": "/team-crests/america-cali.png",
+  "Deportes Tolima": "/team-crests/deportes-tolima.png",
+  "Alianza FC": "/team-crests/alianza.png"
+};
+
+const LIGA_MILLONARIOS_OFFICIAL_MATCHES: LigaMillonariosMatch[] = [
+  [1, "Millonarios", "Atlético Bucaramanga", "2026-07-25T23:10:00.000Z", "Nemesio Camacho El Campín"],
+  [2, "Junior", "Millonarios", "2026-08-02T01:15:00.000Z", "Romelio Martínez"],
+  [3, "Millonarios", "Deportivo Pasto", "2026-08-05T01:20:00.000Z", "Nemesio Camacho El Campín"],
+  [4, "Independiente Medellín", "Millonarios", "2026-08-12T01:00:00.000Z", "Atanasio Girardot"],
+  [5, "Millonarios", "Deportivo Cali", "2026-08-17T23:10:00.000Z", "Nemesio Camacho El Campín"],
+  [6, "Águilas Doradas", "Millonarios", "2026-08-22T19:00:00.000Z", "Bello Horizonte"],
+  [7, "Llaneros", "Millonarios", "2026-08-27T23:10:00.000Z", "Bello Horizonte"],
+  [8, "Millonarios", "Internacional de Bogotá", "2026-08-30T23:15:00.000Z", "Nemesio Camacho El Campín"],
+  [9, "Santa Fe", "Millonarios", "2026-09-03T01:25:00.000Z", "Nemesio Camacho El Campín"],
+  [10, "Deportivo Pereira", "Millonarios", "2026-09-06T23:10:00.000Z", "Hernán Ramírez Villegas"],
+  [11, "Cúcuta Deportivo", "Millonarios", "2026-09-14T01:15:00.000Z", "General Santander"],
+  [12, "Millonarios", "Boyacá Chicó", "2026-09-20T01:15:00.000Z", "Nemesio Camacho El Campín"],
+  [13, "Atlético Nacional", "Millonarios", "2026-09-24T01:30:00.000Z", "Atanasio Girardot"],
+  [14, "Fortaleza", "Millonarios", "2026-10-09T01:10:00.000Z", "Metropolitano de Techo"],
+  [15, "Millonarios", "Once Caldas", "2026-10-14T01:00:00.000Z", "Nemesio Camacho El Campín"],
+  [16, "Millonarios", "Jaguares", "2026-10-17T19:00:00.000Z", "Nemesio Camacho El Campín"],
+  [17, "Millonarios", "América de Cali", "2026-10-27T01:00:00.000Z", "Nemesio Camacho El Campín"],
+  [18, "Deportes Tolima", "Millonarios", "2026-11-03T01:30:00.000Z", "Manuel Murillo Toro"],
+  [19, "Millonarios", "Alianza FC", "2026-11-08T20:30:00.000Z", "Nemesio Camacho El Campín"]
+].map(([id, local, visitor, date, stadium]) => ({
+  id: id as number,
+  stage: `Fecha ${id}`,
+  local: local as string,
+  visitor: visitor as string,
+  date: date as string,
+  stadium: stadium as string,
+  status: "pending" as const,
+  localScore: null,
+  visitorScore: null,
+  externalSource: "DIMAYOR + AS",
+  localCrest: LIGA_TEAM_CRESTS[local as string],
+  visitorCrest: LIGA_TEAM_CRESTS[visitor as string]
+}));
+
 const DB_FILE = path.join(process.cwd(), "db_store.json");
+const LIGA_MILLONARIOS_DB_FILE = path.join(process.cwd(), "liga_millonarios_2026_store.json");
 const ASSETS_DIR = path.join(process.cwd(), "assets", "assets");
 const prisma = process.env.DATABASE_URL ? new PrismaClient() : null;
 let postgresPersistTimer: NodeJS.Timeout | null = null;
@@ -344,6 +444,201 @@ function validateMatchScoringRules() {
   if (failed) {
     throw new Error(`Regla de puntuacion invalida: ${failed.label} dio ${failed.actual}, esperaba ${failed.expected}.`);
   }
+}
+
+function calculateLigaMillonariosScore(
+  predictedLocal: number,
+  predictedVisitor: number,
+  realLocal: number,
+  realVisitor: number
+) {
+  const base = calculateMatchPredictionScore(predictedLocal, predictedVisitor, realLocal, realVisitor);
+  const goalDifferenceHit = predictedLocal - predictedVisitor === realLocal - realVisitor;
+  return {
+    ...base,
+    goalDifferenceHit,
+    goalDifferenceBonus: 0,
+    points: base.points
+  };
+}
+
+function validateLigaMillonariosScoringRules() {
+  const cases = [
+    { label: "diferencia no acertada", actual: calculateLigaMillonariosScore(1, 0, 3, 1).points, expected: 15 },
+    { label: "diferencia exacta sin puntos extra", actual: calculateLigaMillonariosScore(1, 0, 2, 1).points, expected: 15 },
+    { label: "marcador ganador exacto", actual: calculateLigaMillonariosScore(2, 0, 2, 0).points, expected: 25 },
+    { label: "empate exacto", actual: calculateLigaMillonariosScore(1, 1, 1, 1).points, expected: 35 }
+  ];
+  const failed = cases.find((testCase) => testCase.actual !== testCase.expected);
+  if (failed) throw new Error(`Regla Liga Millonarios invalida: ${failed.label} dio ${failed.actual}, esperaba ${failed.expected}.`);
+}
+
+function createLigaMillonariosState(): LigaMillonariosState {
+  return {
+    config: {
+      id: "liga-betplay-ii-2026-millonarios",
+      title: "Pollón Liga BetPlay Dimayor II 2026",
+      description: "Pollón de oficina exclusivo para los partidos de Millonarios FC.",
+      timezone: "America/Bogota",
+      team: "Millonarios",
+      goalDifferenceBonusPoints: 0,
+      notificationConfig: { reminders: true, results: true, rankingChanges: true, announcements: true }
+    },
+    matches: LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((match) => ({ ...match })),
+    predictions: [],
+    tiebreakPredictions: [],
+    scorerPredictions: [],
+    notifications: [],
+    sentReminders: []
+  };
+}
+
+function loadLigaMillonariosState(): LigaMillonariosState {
+  try {
+    if (fs.existsSync(LIGA_MILLONARIOS_DB_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(LIGA_MILLONARIOS_DB_FILE, "utf-8")) as LigaMillonariosState;
+      if (parsed?.config?.id === "liga-betplay-ii-2026-millonarios") {
+        parsed.tiebreakPredictions ||= [];
+        parsed.scorerPredictions ||= [];
+        const existingById = new Map(parsed.matches.map((match) => [match.id, match]));
+        parsed.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
+          const existing = existingById.get(official.id);
+          return existing?.status === "finished"
+            ? { ...official, status: existing.status, localScore: existing.localScore, visitorScore: existing.visitorScore }
+            : { ...official };
+        });
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error("Error reading Liga Millonarios module:", error);
+  }
+  const initial = createLigaMillonariosState();
+  saveLigaMillonariosState(initial);
+  return initial;
+}
+
+function saveLigaMillonariosState(state: LigaMillonariosState) {
+  fs.writeFileSync(LIGA_MILLONARIOS_DB_FILE, JSON.stringify(state, null, 2), "utf-8");
+  if (prisma) {
+    const snapshot = JSON.parse(JSON.stringify(state));
+    void prisma.ligaMillonariosModule.upsert({
+      where: { id: "liga-betplay-ii-2026-millonarios" },
+      create: { id: "liga-betplay-ii-2026-millonarios", state: snapshot },
+      update: { state: snapshot }
+    }).catch((error) => console.error("Error syncing Liga Millonarios module to PostgreSQL:", error));
+  }
+}
+
+async function initializeLigaMillonariosState() {
+  if (prisma) {
+    try {
+      const stored = await prisma.ligaMillonariosModule.findUnique({ where: { id: "liga-betplay-ii-2026-millonarios" } });
+      if (stored?.state) {
+        const state = stored.state as unknown as LigaMillonariosState;
+        state.tiebreakPredictions ||= [];
+        state.scorerPredictions ||= [];
+        const existingById = new Map((state.matches || []).map((match) => [match.id, match]));
+        state.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
+          const existing = existingById.get(official.id);
+          return existing?.status === "finished"
+            ? { ...official, status: existing.status, localScore: existing.localScore, visitorScore: existing.visitorScore }
+            : { ...official };
+        });
+        fs.writeFileSync(LIGA_MILLONARIOS_DB_FILE, JSON.stringify(state, null, 2), "utf-8");
+        saveLigaMillonariosState(state);
+        return;
+      }
+    } catch (error) {
+      console.error("No se pudo cargar el módulo Liga Millonarios desde PostgreSQL:", error);
+    }
+  }
+  saveLigaMillonariosState(loadLigaMillonariosState());
+}
+
+function buildLigaMillonariosRanking(state: LigaMillonariosState, users: User[]) {
+  const stats = users
+    .filter((user) => user.status === "active" && !isSuperAdmin(user))
+    .map((user) => {
+      const predictions = state.predictions.filter((prediction) => prediction.userId === user.id);
+      let points = 0;
+      let exactCount = 0;
+      let outcomeCount = 0;
+      let goalDifferenceHits = 0;
+      let cumulativeScoreError = 0;
+      let exactTeamScores = 0;
+      let predictCount = 0;
+      for (const prediction of predictions) {
+        const match = state.matches.find((candidate) => candidate.id === prediction.matchId);
+        if (!match || match.status !== "finished" || match.localScore === null || match.visitorScore === null) continue;
+        predictCount += 1;
+        const score = calculateLigaMillonariosScore(
+          prediction.localScore,
+          prediction.visitorScore,
+          match.localScore,
+          match.visitorScore
+        );
+        prediction.pointsEarned = score.points;
+        prediction.reason = score.reason;
+        prediction.goalDifferenceBonus = score.goalDifferenceBonus;
+        points += score.points;
+        if (score.exactHit) exactCount += 1;
+        if (score.outcomeHit) outcomeCount += 1;
+        if (score.goalDifferenceHit) goalDifferenceHits += 1;
+        cumulativeScoreError += Math.abs(prediction.localScore - match.localScore) + Math.abs(prediction.visitorScore - match.visitorScore);
+        if (prediction.localScore === match.localScore) exactTeamScores += 1;
+        if (prediction.visitorScore === match.visitorScore) exactTeamScores += 1;
+      }
+      const special = state.tiebreakPredictions.find((prediction) => prediction.userId === user.id);
+      const specialTiebreakError = special && state.finalTiebreakOutcome
+        ? Math.abs(special.finalPosition - state.finalTiebreakOutcome.finalPosition) * 10000
+          + Math.abs(special.totalGoals - state.finalTiebreakOutcome.totalGoals) * 100
+          + Math.abs(special.totalLeaguePoints - state.finalTiebreakOutcome.totalLeaguePoints)
+        : Number.MAX_SAFE_INTEGER;
+      const positionBonusPoints = special && state.finalTiebreakOutcome && special.finalPosition === state.finalTiebreakOutcome.finalPosition ? 100 : 0;
+      const leaguePointsBonusPoints = special && state.finalTiebreakOutcome && special.totalLeaguePoints === state.finalTiebreakOutcome.totalLeaguePoints ? 100 : 0;
+      const scorerPrediction = state.scorerPredictions.find((prediction) => prediction.userId === user.id);
+      const normalizePlayerName = (value: string) => value.trim().toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const scorerHit = Boolean(
+        scorerPrediction && state.scorerOutcome?.playerNames.some((name) => normalizePlayerName(name) === normalizePlayerName(scorerPrediction.playerName))
+      );
+      const scorerPlayerBonusPoints = scorerHit ? 50 : 0;
+      const scorerGoalsBonusPoints = scorerHit && scorerPrediction?.exactGoals === state.scorerOutcome?.exactGoals ? 50 : 0;
+      const seasonBonusPoints = positionBonusPoints + leaguePointsBonusPoints + scorerPlayerBonusPoints + scorerGoalsBonusPoints;
+      points += seasonBonusPoints;
+      return {
+        userId: user.id,
+        userName: user.name,
+        userAvatar: user.avatar,
+        userCountry: user.country,
+        points,
+        exactCount,
+        outcomeCount,
+        predictCount,
+        goalDifferenceHits,
+        cumulativeScoreError,
+        exactTeamScores,
+        positionBonusPoints,
+        leaguePointsBonusPoints,
+        scorerPlayerBonusPoints,
+        scorerGoalsBonusPoints,
+        seasonBonusPoints,
+        scorerPrediction: scorerPrediction || null,
+        specialTiebreak: special || null,
+        specialTiebreakError
+      };
+    })
+    .sort((a, b) =>
+      b.points - a.points ||
+      b.exactCount - a.exactCount ||
+      b.goalDifferenceHits - a.goalDifferenceHits ||
+      a.cumulativeScoreError - b.cumulativeScoreError ||
+      b.exactTeamScores - a.exactTeamScores ||
+      b.outcomeCount - a.outcomeCount ||
+      a.specialTiebreakError - b.specialTiebreakError ||
+      a.userName.localeCompare(b.userName)
+    );
+  return stats.map((row, index) => ({ ...row, position: index + 1 }));
 }
 
 function roundMoney(value: number) {
@@ -5636,6 +5931,225 @@ app.post("/api/matches/:id/simulate", async (req, res) => {
   res.json({ message: "Simulación de partido aplicada y ranking recalculado.", match: m });
 });
 
+// Independent module: Liga BetPlay Dimayor II 2026, Millonarios matches only.
+app.get("/api/liga-millonarios", (_req, res) => {
+  const state = loadLigaMillonariosState();
+  res.json({ config: state.config, matches: state.matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) });
+});
+
+app.get("/api/liga-millonarios/predictions", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  res.json(state.predictions.filter((prediction) => prediction.userId === user.id));
+});
+
+app.post("/api/liga-millonarios/predictions", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  if (requirePaidParticipant(user, res)) return;
+  const matchId = Number(req.body?.matchId);
+  const localScore = Number(req.body?.localScore);
+  const visitorScore = Number(req.body?.visitorScore);
+  if (![matchId, localScore, visitorScore].every(Number.isInteger) || localScore < 0 || visitorScore < 0) {
+    return res.status(400).json({ error: "Ingresa marcadores válidos para ambos equipos." });
+  }
+  const state = loadLigaMillonariosState();
+  const match = state.matches.find((candidate) => candidate.id === matchId);
+  if (!match) return res.status(404).json({ error: "Partido no encontrado en Liga II 2026." });
+  if (match.local !== "Millonarios" && match.visitor !== "Millonarios") {
+    return res.status(400).json({ error: "Este módulo solo admite partidos de Millonarios." });
+  }
+  if (match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - PREDICTION_LOCK_MINUTES * 60_000) {
+    return res.status(400).json({ error: "El pronóstico está cerrado; se bloquea 5 minutos antes del partido." });
+  }
+  let prediction = state.predictions.find((candidate) => candidate.userId === user.id && candidate.matchId === matchId);
+  if (prediction) {
+    prediction.localScore = localScore;
+    prediction.visitorScore = visitorScore;
+    prediction.pointsEarned = null;
+    prediction.reason = null;
+    prediction.goalDifferenceBonus = 0;
+    prediction.dateCreated = new Date().toISOString();
+  } else {
+    prediction = {
+      id: `liga2_pred_${user.id}_${matchId}`,
+      userId: user.id,
+      matchId,
+      localScore,
+      visitorScore,
+      pointsEarned: null,
+      reason: null,
+      goalDifferenceBonus: 0,
+      dateCreated: new Date().toISOString()
+    };
+    state.predictions.push(prediction);
+  }
+  saveLigaMillonariosState(state);
+  res.json({ message: "Pronóstico de Liga II guardado.", prediction });
+});
+
+app.delete("/api/liga-millonarios/predictions/:matchId", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const matchId = Number(req.params.matchId);
+  const state = loadLigaMillonariosState();
+  const match = state.matches.find((candidate) => candidate.id === matchId);
+  if (!match) return res.status(404).json({ error: "Partido no encontrado." });
+  if (match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - PREDICTION_LOCK_MINUTES * 60_000) {
+    return res.status(400).json({ error: "El pronóstico ya está cerrado." });
+  }
+  state.predictions = state.predictions.filter((prediction) => prediction.userId !== user.id || prediction.matchId !== matchId);
+  saveLigaMillonariosState(state);
+  res.json({ message: "Pronóstico eliminado." });
+});
+
+app.get("/api/liga-millonarios/tiebreak-prediction", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  res.json(state.tiebreakPredictions.find((prediction) => prediction.userId === user.id) || null);
+});
+
+app.post("/api/liga-millonarios/tiebreak-prediction", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  const firstKickoff = Math.min(...state.matches.map((match) => new Date(match.date).getTime()));
+  if (Date.now() >= firstKickoff - PREDICTION_LOCK_MINUTES * 60_000) {
+    return res.status(400).json({ error: "Los pronósticos especiales cerraron antes del primer partido." });
+  }
+  const finalPosition = Number(req.body?.finalPosition);
+  const totalGoals = Number(req.body?.totalGoals);
+  const totalLeaguePoints = Number(req.body?.totalLeaguePoints);
+  if (!Number.isInteger(finalPosition) || finalPosition < 1 || finalPosition > 20 || !Number.isInteger(totalGoals) || totalGoals < 0 || !Number.isInteger(totalLeaguePoints) || totalLeaguePoints < 0) {
+    return res.status(400).json({ error: "Ingresa posición, goles y puntos válidos." });
+  }
+  const prediction = { userId: user.id, finalPosition, totalGoals, totalLeaguePoints, dateCreated: new Date().toISOString() };
+  const index = state.tiebreakPredictions.findIndex((candidate) => candidate.userId === user.id);
+  if (index >= 0) state.tiebreakPredictions[index] = prediction;
+  else state.tiebreakPredictions.push(prediction);
+  saveLigaMillonariosState(state);
+  res.json({ message: "Pronósticos especiales guardados; solo se usarán como último desempate.", prediction });
+});
+
+app.get("/api/liga-millonarios/scorer-prediction", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  res.json(state.scorerPredictions.find((prediction) => prediction.userId === user.id) || null);
+});
+
+app.post("/api/liga-millonarios/scorer-prediction", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  const firstKickoff = Math.min(...state.matches.map((match) => new Date(match.date).getTime()));
+  if (Date.now() >= firstKickoff - PREDICTION_LOCK_MINUTES * 60_000) {
+    return res.status(400).json({ error: "El pronóstico de goleador cerró antes del primer partido." });
+  }
+  const playerName = String(req.body?.playerName || "").trim();
+  const exactGoals = Number(req.body?.exactGoals);
+  if (playerName.length < 3 || !Number.isInteger(exactGoals) || exactGoals < 0) {
+    return res.status(400).json({ error: "Ingresa el nombre del jugador y una cantidad válida de goles." });
+  }
+  const prediction = { userId: user.id, playerName, exactGoals, dateCreated: new Date().toISOString() };
+  const index = state.scorerPredictions.findIndex((candidate) => candidate.userId === user.id);
+  if (index >= 0) state.scorerPredictions[index] = prediction;
+  else state.scorerPredictions.push(prediction);
+  saveLigaMillonariosState(state);
+  res.json({ message: "Pronóstico de goleador guardado.", prediction });
+});
+
+app.get("/api/liga-millonarios/rankings", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const db = loadDb();
+  const state = loadLigaMillonariosState();
+  const visibleIds = getVisibleRankingUserIds(db, user);
+  const ranking = buildLigaMillonariosRanking(state, db.users).filter((row) => visibleIds.has(row.userId));
+  saveLigaMillonariosState(state);
+  res.json(ranking.map((row, index) => ({ ...row, position: index + 1 })));
+});
+
+app.get("/api/liga-millonarios/notifications", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  res.json(state.notifications.filter((notification) => notification.userId === user.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+});
+
+app.post("/api/liga-millonarios/admin/matches", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "Solo el SuperAdmin puede administrar este calendario." });
+  const { stage, local, visitor, date, stadium } = req.body || {};
+  if (!stage || !local || !visitor || !date || !stadium) return res.status(400).json({ error: "Todos los datos del partido son obligatorios." });
+  if (local !== "Millonarios" && visitor !== "Millonarios") return res.status(400).json({ error: "Solo se permiten partidos de Millonarios." });
+  const state = loadLigaMillonariosState();
+  const id = state.matches.reduce((max, match) => Math.max(max, match.id), 0) + 1;
+  const match: LigaMillonariosMatch = { id, stage, local, visitor, date: new Date(date).toISOString(), stadium, status: "pending", localScore: null, visitorScore: null, localCrest: LIGA_TEAM_CRESTS[local] || "", visitorCrest: LIGA_TEAM_CRESTS[visitor] || "" };
+  state.matches.push(match);
+  saveLigaMillonariosState(state);
+  res.status(201).json(match);
+});
+
+app.put("/api/liga-millonarios/admin/matches/:matchId/result", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "Solo el SuperAdmin puede registrar resultados." });
+  const localScore = Number(req.body?.localScore);
+  const visitorScore = Number(req.body?.visitorScore);
+  if (![localScore, visitorScore].every(Number.isInteger) || localScore < 0 || visitorScore < 0) return res.status(400).json({ error: "Marcador inválido." });
+  const state = loadLigaMillonariosState();
+  const match = state.matches.find((candidate) => candidate.id === Number(req.params.matchId));
+  if (!match) return res.status(404).json({ error: "Partido no encontrado." });
+  match.localScore = localScore;
+  match.visitorScore = visitorScore;
+  match.status = "finished";
+  const db = loadDb();
+  buildLigaMillonariosRanking(state, db.users);
+  if (state.config.notificationConfig.results) {
+    for (const user of db.users.filter((candidate) => candidate.status === "active" && !isSuperAdmin(candidate))) {
+      const prediction = state.predictions.find((candidate) => candidate.userId === user.id && candidate.matchId === match.id);
+      const predictedDifference = prediction ? prediction.localScore - prediction.visitorScore : null;
+      const realDifference = localScore - visitorScore;
+      const differenceDetail = prediction && predictedDifference === realDifference ? " Acertaste la diferencia de gol, que se usará como desempate del ranking." : "";
+      const detail = prediction ? `Tu pronóstico fue ${prediction.localScore}-${prediction.visitorScore} y sumaste ${prediction.pointsEarned || 0} puntos.${differenceDetail}` : "No registraste pronóstico para este partido.";
+      state.notifications.push({ id: `liga2_result_${match.id}_${user.id}_${Date.now()}`, userId: user.id, title: "Resultado Liga II · Millonarios", message: `${match.local} ${localScore}-${visitorScore} ${match.visitor}. ${detail}`, type: "result", date: new Date().toISOString(), read: false });
+    }
+  }
+  saveLigaMillonariosState(state);
+  res.json({ message: "Resultado guardado, puntajes recalculados y notificaciones generadas.", match });
+});
+
+app.put("/api/liga-millonarios/admin/final-tiebreak-outcome", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "Solo el SuperAdmin puede cerrar los desempates." });
+  const finalPosition = Number(req.body?.finalPosition);
+  const totalGoals = Number(req.body?.totalGoals);
+  const totalLeaguePoints = Number(req.body?.totalLeaguePoints);
+  if (![finalPosition, totalGoals, totalLeaguePoints].every(Number.isInteger) || finalPosition < 1 || finalPosition > 20 || totalGoals < 0 || totalLeaguePoints < 0) {
+    return res.status(400).json({ error: "Resultado final de desempate inválido." });
+  }
+  const state = loadLigaMillonariosState();
+  state.finalTiebreakOutcome = { finalPosition, totalGoals, totalLeaguePoints };
+  saveLigaMillonariosState(state);
+  res.json({ message: "Resultados finales de desempate guardados.", outcome: state.finalTiebreakOutcome });
+});
+
+app.put("/api/liga-millonarios/admin/scorer-outcome", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "Solo el SuperAdmin puede registrar el goleador final." });
+  const playerNames = Array.isArray(req.body?.playerNames)
+    ? req.body.playerNames.map((name: unknown) => String(name).trim()).filter(Boolean)
+    : String(req.body?.playerName || "").split(",").map((name) => name.trim()).filter(Boolean);
+  const exactGoals = Number(req.body?.exactGoals);
+  if (!playerNames.length || !Number.isInteger(exactGoals) || exactGoals < 0) return res.status(400).json({ error: "Goleador final inválido." });
+  const state = loadLigaMillonariosState();
+  state.scorerOutcome = { playerNames, exactGoals };
+  saveLigaMillonariosState(state);
+  res.json({ message: "Goleador final guardado y bonos recalculados.", outcome: state.scorerOutcome });
+});
+
 // API: Predictions
 app.get("/api/predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
@@ -6474,8 +6988,10 @@ setInterval(() => {
 // Set up server listening and Vite configuration
 async function startServer() {
   validateMatchScoringRules();
+  validateLigaMillonariosScoringRules();
   validateFootballDataTournamentAutomation();
   await initializeDb();
+  await initializeLigaMillonariosState();
   applyKnownOfficialResultCorrections(loadDb());
   recalculateScoresAndRankings();
   void runFootballDataSyncScheduler();

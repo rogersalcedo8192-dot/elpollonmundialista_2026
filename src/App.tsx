@@ -57,6 +57,7 @@ import { MatchResultsTicker } from "./components/MatchResultsTicker";
 import { WorldCupTrivia } from "./components/WorldCupTrivia";
 import { WorldCupOverviewView } from "./components/WorldCupOverviewView";
 import { KnockoutBracketView } from "./components/KnockoutBracketView";
+import { LigaMillonariosView } from "./components/LigaMillonariosView";
 
 const createEmojiAvatar = (emoji: string, background: string) => {
   const svg = `
@@ -5121,6 +5122,15 @@ export default function App() {
 
                   <button
                     type="button"
+                    onClick={() => navigateToMenuItem("liga-millonarios")}
+                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "liga-millonarios" ? "md:bg-blue-50 dark:md:bg-blue-950 text-blue-800 dark:text-sky-300 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                  >
+                    <Trophy className="w-4 h-4 shrink-0 text-blue-600" />
+                    <span>Pollón Millonarios · Liga II</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => navigateToMenuItem("trivia")}
                     className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "trivia" ? "md:bg-emerald-50 dark:md:bg-slate-800 text-slate-950 md:text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}`}
                   >
@@ -6212,6 +6222,10 @@ export default function App() {
                     </div>
                   </div>}
                 </div>
+              )}
+
+              {activeTab === "liga-millonarios" && currentUser && (
+                <LigaMillonariosView currentUser={currentUser} getHeaders={getHeaders} />
               )}
 
               {activeTab === "predictions" && (

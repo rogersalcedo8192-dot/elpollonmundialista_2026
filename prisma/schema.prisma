@@ -265,3 +265,12 @@ model SponsorBanner {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// Independent serialized state for the office pool based only on Millonarios
+// matches. Keeping it outside the World Cup tables prevents cross-tournament
+// predictions, points, rankings and notifications from being mixed.
+model LigaMillonariosModule {
+  id        String   @id @default("liga-betplay-ii-2026-millonarios")
+  state     Json
+  updatedAt DateTime @updatedAt
+}
