@@ -6126,6 +6126,13 @@ app.put("/api/liga-millonarios/admin/financial-config", (req, res) => {
   res.json({ message: "Configuración financiera de Liga guardada.", financialConfig: values, finances: calculateLigaMillonariosFinances(state) });
 });
 
+app.get("/api/liga-millonarios/admin/outcomes", (req, res) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
+  const state = loadLigaMillonariosState();
+  res.json({ finalTiebreakOutcome: state.finalTiebreakOutcome || null, scorerOutcome: state.scorerOutcome || null });
+});
+
 app.put("/api/liga-millonarios/admin/overview", (req, res) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || !isSuperAdmin(admin)) return res.status(403).json({ error: "No autorizado." });
@@ -6331,7 +6338,7 @@ app.put("/api/liga-millonarios/admin/final-tiebreak-outcome", (req, res) => {
   const finalPosition = Number(req.body?.finalPosition);
   const totalGoals = Number(req.body?.totalGoals);
   const totalLeaguePoints = Number(req.body?.totalLeaguePoints);
-  if (![finalPosition, totalGoals, totalLeaguePoints].every(Number.isInteger) || finalPosition < 1 || finalPosition > 20 || totalGoals < 0 || totalLeaguePoints < 0) {
+  if (![finalPosition, totalGoals, totalLeaguePoints].every(Number.isInteger) || finalPosition < 1 || finalPosition > 19 || totalGoals < 0 || totalGoals > 50 || totalLeaguePoints < 0 || totalLeaguePoints > 57) {
     return res.status(400).json({ error: "Resultado final de desempate inválido." });
   }
   const state = loadLigaMillonariosState();
@@ -6347,7 +6354,7 @@ app.put("/api/liga-millonarios/admin/scorer-outcome", (req, res) => {
     ? req.body.playerNames.map((name: unknown) => String(name).trim()).filter(Boolean)
     : String(req.body?.playerName || "").split(",").map((name) => name.trim()).filter(Boolean);
   const exactGoals = Number(req.body?.exactGoals);
-  if (!playerNames.length || !Number.isInteger(exactGoals) || exactGoals < 0) return res.status(400).json({ error: "Goleador final inválido." });
+  if (!playerNames.length || !Number.isInteger(exactGoals) || exactGoals < 0 || exactGoals > 30) return res.status(400).json({ error: "Goleador final inválido." });
   const state = loadLigaMillonariosState();
   state.scorerOutcome = { playerNames, exactGoals };
   saveLigaMillonariosState(state);

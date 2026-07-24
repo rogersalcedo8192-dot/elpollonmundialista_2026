@@ -68,6 +68,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   const [now, setNow] = useState(Date.now());
   const [special, setSpecial] = useState({ finalPosition: "", totalGoals: "", totalLeaguePoints: "" });
   const [scorer, setScorer] = useState({ playerName: "", exactGoals: "" });
+  const [adminOutcome, setAdminOutcome] = useState({ finalPosition: "", totalGoals: "", totalLeaguePoints: "", playerNames: [] as string[], exactGoals: "" });
   const [membership, setMembership] = useState<LigaMembership | null>(null);
   const [adminMemberships, setAdminMemberships] = useState<LigaMembership[]>([]);
   const [financialConfig, setFinancialConfig] = useState<FinancialConfig>({ entryFeeCop: 20000, prizePoolPercent: 80, bankCommissionPercent: 3, administrationPercent: 17, firstPlacePercent: 80, secondPlacePercent: 15, thirdPlacePercent: 5 });
@@ -79,7 +80,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
     setBusy(true);
     try {
       const headers = getHeaders();
-      const [moduleRes, predictionsRes, rankingRes, notificationsRes, specialRes, scorerRes, membershipRes, adminMembershipsRes] = await Promise.all([
+      const [moduleRes, predictionsRes, rankingRes, notificationsRes, specialRes, scorerRes, membershipRes, adminMembershipsRes, adminOutcomesRes] = await Promise.all([
         fetch("/api/liga-millonarios"),
         fetch("/api/liga-millonarios/predictions", { headers }),
         fetch("/api/liga-millonarios/rankings", { headers }),
@@ -87,7 +88,8 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
         fetch("/api/liga-millonarios/tiebreak-prediction", { headers }),
         fetch("/api/liga-millonarios/scorer-prediction", { headers }),
         fetch("/api/liga-millonarios/membership", { headers }),
-        currentUser.role === "admin" || currentUser.role === "superadmin" ? fetch("/api/liga-millonarios/admin/memberships", { headers }) : Promise.resolve(null)
+        currentUser.role === "admin" || currentUser.role === "superadmin" ? fetch("/api/liga-millonarios/admin/memberships", { headers }) : Promise.resolve(null),
+        currentUser.role === "admin" || currentUser.role === "superadmin" ? fetch("/api/liga-millonarios/admin/outcomes", { headers }) : Promise.resolve(null)
       ]);
       if (!moduleRes.ok) throw new Error("No se pudo cargar el módulo de Liga II.");
       const moduleData = await moduleRes.json();
@@ -110,6 +112,16 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
       }
       if (membershipRes.ok) setMembership(await membershipRes.json());
       if (adminMembershipsRes?.ok) setAdminMemberships(await adminMembershipsRes.json());
+      if (adminOutcomesRes?.ok) {
+        const outcomes = await adminOutcomesRes.json();
+        setAdminOutcome({
+          finalPosition: outcomes.finalTiebreakOutcome ? String(outcomes.finalTiebreakOutcome.finalPosition) : "",
+          totalGoals: outcomes.finalTiebreakOutcome ? String(outcomes.finalTiebreakOutcome.totalGoals) : "",
+          totalLeaguePoints: outcomes.finalTiebreakOutcome ? String(outcomes.finalTiebreakOutcome.totalLeaguePoints) : "",
+          playerNames: outcomes.scorerOutcome?.playerNames || [],
+          exactGoals: outcomes.scorerOutcome ? String(outcomes.scorerOutcome.exactGoals) : ""
+        });
+      }
       setDrafts(Object.fromEntries(predictionData.map((prediction) => [prediction.matchId, { local: prediction.localScore, visitor: prediction.visitorScore }])));
     } catch (error: any) {
       setMessage(error.message || "No se pudo cargar el módulo.");
@@ -189,24 +201,23 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   };
 
   const closeSeasonBonuses = async () => {
-    const finalPosition = window.prompt("Posición final exacta de Millonarios");
-    if (finalPosition === null) return;
-    const totalGoals = window.prompt("Total de goles de Millonarios");
-    if (totalGoals === null) return;
-    const totalLeaguePoints = window.prompt("Total de puntos de Millonarios");
-    if (totalLeaguePoints === null) return;
-    const playerNames = window.prompt("Goleador(es); separa empates con comas");
-    if (playerNames === null) return;
-    const exactGoals = window.prompt("Goles del goleador");
-    if (exactGoals === null) return;
-    const [seasonResponse, scorerResponse] = await Promise.all([
-      fetch("/api/liga-millonarios/admin/final-tiebreak-outcome", { method: "PUT", headers: getHeaders(), body: JSON.stringify({ finalPosition: Number(finalPosition), totalGoals: Number(totalGoals), totalLeaguePoints: Number(totalLeaguePoints) }) }),
-      fetch("/api/liga-millonarios/admin/scorer-outcome", { method: "PUT", headers: getHeaders(), body: JSON.stringify({ playerNames: playerNames.split(","), exactGoals: Number(exactGoals) }) })
-    ]);
-    const seasonData = await seasonResponse.json();
-    const scorerData = await scorerResponse.json();
-    setMessage(!seasonResponse.ok ? seasonData.error : !scorerResponse.ok ? scorerData.error : "Bonos finales guardados y ranking recalculado.");
-    if (seasonResponse.ok && scorerResponse.ok) void load();
+    if (!adminOutcome.finalPosition || adminOutcome.totalGoals === "" || adminOutcome.totalLeaguePoints === "" || !adminOutcome.playerNames.length || adminOutcome.exactGoals === "") {
+      setMessage("Completa todos los resultados finales antes de cerrar los bonos.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const [seasonResponse, scorerResponse] = await Promise.all([
+        fetch("/api/liga-millonarios/admin/final-tiebreak-outcome", { method: "PUT", headers: getHeaders(), body: JSON.stringify({ finalPosition: Number(adminOutcome.finalPosition), totalGoals: Number(adminOutcome.totalGoals), totalLeaguePoints: Number(adminOutcome.totalLeaguePoints) }) }),
+        fetch("/api/liga-millonarios/admin/scorer-outcome", { method: "PUT", headers: getHeaders(), body: JSON.stringify({ playerNames: adminOutcome.playerNames, exactGoals: Number(adminOutcome.exactGoals) }) })
+      ]);
+      const seasonData = await seasonResponse.json();
+      const scorerData = await scorerResponse.json();
+      setMessage(!seasonResponse.ok ? seasonData.error : !scorerResponse.ok ? scorerData.error : "Bonos finales guardados y ranking recalculado.");
+      if (seasonResponse.ok && scorerResponse.ok) void load();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const registerResult = async (match: LigaMatch) => {
@@ -379,7 +390,22 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
             </div>
             <button type="button" onClick={() => void saveScorer()} className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2 text-sm font-black text-white">Guardar goleador</button>
           </div>
-          {activeSection === "admin" && (currentUser.role === "admin" || currentUser.role === "superadmin") && <button type="button" onClick={() => void closeSeasonBonuses()} className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Cerrar bonos finales de temporada</button>}
+          {activeSection === "admin" && (currentUser.role === "admin" || currentUser.role === "superadmin") && (
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="font-black">Cierre de bonos finales</h3>
+              <p className="mt-1 text-xs text-slate-500">Registra los resultados oficiales. Puedes elegir varios jugadores si comparten el título de goleador.</p>
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <label className="text-[10px] font-bold">Posición final<select value={adminOutcome.finalPosition} onChange={(event) => setAdminOutcome((current) => ({ ...current, finalPosition: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-sm dark:bg-slate-950"><option value="">Selecciona</option>{range(1, 19).map((value) => <option key={value}>{value}</option>)}</select></label>
+                <label className="text-[10px] font-bold">Goles Millos<select value={adminOutcome.totalGoals} onChange={(event) => setAdminOutcome((current) => ({ ...current, totalGoals: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-sm dark:bg-slate-950"><option value="">Selecciona</option>{range(0, 50).map((value) => <option key={value}>{value}</option>)}</select></label>
+                <label className="text-[10px] font-bold">Puntos Millos<select value={adminOutcome.totalLeaguePoints} onChange={(event) => setAdminOutcome((current) => ({ ...current, totalLeaguePoints: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-sm dark:bg-slate-950"><option value="">Selecciona</option>{range(0, 57).map((value) => <option key={value}>{value}</option>)}</select></label>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_9rem]">
+                <fieldset><legend className="text-[10px] font-bold">Goleador(es) de Millonarios</legend><div className="mt-1 grid max-h-52 grid-cols-1 gap-1 overflow-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-2 dark:border-slate-700">{MILLONARIOS_PLAYERS.map((player) => <label key={player} className={`flex cursor-pointer items-center gap-2 rounded-lg p-2 text-xs ${adminOutcome.playerNames.includes(player) ? "bg-blue-50 font-bold text-blue-900 dark:bg-blue-950 dark:text-blue-100" : "hover:bg-slate-50 dark:hover:bg-slate-800"}`}><input type="checkbox" checked={adminOutcome.playerNames.includes(player)} onChange={(event) => setAdminOutcome((current) => ({ ...current, playerNames: event.target.checked ? [...current.playerNames, player] : current.playerNames.filter((name) => name !== player) }))} />{player}</label>)}</div></fieldset>
+                <label className="text-[10px] font-bold">Goles del goleador<select value={adminOutcome.exactGoals} onChange={(event) => setAdminOutcome((current) => ({ ...current, exactGoals: event.target.value }))} className="mt-1 w-full rounded-lg border p-2 text-sm dark:bg-slate-950"><option value="">Selecciona</option>{range(0, 30).map((value) => <option key={value}>{value}</option>)}</select></label>
+              </div>
+              <button type="button" disabled={busy} onClick={() => void closeSeasonBonuses()} className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:opacity-50 dark:bg-blue-700">Guardar resultados y recalcular bonos</button>
+            </div>
+          )}
           <div id="liga-ranking" className={`${activeSection === "ranking" ? "space-y-5" : "hidden"}`}>
             <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-amber-500" /> PolloRanking · Liga II</h2><p className="mt-1 text-xs text-slate-500">Clasificación exclusiva de participantes pagos del Pollón de Liga.</p></div>
             {myRanking && <div className="grid gap-3 rounded-2xl bg-slate-950 p-5 text-white shadow-sm sm:grid-cols-[1fr_auto_auto]"><div><span className="text-[10px] font-black uppercase tracking-widest text-blue-300">Tu posición actual</span><strong className="mt-1 block text-lg">{currentUser.name}</strong></div><div><span className="text-[10px] text-slate-400">Posición</span><strong className="block text-2xl">#{myRanking.position}</strong></div><div><span className="text-[10px] text-slate-400">Puntos</span><strong className="block text-2xl text-amber-400">{myRanking.points}</strong></div></div>}
