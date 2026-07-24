@@ -1755,6 +1755,7 @@ export default function App() {
   const formatEntryFeeLabel = (value?: number) => `${formatCop(value || 20000)} pesos`;
 
   const [activeTab, setActiveTab] = useState<string>("predictions");
+  const [pollonMenu, setPollonMenu] = useState<"mundial" | "liga">("mundial");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
   const [rulesFlyerPreviewLang, setRulesFlyerPreviewLang] = useState<"es" | "en">("es");
   const [managedPopupOpen, setManagedPopupOpen] = useState(false);
@@ -4054,6 +4055,7 @@ export default function App() {
       ? "favorites"
       : activeTab;
   const navigateToMenuItem = (key: string) => {
+    setPollonMenu(key === "liga-millonarios" ? "liga" : "mundial");
     if (key === "how-to-play") {
       setOnboardingOpen(true);
     } else if (key === "admin-prediction-corrections") {
@@ -4072,6 +4074,11 @@ export default function App() {
       if (key === "public-favorites") void fetchPublicTournamentFavorites();
     }
     setMobileMenuOpen(false);
+  };
+  const navigateToLigaSection = (sectionId: string) => {
+    setPollonMenu("liga");
+    setActiveTab("liga-millonarios");
+    window.setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
   const selectedPublicPredictionMatch = publicPredictionMatches.find((match) => match.id === selectedPublicMatchId) || null;
   const publicFavoriteSections: Array<{ key: typeof publicFavoritesSection; label: string }> = [
@@ -4690,15 +4697,6 @@ export default function App() {
         </div>
       </header>
 
-      {currentUser && (
-        <div className="border-b border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          <div className="mx-auto flex max-w-7xl gap-2" aria-label="Seleccionar Pollón">
-            <button type="button" onClick={() => navigateToMenuItem("dashboard")} className={`flex-1 rounded-xl px-3 py-2 text-xs font-black transition-colors ${activeTab !== "liga-millonarios" ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>🌎 Pollón Mundialista 2026</button>
-            <button type="button" onClick={() => navigateToMenuItem("liga-millonarios")} className={`flex-1 rounded-xl px-3 py-2 text-xs font-black transition-colors ${activeTab === "liga-millonarios" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>⚽ Pollón Liga II · Millonarios</button>
-          </div>
-        </div>
-      )}
-
       {currentUser && mobileMenuOpen && (
         <nav
           id="mobile_header_nav"
@@ -4965,7 +4963,7 @@ export default function App() {
           /* Logged In Portal Layout */
           <>
             {/* Sidebar Navigation */}
-            {activeTab !== "liga-millonarios" && <aside className="hidden md:flex w-full md:w-64 shrink-0 flex-col gap-4">
+            <aside className="hidden md:flex w-full md:w-64 shrink-0 flex-col gap-4">
               
               {/* Soccer Ball Toggle Button (Only visible on responsive mobile viewports) */}
               <button
@@ -5017,7 +5015,7 @@ export default function App() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setActiveTab("ranking")}
+                      onClick={() => navigateToMenuItem("ranking")}
                       className="bg-slate-800/40 hover:bg-slate-800/70 p-2 rounded-lg transition-colors"
                     >
                       <span className="block text-[8px] md:text-[9px] text-slate-400 uppercase font-semibold">Ranking</span>
@@ -5028,6 +5026,16 @@ export default function App() {
 
                 {/* Navigation Actions Menu */}
                 <nav className="flex flex-col gap-0.5 p-5 md:p-2 bg-slate-50 md:bg-white dark:bg-slate-900 rounded-[22px] md:rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm font-mono md:font-sans" id="sidebar_nav">
+                  <span className="hidden md:block text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-2 pb-1 uppercase tracking-wider">Selecciona tu Pollón</span>
+                  <button type="button" onClick={() => { setPollonMenu("mundial"); if (activeTab === "liga-millonarios") setActiveTab("dashboard"); }} className={`flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-black transition-colors ${pollonMenu === "mundial" ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>
+                    <Globe className="h-4 w-4 shrink-0" /><span className="flex-1">Pollón Mundialista 2026</span>{pollonMenu === "mundial" ? <ChevronUp className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  </button>
+                  <button type="button" onClick={() => { setPollonMenu("liga"); setActiveTab("liga-millonarios"); }} className={`flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-black transition-colors ${pollonMenu === "liga" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>
+                    <Trophy className="h-4 w-4 shrink-0" /><span className="flex-1">Pollón Liga II · Millonarios</span>{pollonMenu === "liga" ? <ChevronUp className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  </button>
+                  <div className="my-2 border-t border-slate-200 dark:border-slate-800" />
+
+                  {pollonMenu === "mundial" ? <>
                   
                   <span className="hidden md:block text-[9px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-2 pb-1 uppercase tracking-wider">{t("menu_user", "Menú Usuario")}</span>
                   
@@ -5127,15 +5135,6 @@ export default function App() {
                     <span className="ml-auto shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-amber-950">
                       NUEVO
                     </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigateToMenuItem("liga-millonarios")}
-                    className={`flex min-h-12 items-center gap-2.5 px-3 py-2 text-[12px] md:text-xs font-semibold rounded-xl text-left transition-colors ${activeNavigationKey === "liga-millonarios" ? "md:bg-blue-50 dark:md:bg-blue-950 text-blue-800 dark:text-sky-300 font-bold" : "text-slate-950 md:text-slate-600 dark:text-slate-300 hover:bg-white md:hover:bg-slate-50 dark:hover:bg-slate-800"}`}
-                  >
-                    <Trophy className="w-4 h-4 shrink-0 text-blue-600" />
-                    <span>Pollón Millonarios · Liga II</span>
                   </button>
 
                   <button
@@ -5267,10 +5266,28 @@ export default function App() {
                       </button>
                     </>
                   )}
+                  </> : <>
+                    <span className="hidden md:block text-[9px] font-bold text-blue-500 px-3 pt-2 pb-1 uppercase tracking-wider">Menú Liga II 2026</span>
+                    {[
+                      { id: "liga-resumen", label: "Mi resumen y estadísticas", icon: BarChart3 },
+                      { id: "liga-pronosticos", label: "Calendario y pronósticos", icon: Calendar },
+                      { id: "liga-asi-va", label: "Así va la Liga", icon: Globe },
+                      { id: "liga-ranking", label: "PolloRanking", icon: Trophy },
+                      { id: "liga-notificaciones", label: "Notificaciones", icon: Bell },
+                      { id: "liga-reglas", label: "Reglas y premios", icon: Info }
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return <button key={item.id} type="button" onClick={() => navigateToLigaSection(item.id)} className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-blue-950"><Icon className="h-4 w-4 shrink-0" /><span>{item.label}</span></button>;
+                    })}
+                    {isSuperAdminUser && <>
+                      <span className="hidden md:block text-[9px] font-bold text-slate-400 px-3 pt-3 pb-1 uppercase tracking-wider border-t border-slate-200 dark:border-slate-800">Administración Liga</span>
+                      <button type="button" onClick={() => navigateToLigaSection("liga-admin")} className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-blue-950"><Settings className="h-4 w-4" />Pagos y configuración</button>
+                    </>}
+                  </>}
                 </nav>
 
                 {/* Countdown Next Match Info Widget */}
-                {(() => {
+                {pollonMenu === "mundial" && (() => {
                   const pendingMatches = matches.filter((m) => m.status === "pending").sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                   const fallbackMatches = [...matches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                   const displayMatches = pendingMatches.length > 0 ? pendingMatches.slice(0, 3) : fallbackMatches.slice(0, 3);
@@ -5357,7 +5374,7 @@ export default function App() {
                 )}
                 
               </div>
-            </aside>}
+            </aside>
 
             {/* Content Area */}
             <section className="flex-1 min-w-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 md:p-6 overflow-hidden transition-colors">

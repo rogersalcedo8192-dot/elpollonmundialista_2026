@@ -254,10 +254,6 @@ export function LigaMillonariosView({ currentUser, getHeaders }: Props) {
         </div>
       </div>
 
-      <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 text-xs font-black shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        {[['liga-resumen','Resumen'],['liga-pronosticos','Pronósticos'],['liga-asi-va','Así va la Liga'],['liga-ranking','PolloRanking'],['liga-notificaciones','Notificaciones'],['liga-reglas','Reglas y premios'],...(isAdmin ? [['liga-admin','Administrador']] : [])].map(([id, label]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })} className="shrink-0 rounded-xl bg-slate-100 px-3 py-2 hover:bg-blue-100 hover:text-blue-800 dark:bg-slate-800">{label}</button>)}
-      </nav>
-
       {message && <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm font-semibold text-sky-900">{message}</div>}
 
       <div id="liga-resumen" />
