@@ -6244,7 +6244,7 @@ app.post("/api/liga-millonarios/predictions", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
   const accessState = loadLigaMillonariosState();
-  const hasLigaAccess = isSuperAdmin(user) || accessState.memberships.some((membership) => membership.userId === user.id && membership.status === "paid");
+  const hasLigaAccess = accessState.memberships.some((membership) => membership.userId === user.id && membership.status === "paid");
   if (!hasLigaAccess) return res.status(402).json({ error: "Debes pagar la inscripción independiente de Liga II para pronosticar." });
   const matchId = Number(req.body?.matchId);
   const localScore = Number(req.body?.localScore);
@@ -6292,7 +6292,7 @@ app.delete("/api/liga-millonarios/predictions/:matchId", (req, res) => {
   if (!user) return res.status(401).json({ error: "No autenticado." });
   const matchId = Number(req.params.matchId);
   const state = loadLigaMillonariosState();
-  const hasLigaAccess = isSuperAdmin(user) || state.memberships.some((membership) => membership.userId === user.id && membership.status === "paid");
+  const hasLigaAccess = state.memberships.some((membership) => membership.userId === user.id && membership.status === "paid");
   if (!hasLigaAccess) return res.status(402).json({ error: "Debes pagar la inscripción independiente de Liga II para editar pronósticos." });
   const match = state.matches.find((candidate) => candidate.id === matchId);
   if (!match) return res.status(404).json({ error: "Partido no encontrado." });

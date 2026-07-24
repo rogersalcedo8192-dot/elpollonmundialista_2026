@@ -320,7 +320,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   };
 
   const savePrediction = async (matchId: number) => {
-    if (!hasLigaAccess) return setMessage("Debes pagar la inscripción independiente de Liga II para editar pronósticos.");
+    if (!hasLigaAccess) {
+      const paymentMessage = "Debes pagar primero la inscripción independiente del Pollón Liga II para guardar o editar pronósticos.";
+      setMessage(paymentMessage);
+      window.alert(paymentMessage);
+      return;
+    }
     const draft = drafts[matchId];
     if (!draft || draft.local === "" || draft.visitor === "") return setMessage("Ingresa ambos marcadores.");
     setBusy(true);
@@ -336,7 +341,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   };
 
   const clearPrediction = async (matchId: number) => {
-    if (!hasLigaAccess) return setMessage("Debes pagar la inscripción independiente de Liga II para editar pronósticos.");
+    if (!hasLigaAccess) {
+      const paymentMessage = "Debes pagar primero la inscripción independiente del Pollón Liga II para guardar o editar pronósticos.";
+      setMessage(paymentMessage);
+      window.alert(paymentMessage);
+      return;
+    }
     const response = await fetch(`/api/liga-millonarios/predictions/${matchId}`, { method: "DELETE", headers: getHeaders() });
     const data = await response.json();
     setMessage(data.message || data.error);
@@ -346,7 +356,9 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   const predictionByMatch = new Map<number, LigaPrediction>(predictions.map((prediction) => [prediction.matchId, prediction]));
   const myRanking = ranking.find((row) => row.userId === currentUser.id);
   const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
-  const hasLigaAccess = isAdmin || membership?.status === "paid";
+  // Administrative permissions do not count as a paid Liga entry. Admins can
+  // manage the tournament, but must have their own paid membership to compete.
+  const hasLigaAccess = membership?.status === "paid";
   const updateDraftScore = (matchId: number, side: "local" | "visitor", delta: number) => {
     if (!hasLigaAccess) {
       setMessage("Debes pagar la inscripción independiente de Liga II para editar pronósticos.");
@@ -477,7 +489,8 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
           {!hasLigaAccess && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">Para guardar o modificar pronósticos debes confirmar el pago de inscripción de Liga.</div>}
           {filteredMatches.map((match) => {
             const prediction = predictionByMatch.get(match.id);
-            const closed = !hasLigaAccess || match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
+            const matchClosed = match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
+            const closed = !hasLigaAccess || matchClosed;
             const draft = drafts[match.id] || { local: "", visitor: "" };
             const scoreControlsOpen = expandedScoreMatchId === match.id && !closed;
             return (
@@ -497,8 +510,8 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
                     <span>-</span>
                     <input disabled={closed} onFocus={() => !closed && setExpandedScoreMatchId(match.id)} onClick={() => !closed && setExpandedScoreMatchId(match.id)} type="number" inputMode="numeric" min="0" max="30" value={draft.visitor} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, visitor: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
                     {scoreControlsOpen && <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.visitor}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.visitor}`}>-</button></div>}
-                    <button disabled={closed || busy} onClick={() => void savePrediction(match.id)} className="ml-2 rounded-xl bg-blue-700 p-3 text-white disabled:opacity-40" title="Guardar"><Check className="h-5 w-5" /></button>
-                    {prediction && <button disabled={closed || busy} onClick={() => void clearPrediction(match.id)} className="rounded-xl bg-slate-100 p-3 text-slate-700 disabled:opacity-40" title="Borrar"><Eraser className="h-5 w-5" /></button>}
+                    <button disabled={matchClosed || busy} onClick={() => void savePrediction(match.id)} className={`ml-2 rounded-xl p-3 text-white disabled:opacity-40 ${hasLigaAccess ? "bg-blue-700" : "bg-amber-600"}`} title={hasLigaAccess ? "Guardar" : "Paga la inscripción para guardar"}><Check className="h-5 w-5" /></button>
+                    {prediction && <button disabled={matchClosed || busy} onClick={() => void clearPrediction(match.id)} className="rounded-xl bg-slate-100 p-3 text-slate-700 disabled:opacity-40" title={hasLigaAccess ? "Borrar" : "Paga la inscripción para editar"}><Eraser className="h-5 w-5" /></button>}
                   </div>
                 )}
                 <p className="mt-3 text-center text-[11px] text-slate-500">{match.stadium} · <strong className={closed ? "text-rose-600" : "text-blue-600"}>{countdown(match.date)}</strong></p>
