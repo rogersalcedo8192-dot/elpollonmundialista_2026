@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BarChart3, Bell, Calendar, Check, Eraser, RefreshCw, Trophy } from "lucide-react";
 import type { User } from "../types";
 import { MatchResultsTicker } from "./MatchResultsTicker";
+import { LigaMillonariosTrivia } from "./LigaMillonariosTrivia";
 
 type LigaMatch = {
   id: number;
@@ -81,7 +82,6 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   const [ligaGroups, setLigaGroups] = useState<Array<{ id: string; name: string; code: string; ownerId: string; memberIds: string[] }>>([]);
   const [groupName, setGroupName] = useState("");
   const [groupCode, setGroupCode] = useState("");
-  const [triviaAnswers, setTriviaAnswers] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -470,11 +470,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
         </div>
       </div>
 
-      <section className={`${activeSection === "trivia" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Trivia de Millonarios</h2><p className="mt-1 text-xs text-slate-500">Pon a prueba tu conocimiento embajador. La trivia no modifica el ranking.</p></div>{[
-        { question: "¿En qué año fue fundado oficialmente Millonarios FC?", options: ["1937", "1946", "1958"], answer: "1946" },
-        { question: "¿Cuál es el estadio tradicional de Millonarios?", options: ["El Campín", "Atanasio Girardot", "Pascual Guerrero"], answer: "El Campín" },
-        { question: "¿Cuál es el color principal del club?", options: ["Azul", "Rojo", "Verde"], answer: "Azul" }
-      ].map((item, index) => <div key={item.question} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 className="font-black">{index + 1}. {item.question}</h3><div className="mt-3 flex flex-wrap gap-2">{item.options.map((option) => <button type="button" key={option} onClick={() => setTriviaAnswers((current) => ({ ...current, [index]: option }))} className={`rounded-xl border px-4 py-2 text-xs font-bold ${triviaAnswers[index] === option ? option === item.answer ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-rose-400 bg-rose-50 text-rose-800" : "border-slate-200"}`}>{option}</button>)}</div></div>)}</section>
+      <section className={activeSection === "trivia" ? "block" : "hidden"}><LigaMillonariosTrivia /></section>
 
       <section className={`${activeSection === "publicos" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Pronósticos Públicos · Liga II</h2><p className="mt-1 text-xs text-slate-500">Se publican después del cierre para impedir copias.</p></div>{publicPredictions.locked ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Los pronósticos serán públicos cuando cierre el primer partido.</div> : <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-xs"><thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="p-3 text-left">Participante</th><th className="p-3 text-left">Partido</th><th className="p-3">Pronóstico</th><th className="p-3">Puntos</th></tr></thead><tbody>{publicPredictions.entries.map((entry, index) => { const match = matches.find((candidate) => candidate.id === entry.matchId); return <tr key={`${entry.userId}-${entry.matchId}-${index}`} className="border-t dark:border-slate-800"><td className="p-3">{entry.userName}</td><td className="p-3">{match ? `${match.local} vs ${match.visitor}` : `Partido ${entry.matchId}`}</td><td className="p-3 text-center font-black">{entry.localScore}-{entry.visitorScore}</td><td className="p-3 text-center">{entry.pointsEarned || 0}</td></tr>; })}</tbody></table></div></div>}</section>
 
