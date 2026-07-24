@@ -116,6 +116,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "finished">("all");
   const [matchSearch, setMatchSearch] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [expandedScoreMatchId, setExpandedScoreMatchId] = useState<number | null>(null);
   const predictionsTopRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
@@ -176,6 +177,14 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   }, [currentUser.id]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const closeScoreControls = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest("[data-liga-score-editor]")) setExpandedScoreMatchId(null);
+    };
+    document.addEventListener("pointerdown", closeScoreControls);
+    return () => document.removeEventListener("pointerdown", closeScoreControls);
+  }, []);
   useEffect(() => {
     if (!["publicos", "favoritos-publicos", "grupo"].includes(activeSection)) return;
     const headers = getHeaders();
@@ -470,6 +479,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
             const prediction = predictionByMatch.get(match.id);
             const closed = !hasLigaAccess || match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
             const draft = drafts[match.id] || { local: "", visitor: "" };
+            const scoreControlsOpen = expandedScoreMatchId === match.id && !closed;
             return (
               <article key={match.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500"><strong className="text-blue-700 dark:text-sky-300">{match.stage}</strong><span>{new Date(match.date).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" })}</span></div>
@@ -481,12 +491,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
                 {match.status === "finished" ? (
                   <div className="text-center"><strong className="text-2xl">{match.localScore} - {match.visitorScore}</strong><p className="mt-1 text-xs text-slate-500">Tu puntaje: {prediction?.pointsEarned ?? 0} · La diferencia de gol solo desempata</p></div>
                 ) : (
-                  <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                    <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "local", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.local}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "local", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.local}`}>-</button></div>
-                    <input disabled={closed} type="number" inputMode="numeric" min="0" max="30" value={draft.local} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, local: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
+                  <div data-liga-score-editor className="flex items-center justify-center gap-1.5 sm:gap-2">
+                    {scoreControlsOpen && <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "local", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.local}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "local", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.local}`}>-</button></div>}
+                    <input disabled={closed} onFocus={() => !closed && setExpandedScoreMatchId(match.id)} onClick={() => !closed && setExpandedScoreMatchId(match.id)} type="number" inputMode="numeric" min="0" max="30" value={draft.local} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, local: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
                     <span>-</span>
-                    <input disabled={closed} type="number" inputMode="numeric" min="0" max="30" value={draft.visitor} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, visitor: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
-                    <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.visitor}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.visitor}`}>-</button></div>
+                    <input disabled={closed} onFocus={() => !closed && setExpandedScoreMatchId(match.id)} onClick={() => !closed && setExpandedScoreMatchId(match.id)} type="number" inputMode="numeric" min="0" max="30" value={draft.visitor} onChange={(event) => setDrafts((current) => ({ ...current, [match.id]: { ...draft, visitor: event.target.value === "" ? "" : Math.max(0, Math.min(30, Number(event.target.value))) } }))} className="h-12 w-12 rounded-xl border text-center font-black disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-950 dark:disabled:bg-slate-800" />
+                    {scoreControlsOpen && <div className="flex flex-col gap-1"><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", 1)} className="h-9 w-9 rounded-xl bg-blue-700 font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700" aria-label={`Aumentar goles de ${match.visitor}`}>+</button><button type="button" disabled={closed} onClick={() => updateDraftScore(match.id, "visitor", -1)} className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 font-black text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label={`Disminuir goles de ${match.visitor}`}>-</button></div>}
                     <button disabled={closed || busy} onClick={() => void savePrediction(match.id)} className="ml-2 rounded-xl bg-blue-700 p-3 text-white disabled:opacity-40" title="Guardar"><Check className="h-5 w-5" /></button>
                     {prediction && <button disabled={closed || busy} onClick={() => void clearPrediction(match.id)} className="rounded-xl bg-slate-100 p-3 text-slate-700 disabled:opacity-40" title="Borrar"><Eraser className="h-5 w-5" /></button>}
                   </div>
