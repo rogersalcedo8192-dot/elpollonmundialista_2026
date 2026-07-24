@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BarChart3, Bell, Calendar, Check, CircleHelp, Eraser, FileSpreadsheet, RefreshCw, Trophy } from "lucide-react";
+import { Award, BarChart3, Bell, Calendar, Check, CircleHelp, CreditCard, Eraser, FileSpreadsheet, RefreshCw, Trophy, UserPlus } from "lucide-react";
 import type { User } from "../types";
 import { MatchResultsTicker } from "./MatchResultsTicker";
 import { LigaMillonariosTrivia } from "./LigaMillonariosTrivia";
@@ -51,7 +51,7 @@ type LigaRanking = {
 };
 
 type LigaSection = "como-jugar" | "resumen" | "pronosticos" | "grupo" | "favoritos" | "participar" | "asi-va" | "ranking" | "trivia" | "publicos" | "favoritos-publicos" | "notificaciones" | "reglas" | "admin";
-type Props = { currentUser: User; getHeaders: () => Record<string, string>; activeSection: LigaSection };
+type Props = { currentUser: User; getHeaders: () => Record<string, string>; activeSection: LigaSection; onNavigate: (section: LigaSection) => void };
 type LigaMembership = { userId: string; status: "pending" | "paid" | "suspended"; paymentMethod?: string; paidAt?: string; user?: User };
 type FinancialConfig = { entryFeeCop: number; prizePoolPercent: number; bankCommissionPercent: number; administrationPercent: number; firstPlacePercent: number; secondPlacePercent: number; thirdPlacePercent: number };
 type Finances = { paidParticipants: number; grossRevenue: number; prizePool: number; bankCommission: number; administrationCosts: number; payouts: { first: number; second: number; third: number } };
@@ -86,7 +86,7 @@ const LIGA_RANKING_HELP: Record<string, { title: string; description: string; ex
   matches: { title: "Partidos puntuados", description: "Cantidad de partidos finalizados en los que registraste un pronóstico válido.", example: "Si ya terminaron 4 partidos que pronosticaste, aparecerá 4." }
 };
 
-export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: Props) {
+export function LigaMillonariosView({ currentUser, getHeaders, activeSection, onNavigate }: Props) {
   const [matches, setMatches] = useState<LigaMatch[]>([]);
   const [predictions, setPredictions] = useState<LigaPrediction[]>([]);
   const [ranking, setRanking] = useState<LigaRanking[]>([]);
@@ -352,7 +352,23 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
 
   return (
     <section className="space-y-5">
-      <section className={`${activeSection === "como-jugar" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Cómo jugar · Liga II</h2><p className="mt-1 text-xs text-slate-500">Participa únicamente con los partidos de Millonarios.</p></div><div className="grid gap-4 md:grid-cols-3">{["Confirma la inscripción independiente de Liga.", "Registra cada marcador hasta 5 minutos antes del partido.", "Suma puntos, bonos especiales y compite en el PolloRanking."].map((text, index) => <div key={text} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 font-black text-blue-800">{index + 1}</span><p className="mt-3 text-sm font-semibold">{text}</p></div>)}</div></section>
+      <section className={activeSection === "como-jugar" ? "block" : "hidden"}>
+        <div className="mx-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-950">
+          <div className="flex items-start gap-3 border-b border-slate-100 p-5 dark:border-slate-800"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"><CircleHelp className="h-5 w-5" /></span><div><h2 className="text-base font-black">Cómo se juega el Pollón Liga II</h2><p className="mt-0.5 text-[11px] text-slate-500">Guía rápida para empezar sin perderse</p></div></div>
+          <div className="space-y-4 p-5">
+            <div className="grid gap-3 sm:grid-cols-2">{[
+              { icon: UserPlus, title: "1. Usa tu cuenta", text: "Tu nombre, correo, país y avatar son los mismos. Los datos y puntos del Mundial se conservan separados." },
+              { icon: CreditCard, title: "2. Activa Liga II", text: `La inscripción de Liga es independiente y cuesta ${formatCop(financialConfig.entryFeeCop)}. Puedes pagar por Wompi o ser activado por el administrador.` },
+              { icon: Calendar, title: "3. Pronostica partidos", text: "Registra el marcador de cada partido de Millonarios. Cada evento se bloquea 5 minutos antes del inicio." },
+              { icon: Trophy, title: "4. Elige favoritos", text: "Pronostica posición final, puntos y goles de Millonarios, además del goleador del equipo y sus goles exactos." },
+              { icon: BarChart3, title: "5. Sigue el ranking", text: "Cada resultado recalcula puntos, posición y desempates. La diferencia de gol exacta no suma puntos; únicamente desempata." },
+              { icon: Award, title: "6. Revisa premios", text: "Consulta la bolsa acumulada, distribución entre ganadores, reglas y bonos finales del semestre." }
+            ].map((step) => { const Icon = step.icon; return <div key={step.title} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-600 dark:border-slate-800 dark:bg-slate-950 dark:text-blue-400"><Icon className="h-4 w-4" /></span><div><h3 className="text-xs font-black">{step.title}</h3><p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{step.text}</p></div></div></div>; })}</div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"><p className="font-black">Mensaje corto para compartir:</p><p className="mt-1 leading-relaxed">Entra con tu cuenta, paga la inscripción independiente de Liga, registra los marcadores de Millonarios y completa posición, puntos y goleador antes del cierre.</p></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 border-t border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"><button type="button" onClick={() => onNavigate("reglas")} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">Ver reglas</button><button type="button" onClick={() => onNavigate("participar")} className="min-h-11 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-black text-amber-800">Pagar / acceso</button><button type="button" onClick={() => onNavigate("favoritos")} className="min-h-11 rounded-xl bg-blue-700 px-3 text-xs font-black text-white">Ir a favoritos</button></div>
+        </div>
+      </section>
       <div className={`${activeSection === "resumen" ? "space-y-6" : "hidden"}`}>
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
           <div><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Mi Resumen & Evolución de Puntos</h2><p className="mt-1 text-xs text-slate-500">Sigue tu progreso, aciertos y estadísticas en el Pollón de Millonarios.</p></div>

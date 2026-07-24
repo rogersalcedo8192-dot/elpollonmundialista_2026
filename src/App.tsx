@@ -6285,7 +6285,7 @@ export default function App() {
               )}
 
               {activeTab === "liga-millonarios" && currentUser && (
-                <LigaMillonariosView currentUser={currentUser} getHeaders={getHeaders} activeSection={ligaSection} />
+                <LigaMillonariosView currentUser={currentUser} getHeaders={getHeaders} activeSection={ligaSection} onNavigate={setLigaSection} />
               )}
 
               {activeTab === "predictions" && (
