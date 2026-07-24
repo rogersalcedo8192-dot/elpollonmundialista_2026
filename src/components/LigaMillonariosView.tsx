@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Award, BarChart3, Bell, Calendar, Check, CircleHelp, CreditCard, Eraser, FileSpreadsheet, RefreshCw, Trophy, UserPlus } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Award, BarChart3, Bell, Calendar, Check, ChevronDown, ChevronUp, CircleHelp, CreditCard, Eraser, FileSpreadsheet, RefreshCw, Trophy, UserPlus } from "lucide-react";
 import type { User } from "../types";
 import { MatchResultsTicker } from "./MatchResultsTicker";
 import { LigaMillonariosTrivia } from "./LigaMillonariosTrivia";
@@ -111,6 +111,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   const [groupCode, setGroupCode] = useState("");
   const [rankingHelpOpen, setRankingHelpOpen] = useState(false);
   const [rankingColumnHelp, setRankingColumnHelp] = useState<string | null>(null);
+  const [matchFiltersOpen, setMatchFiltersOpen] = useState(false);
+  const [roundFilter, setRoundFilter] = useState("Todas");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "finished">("all");
+  const [matchSearch, setMatchSearch] = useState("");
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const predictionsTopRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -179,6 +185,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, currentUser.id]);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    if (activeSection !== "pronosticos") { setShowBackToTop(false); return; }
+    const update = () => setShowBackToTop((predictionsTopRef.current?.getBoundingClientRect().top || 0) < -320);
+    update(); window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [activeSection]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const reference = params.get("reference");
@@ -327,6 +339,15 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
   const formatCop = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value || 0);
   const registeredPredictions = predictions.length;
   const pendingPredictions = matches.filter((match) => match.status === "pending" && !predictionByMatch.has(match.id)).length;
+  const footballDates = [...new Set(matches.map((match) => match.stage))];
+  const filteredMatches = matches.filter((match) => {
+    const roundMatches = roundFilter === "Todas" || match.stage === roundFilter;
+    const statusMatches = statusFilter === "all" || match.status === statusFilter;
+    const query = matchSearch.trim().toLocaleLowerCase("es");
+    const searchMatches = !query || `${match.local} ${match.visitor} ${match.stadium} ${match.stage}`.toLocaleLowerCase("es").includes(query);
+    return roundMatches && statusMatches && searchMatches;
+  });
+  const hasMatchFilters = roundFilter !== "Todas" || statusFilter !== "all" || Boolean(matchSearch.trim());
   const upcomingMatches = [...matches].filter((match) => match.status === "pending").sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 3);
   const getLigaCrest = (teamName: string) => {
     const match = matches.find((candidate) => candidate.local === teamName || candidate.visitor === teamName);
@@ -427,10 +448,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
       </section>
 
       <div className={`${["pronosticos", "favoritos", "ranking", "notificaciones", "admin"].includes(activeSection) ? "grid" : "hidden"} gap-5 xl:grid-cols-[1.6fr_1fr]`}>
-        <div id="liga-pronosticos" className={activeSection === "pronosticos" ? "space-y-3" : "hidden"}>
+        <div id="liga-pronosticos" ref={predictionsTopRef} className={activeSection === "pronosticos" ? "space-y-3" : "hidden"}>
+          {showBackToTop && <button type="button" onClick={() => predictionsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} className="fixed right-3 top-1/2 z-40 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-full border border-blue-200/80 bg-white/90 px-3 py-2 text-[11px] font-black text-blue-700 shadow-lg backdrop-blur hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-950/90 dark:text-blue-300" title="Volver al inicio del calendario" aria-label="Volver al inicio del calendario"><ChevronUp className="h-4 w-4 stroke-[3]" /><span className="hidden sm:inline">Arriba</span></button>}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3 dark:border-slate-800"><div><h2 className="flex items-center gap-2 text-xl font-bold"><Calendar className="h-5 w-5 text-blue-600" /> Calendario & Pronósticos</h2><p className="mt-1 text-xs text-slate-500">Introduce marcadores. El registro cierra cinco minutos antes de cada partido.</p></div><div className="flex gap-4 rounded-xl bg-slate-100 px-3 py-1.5 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300"><span>Registrados: <b>{registeredPredictions}</b></span><span>Pendientes: <b>{pendingPredictions}</b></span></div></div>
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/60"><div className="flex items-center justify-between gap-3"><button type="button" onClick={() => setMatchFiltersOpen((current) => !current)} className={`flex min-h-11 items-center gap-2 rounded-xl px-3 font-black ${matchFiltersOpen || hasMatchFilters ? "bg-blue-700 text-white" : "border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>{matchFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />} Filtros {hasMatchFilters && <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px]">activos</span>}</button><span className="text-[11px] font-semibold text-slate-500">{filteredMatches.length} de {matches.length} partidos</span></div>{matchFiltersOpen && <div className="grid gap-3 sm:grid-cols-3"><label className="font-bold text-slate-600 dark:text-slate-300">Fecha futbolera<select value={roundFilter} onChange={(event) => setRoundFilter(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-800"><option value="Todas">Todas las fechas</option>{footballDates.map((stage) => { const match = matches.find((candidate) => candidate.stage === stage); return <option key={stage} value={stage}>{stage}{match ? ` · ${new Date(match.date).toLocaleDateString("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "short" })}` : ""}</option>; })}</select></label><label className="font-bold text-slate-600 dark:text-slate-300">Estado<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-800"><option value="all">Ver todos</option><option value="pending">Abiertos</option><option value="finished">Finalizados</option></select></label><label className="font-bold text-slate-600 dark:text-slate-300">Buscar rival o estadio<input type="search" value={matchSearch} onChange={(event) => setMatchSearch(event.target.value)} placeholder="Bucaramanga, El Campín..." className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-800" /></label></div>}<div className="flex items-center justify-between gap-3"><span className="text-[11px] text-slate-500">Filtra por jornada oficial, estado o rival.</span>{hasMatchFilters && <button type="button" onClick={() => { setRoundFilter("Todas"); setStatusFilter("all"); setMatchSearch(""); }} className="min-h-10 rounded-xl bg-slate-200 px-3 font-black text-slate-700 dark:bg-slate-800 dark:text-slate-200">Limpiar filtros</button>}</div></div>
           {!hasLigaAccess && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">Para guardar o modificar pronósticos debes confirmar el pago de inscripción de Liga.</div>}
-          {matches.map((match) => {
+          {filteredMatches.map((match) => {
             const prediction = predictionByMatch.get(match.id);
             const closed = !hasLigaAccess || match.status !== "pending" || Date.now() >= new Date(match.date).getTime() - 5 * 60_000;
             const draft = drafts[match.id] || { local: "", visitor: "" };
@@ -458,6 +481,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection, on
               </article>
             );
           })}
+          {!filteredMatches.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">No hay partidos que coincidan con los filtros seleccionados.</div>}
         </div>
 
         <div className={`${activeSection === "pronosticos" ? "space-y-5" : "xl:col-span-2"}`}>
