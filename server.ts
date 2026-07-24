@@ -316,6 +316,7 @@ interface LigaMillonariosState {
   scorers: Array<{ position: number; player: string; team: string; crest: string; goals: number }>;
   notifications: AppNotification[];
   sentReminders: string[];
+  groups: Array<{ id: string; name: string; code: string; ownerId: string; memberIds: string[]; createdAt: string }>;
 }
 
 const LIGA_TEAM_CRESTS: Record<string, string> = {
@@ -521,7 +522,8 @@ function createLigaMillonariosState(): LigaMillonariosState {
     standings: Object.keys(LIGA_TEAM_CRESTS).map((team, index) => ({ position: index + 1, team, crest: LIGA_TEAM_CRESTS[team], played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })),
     scorers: [],
     notifications: [],
-    sentReminders: []
+    sentReminders: [],
+    groups: []
   };
 }
 
@@ -537,6 +539,7 @@ function loadLigaMillonariosState(): LigaMillonariosState {
         parsed.standings ||= createLigaMillonariosState().standings;
         parsed.scorers ||= [];
         parsed.sentReminders ||= [];
+        parsed.groups ||= [];
         const existingById = new Map(parsed.matches.map((match) => [match.id, match]));
         parsed.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
           const existing = existingById.get(official.id);
@@ -580,6 +583,7 @@ async function initializeLigaMillonariosState() {
         state.standings ||= createLigaMillonariosState().standings;
         state.scorers ||= [];
         state.sentReminders ||= [];
+        state.groups ||= [];
         const existingById = new Map((state.matches || []).map((match) => [match.id, match]));
         state.matches = LIGA_MILLONARIOS_OFFICIAL_MATCHES.map((official) => {
           const existing = existingById.get(official.id);
@@ -6039,6 +6043,37 @@ app.post("/api/liga-millonarios/join", (req, res) => {
   res.json({ message: membership.status === "paid" ? "Ya estás inscrito y pago en Liga II." : "Inscripción creada. Completa el pago para pronosticar.", membership });
 });
 
+app.get("/api/liga-millonarios/groups", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  res.json(state.groups.filter((group) => group.ownerId === user.id || group.memberIds.includes(user.id)));
+});
+
+app.post("/api/liga-millonarios/groups", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const name = String(req.body?.name || "").trim();
+  if (name.length < 3 || name.length > 60) return res.status(400).json({ error: "El nombre debe tener entre 3 y 60 caracteres." });
+  const state = loadLigaMillonariosState();
+  const group = { id: `liga_group_${Date.now()}`, name, code: Math.random().toString(36).slice(2, 8).toUpperCase(), ownerId: user.id, memberIds: [user.id], createdAt: new Date().toISOString() };
+  state.groups.push(group);
+  saveLigaMillonariosState(state);
+  res.status(201).json({ message: "Polla grupal de Liga creada.", group });
+});
+
+app.post("/api/liga-millonarios/groups/join", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const code = String(req.body?.code || "").trim().toUpperCase();
+  const state = loadLigaMillonariosState();
+  const group = state.groups.find((candidate) => candidate.code === code);
+  if (!group) return res.status(404).json({ error: "Código de Polla grupal inválido." });
+  if (!group.memberIds.includes(user.id)) group.memberIds.push(user.id);
+  saveLigaMillonariosState(state);
+  res.json({ message: `Te uniste a ${group.name}.`, group });
+});
+
 app.post("/api/liga-millonarios/payments/create", (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) return res.status(401).json({ error: "No autenticado." });
@@ -6318,6 +6353,37 @@ app.get("/api/liga-millonarios/rankings", (req, res) => {
   const ranking = buildLigaMillonariosRanking(state, db.users).filter((row) => visibleIds.has(row.userId));
   saveLigaMillonariosState(state);
   res.json(ranking.map((row, index) => ({ ...row, position: index + 1 })));
+});
+
+app.get("/api/liga-millonarios/public-predictions", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  const firstKickoff = Math.min(...state.matches.map((match) => new Date(match.date).getTime()));
+  if (Date.now() < firstKickoff - PREDICTION_LOCK_MINUTES * 60_000) return res.json({ locked: true, entries: [] });
+  const db = loadDb();
+  const paidUserIds = new Set(state.memberships.filter((membership) => membership.status === "paid").map((membership) => membership.userId));
+  const entries = state.predictions.filter((prediction) => paidUserIds.has(prediction.userId)).map((prediction) => ({
+    ...prediction,
+    userName: db.users.find((candidate) => candidate.id === prediction.userId)?.name || "Participante"
+  }));
+  res.json({ locked: false, entries });
+});
+
+app.get("/api/liga-millonarios/public-favorites", (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: "No autenticado." });
+  const state = loadLigaMillonariosState();
+  const firstKickoff = Math.min(...state.matches.map((match) => new Date(match.date).getTime()));
+  if (Date.now() < firstKickoff - PREDICTION_LOCK_MINUTES * 60_000) return res.json({ locked: true, entries: [] });
+  const db = loadDb();
+  const paidUserIds = new Set(state.memberships.filter((membership) => membership.status === "paid").map((membership) => membership.userId));
+  const entries = state.tiebreakPredictions.filter((prediction) => paidUserIds.has(prediction.userId)).map((prediction) => ({
+    ...prediction,
+    userName: db.users.find((candidate) => candidate.id === prediction.userId)?.name || "Participante",
+    scorer: state.scorerPredictions.find((candidate) => candidate.userId === prediction.userId) || null
+  }));
+  res.json({ locked: false, entries });
 });
 
 app.get("/api/liga-millonarios/notifications", (req, res) => {

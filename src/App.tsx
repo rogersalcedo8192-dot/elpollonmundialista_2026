@@ -1757,7 +1757,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>("predictions");
   const [pollonMenu, setPollonMenu] = useState<"mundial" | "liga" | null>("mundial");
-  const [ligaSection, setLigaSection] = useState<"resumen" | "pronosticos" | "asi-va" | "ranking" | "notificaciones" | "reglas" | "admin">("resumen");
+  const [ligaSection, setLigaSection] = useState<"como-jugar" | "resumen" | "pronosticos" | "grupo" | "favoritos" | "participar" | "asi-va" | "ranking" | "trivia" | "publicos" | "favoritos-publicos" | "notificaciones" | "reglas" | "admin">("resumen");
   const [rulesImageZoom, setRulesImageZoom] = useState(false);
   const [rulesFlyerPreviewLang, setRulesFlyerPreviewLang] = useState<"es" | "en">("es");
   const [managedPopupOpen, setManagedPopupOpen] = useState(false);
@@ -4087,9 +4087,16 @@ export default function App() {
     setActiveTab("liga-millonarios");
     const sectionMap: Record<string, typeof ligaSection> = {
       "liga-resumen": "resumen",
+      "liga-como-jugar": "como-jugar",
       "liga-pronosticos": "pronosticos",
+      "liga-grupo": "grupo",
+      "liga-favoritos": "favoritos",
+      "liga-participar": "participar",
       "liga-asi-va": "asi-va",
       "liga-ranking": "ranking",
+      "liga-trivia": "trivia",
+      "liga-publicos": "publicos",
+      "liga-favoritos-publicos": "favoritos-publicos",
       "liga-notificaciones": "notificaciones",
       "liga-reglas": "reglas",
       "liga-admin": "admin"
@@ -5287,10 +5294,17 @@ export default function App() {
                   {pollonMenu === "liga" && <div className="flex flex-col gap-0.5 border-l-2 border-blue-200 pl-1 dark:border-blue-900">
                     <span className="hidden md:block text-[9px] font-bold text-blue-500 px-3 pt-2 pb-1 uppercase tracking-wider">Menú Liga II 2026</span>
                     {[
+                      { id: "liga-como-jugar", label: "Cómo jugar", icon: Info },
                       { id: "liga-resumen", label: "Mi resumen y estadísticas", icon: BarChart3 },
                       { id: "liga-pronosticos", label: "Calendario y pronósticos", icon: Calendar },
+                      ...(canCreateGroupPool ? [{ id: "liga-grupo", label: "Crear Polla Grupal", icon: Users }] : []),
+                      { id: "liga-favoritos", label: "Favoritos del Torneo", icon: Star },
+                      { id: "liga-participar", label: "Participar en Polla", icon: CreditCard },
                       { id: "liga-asi-va", label: "Así va la Liga", icon: Globe },
                       { id: "liga-ranking", label: "PolloRanking", icon: Trophy },
+                      { id: "liga-trivia", label: "Trivia de Millonarios", icon: CircleHelp },
+                      { id: "liga-publicos", label: "Pronósticos Públicos", icon: Eye },
+                      { id: "liga-favoritos-publicos", label: "Favoritos Públicos", icon: Star },
                       { id: "liga-notificaciones", label: "Notificaciones", icon: Bell },
                       { id: "liga-reglas", label: "Reglas y premios", icon: Info }
                     ].map((item) => {

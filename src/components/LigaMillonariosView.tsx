@@ -39,7 +39,7 @@ type LigaRanking = {
   position: number;
 };
 
-type LigaSection = "resumen" | "pronosticos" | "asi-va" | "ranking" | "notificaciones" | "reglas" | "admin";
+type LigaSection = "como-jugar" | "resumen" | "pronosticos" | "grupo" | "favoritos" | "participar" | "asi-va" | "ranking" | "trivia" | "publicos" | "favoritos-publicos" | "notificaciones" | "reglas" | "admin";
 type Props = { currentUser: User; getHeaders: () => Record<string, string>; activeSection: LigaSection };
 type LigaMembership = { userId: string; status: "pending" | "paid" | "suspended"; paymentMethod?: string; paidAt?: string; user?: User };
 type FinancialConfig = { entryFeeCop: number; prizePoolPercent: number; bankCommissionPercent: number; administrationPercent: number; firstPlacePercent: number; secondPlacePercent: number; thirdPlacePercent: number };
@@ -76,6 +76,12 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   const [finances, setFinances] = useState<Finances | null>(null);
   const [standings, setStandings] = useState<Standing[]>([]);
   const [scorers, setScorers] = useState<Scorer[]>([]);
+  const [publicPredictions, setPublicPredictions] = useState<{ locked: boolean; entries: Array<LigaPrediction & { userName: string }> }>({ locked: true, entries: [] });
+  const [publicFavorites, setPublicFavorites] = useState<{ locked: boolean; entries: Array<{ userId: string; userName: string; finalPosition: number; totalGoals: number; totalLeaguePoints: number; scorer?: { playerName: string; exactGoals: number } | null }> }>({ locked: true, entries: [] });
+  const [ligaGroups, setLigaGroups] = useState<Array<{ id: string; name: string; code: string; ownerId: string; memberIds: string[] }>>([]);
+  const [groupName, setGroupName] = useState("");
+  const [groupCode, setGroupCode] = useState("");
+  const [triviaAnswers, setTriviaAnswers] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -135,6 +141,14 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
   }, [currentUser.id]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!["publicos", "favoritos-publicos", "grupo"].includes(activeSection)) return;
+    const headers = getHeaders();
+    if (activeSection === "publicos") void fetch("/api/liga-millonarios/public-predictions", { headers }).then((response) => response.json()).then(setPublicPredictions);
+    if (activeSection === "favoritos-publicos") void fetch("/api/liga-millonarios/public-favorites", { headers }).then((response) => response.json()).then(setPublicFavorites);
+    if (activeSection === "grupo") void fetch("/api/liga-millonarios/groups", { headers }).then((response) => response.json()).then((data) => setLigaGroups(Array.isArray(data) ? data : []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, currentUser.id]);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -213,6 +227,17 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
     }
   };
 
+  const saveLigaGroup = async (join = false) => {
+    const response = await fetch(join ? "/api/liga-millonarios/groups/join" : "/api/liga-millonarios/groups", { method: "POST", headers: getHeaders(), body: JSON.stringify(join ? { code: groupCode } : { name: groupName }) });
+    const data = await response.json();
+    setMessage(data.message || data.error);
+    if (response.ok) {
+      setGroupName(""); setGroupCode("");
+      const groupsResponse = await fetch("/api/liga-millonarios/groups", { headers: getHeaders() });
+      if (groupsResponse.ok) setLigaGroups(await groupsResponse.json());
+    }
+  };
+
   const closeSeasonBonuses = async () => {
     if (!adminOutcome.finalPosition || adminOutcome.totalGoals === "" || adminOutcome.totalLeaguePoints === "" || !adminOutcome.playerNames.length || adminOutcome.exactGoals === "") {
       setMessage("Completa todos los resultados finales antes de cerrar los bonos.");
@@ -282,6 +307,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
 
   return (
     <section className="space-y-5">
+      <section className={`${activeSection === "como-jugar" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Cómo jugar · Liga II</h2><p className="mt-1 text-xs text-slate-500">Participa únicamente con los partidos de Millonarios.</p></div><div className="grid gap-4 md:grid-cols-3">{["Confirma la inscripción independiente de Liga.", "Registra cada marcador hasta 5 minutos antes del partido.", "Suma puntos, bonos especiales y compite en el PolloRanking."].map((text, index) => <div key={text} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 font-black text-blue-800">{index + 1}</span><p className="mt-3 text-sm font-semibold">{text}</p></div>)}</div></section>
       <div className={`${activeSection === "resumen" ? "space-y-6" : "hidden"}`}>
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
           <div><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Mi Resumen & Evolución de Puntos</h2><p className="mt-1 text-xs text-slate-500">Sigue tu progreso, aciertos y estadísticas en el Pollón de Millonarios.</p></div>
@@ -305,7 +331,8 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
       {message && <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm font-semibold text-sky-900">{message}</div>}
 
       <div id="liga-resumen" />
-      {activeSection === "resumen" && !isAdmin && !hasLigaAccess && (
+      <section className={`${activeSection === "participar" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Participar en Polla · Liga II</h2><p className="mt-1 text-xs text-slate-500">Esta inscripción y su bolsa de premios son independientes del Mundial.</p></div>
+      {!isAdmin && !hasLigaAccess && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 shadow-sm">
           <h3 className="text-lg font-black">Inscripción independiente de Liga II</h3>
           <p className="mt-1 text-sm">Tu cuenta sigue siendo la misma, pero este Pollón requiere una inscripción y pago propios de <strong>{formatCop(financialConfig.entryFeeCop)}</strong>.</p>
@@ -316,6 +343,10 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
           </div>
         </div>
       )}
+      {hasLigaAccess && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900"><h3 className="font-black">Inscripción confirmada</h3><p className="mt-1 text-sm">Ya puedes registrar pronósticos y participar por una bolsa actual de {formatCop(finances?.prizePool || 0)}.</p></div>}
+      </section>
+
+      <section className={`${activeSection === "grupo" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Polla grupal · Liga II</h2><p className="mt-1 text-xs text-slate-500">Crea un grupo privado o entra con el código compartido por su organizador.</p></div><div className="grid gap-4 md:grid-cols-2"><div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 className="font-black">Crear grupo</h3><input value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder="Nombre del grupo" className="mt-3 w-full rounded-xl border p-3 dark:bg-slate-950" /><button type="button" onClick={() => void saveLigaGroup(false)} className="mt-3 w-full rounded-xl bg-blue-700 p-3 text-sm font-black text-white">Crear Polla grupal</button></div><div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 className="font-black">Unirme con código</h3><input value={groupCode} onChange={(event) => setGroupCode(event.target.value.toUpperCase())} placeholder="Código" className="mt-3 w-full rounded-xl border p-3 font-mono uppercase dark:bg-slate-950" /><button type="button" onClick={() => void saveLigaGroup(true)} className="mt-3 w-full rounded-xl bg-slate-900 p-3 text-sm font-black text-white">Unirme al grupo</button></div></div><div className="grid gap-3 md:grid-cols-2">{ligaGroups.map((group) => <div key={group.id} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><strong>{group.name}</strong><p className="mt-1 text-xs text-slate-500">Código: <b className="font-mono text-blue-700">{group.code}</b> · {group.memberIds.length} integrantes</p></div>)}</div></section>
 
       <section id="liga-asi-va" className={`${activeSection === "asi-va" ? "space-y-4" : "hidden"}`}>
         <div className="border-b border-slate-100 pb-4 dark:border-slate-800">
@@ -334,7 +365,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
         </div>
       </section>
 
-      <div className={`${["pronosticos", "ranking", "notificaciones", "admin"].includes(activeSection) ? "grid" : "hidden"} gap-5 xl:grid-cols-[1.6fr_1fr]`}>
+      <div className={`${["pronosticos", "favoritos", "ranking", "notificaciones", "admin"].includes(activeSection) ? "grid" : "hidden"} gap-5 xl:grid-cols-[1.6fr_1fr]`}>
         <div id="liga-pronosticos" className={activeSection === "pronosticos" ? "space-y-3" : "hidden"}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3 dark:border-slate-800"><div><h2 className="flex items-center gap-2 text-xl font-bold"><Calendar className="h-5 w-5 text-blue-600" /> Calendario & Pronósticos</h2><p className="mt-1 text-xs text-slate-500">Introduce marcadores. El registro cierra cinco minutos antes de cada partido.</p></div><div className="flex gap-4 rounded-xl bg-slate-100 px-3 py-1.5 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300"><span>Registrados: <b>{registeredPredictions}</b></span><span>Pendientes: <b>{pendingPredictions}</b></span></div></div>
           {!hasLigaAccess && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">Para guardar o modificar pronósticos debes confirmar el pago de inscripción de Liga.</div>}
@@ -369,6 +400,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
         </div>
 
         <div className={`${activeSection === "pronosticos" ? "space-y-5" : "xl:col-span-2"}`}>
+          {activeSection === "favoritos" && <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Favoritos del Torneo</h2><p className="mt-1 text-xs text-slate-500">Pronostica la campaña final y el goleador de Millonarios.</p></div>}
           {isAdmin && activeSection === "admin" && (
             <div id="liga-admin" className="space-y-5 scroll-mt-4">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"><div><h2 className="flex items-center gap-2 text-xl font-bold"><BarChart3 className="h-5 w-5 text-blue-600" /> Administración · Pollón Liga II</h2><p className="mt-1 text-xs text-slate-500">Configura la inscripción, la bolsa de premios y los pagos independientes de este torneo.</p></div><button type="button" disabled={busy} onClick={() => void syncFootballData()} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} /> Sincronizar football-data.org</button></div>
@@ -391,7 +423,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
               </div>
             </div>
           )}
-          <div className={`${activeSection === "pronosticos" ? "block" : "hidden"} rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950`}>
+          <div className={`${activeSection === "favoritos" ? "block" : "hidden"} rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950`}>
             <h3 className="font-black text-blue-950 dark:text-blue-100">Pronósticos especiales de desempate</h3>
             <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">La posición final exacta vale 100 puntos y los puntos exactos de Millonarios valen otros 100. Los goles totales solo desempatan.</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -401,7 +433,7 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
             </div>
             <button type="button" onClick={() => void saveSpecial()} className="mt-3 w-full rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white">Guardar desempates</button>
           </div>
-          <div className={`${activeSection === "pronosticos" ? "block" : "hidden"} rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950`}>
+          <div className={`${activeSection === "favoritos" ? "block" : "hidden"} rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950`}>
             <h3 className="font-black text-amber-950 dark:text-amber-100">Goleador de Millonarios</h3>
             <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">50 puntos por acertar el jugador y 50 adicionales por acertar también sus goles exactos.</p>
             <div className="mt-3 grid grid-cols-[1fr_7rem] gap-2">
@@ -437,6 +469,16 @@ export function LigaMillonariosView({ currentUser, getHeaders, activeSection }: 
           </div>
         </div>
       </div>
+
+      <section className={`${activeSection === "trivia" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Trivia de Millonarios</h2><p className="mt-1 text-xs text-slate-500">Pon a prueba tu conocimiento embajador. La trivia no modifica el ranking.</p></div>{[
+        { question: "¿En qué año fue fundado oficialmente Millonarios FC?", options: ["1937", "1946", "1958"], answer: "1946" },
+        { question: "¿Cuál es el estadio tradicional de Millonarios?", options: ["El Campín", "Atanasio Girardot", "Pascual Guerrero"], answer: "El Campín" },
+        { question: "¿Cuál es el color principal del club?", options: ["Azul", "Rojo", "Verde"], answer: "Azul" }
+      ].map((item, index) => <div key={item.question} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 className="font-black">{index + 1}. {item.question}</h3><div className="mt-3 flex flex-wrap gap-2">{item.options.map((option) => <button type="button" key={option} onClick={() => setTriviaAnswers((current) => ({ ...current, [index]: option }))} className={`rounded-xl border px-4 py-2 text-xs font-bold ${triviaAnswers[index] === option ? option === item.answer ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-rose-400 bg-rose-50 text-rose-800" : "border-slate-200"}`}>{option}</button>)}</div></div>)}</section>
+
+      <section className={`${activeSection === "publicos" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Pronósticos Públicos · Liga II</h2><p className="mt-1 text-xs text-slate-500">Se publican después del cierre para impedir copias.</p></div>{publicPredictions.locked ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Los pronósticos serán públicos cuando cierre el primer partido.</div> : <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-xs"><thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="p-3 text-left">Participante</th><th className="p-3 text-left">Partido</th><th className="p-3">Pronóstico</th><th className="p-3">Puntos</th></tr></thead><tbody>{publicPredictions.entries.map((entry, index) => { const match = matches.find((candidate) => candidate.id === entry.matchId); return <tr key={`${entry.userId}-${entry.matchId}-${index}`} className="border-t dark:border-slate-800"><td className="p-3">{entry.userName}</td><td className="p-3">{match ? `${match.local} vs ${match.visitor}` : `Partido ${entry.matchId}`}</td><td className="p-3 text-center font-black">{entry.localScore}-{entry.visitorScore}</td><td className="p-3 text-center">{entry.pointsEarned || 0}</td></tr>; })}</tbody></table></div></div>}</section>
+
+      <section className={`${activeSection === "favoritos-publicos" ? "space-y-5" : "hidden"}`}><div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-blue-600" /> Favoritos Públicos · Liga II</h2><p className="mt-1 text-xs text-slate-500">Predicciones especiales de los participantes pagos.</p></div>{publicFavorites.locked ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Los favoritos serán públicos cuando cierre el primer partido.</div> : <div className="grid gap-3 md:grid-cols-2">{publicFavorites.entries.map((entry) => <div key={entry.userId} className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900"><strong>{entry.userName}</strong><p className="mt-2 text-xs text-slate-600 dark:text-slate-300">Posición #{entry.finalPosition} · {entry.totalLeaguePoints} puntos · {entry.totalGoals} goles</p><p className="mt-1 text-xs">Goleador: <b>{entry.scorer?.playerName || "Sin registrar"}</b>{entry.scorer ? ` · ${entry.scorer.exactGoals} goles` : ""}</p></div>)}</div>}</section>
 
       <section id="liga-reglas" className={`${activeSection === "reglas" ? "space-y-5" : "hidden"}`}>
         <div className="border-b border-slate-100 pb-4 dark:border-slate-800"><h2 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-5 w-5 text-amber-500" /> Cómo jugar, reglas y premios</h2><p className="mt-1 text-xs text-slate-500">La misma lógica base del Pollón Mundialista, adaptada al torneo de Millonarios.</p></div>
