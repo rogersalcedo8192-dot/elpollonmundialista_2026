@@ -4724,9 +4724,12 @@ export default function App() {
         <nav
           id="mobile_header_nav"
           aria-label="Menú principal móvil"
-          className="md:hidden sticky top-0 z-40 bg-slate-900 border-b border-emerald-800 shadow-xl"
+          className="md:hidden sticky top-0 z-40 max-h-[calc(100dvh-64px)] overflow-y-auto bg-slate-900 border-b border-emerald-800 shadow-xl"
         >
-          <div className="px-4 py-3 grid grid-cols-2 gap-2">
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Selecciona tu Pollón</p>
+            <button type="button" aria-expanded={pollonMenu === "mundial"} onClick={() => setPollonMenu((current) => current === "mundial" ? null : "mundial")} className={`flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-left text-xs font-black ${pollonMenu === "mundial" ? "bg-emerald-500 text-emerald-950" : "bg-slate-800 text-white"}`}><Globe className="h-4 w-4" /><span className="flex-1">Pollón Mundialista 2026</span>{pollonMenu === "mundial" ? <ChevronUp className="h-4 w-4" /> : <Plus className="h-4 w-4" />}</button>
+            {pollonMenu === "mundial" && <div className="grid grid-cols-2 gap-2 border-l-2 border-emerald-500/40 pl-2">
             {[
               { key: "how-to-play", label: "¿Cómo Jugar?", icon: Info },
               { key: "dashboard", label: "Resumen", icon: BarChart3 },
@@ -4774,6 +4777,27 @@ export default function App() {
                 </button>
               );
             })}
+            </div>}
+
+            <button type="button" aria-expanded={pollonMenu === "liga"} onClick={() => { setPollonMenu((current) => current === "liga" ? null : "liga"); setActiveTab("liga-millonarios"); }} className={`flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-left text-xs font-black ${pollonMenu === "liga" ? "bg-blue-500 text-blue-950" : "bg-slate-800 text-white"}`}><Trophy className="h-4 w-4" /><span className="flex-1">Pollón Liga II · Millonarios</span>{pollonMenu === "liga" ? <ChevronUp className="h-4 w-4" /> : <Plus className="h-4 w-4" />}</button>
+            {pollonMenu === "liga" && <div className="grid grid-cols-2 gap-2 border-l-2 border-blue-500/40 pl-2">
+              {[
+                { id: "liga-como-jugar", label: "¿Cómo jugar?", icon: Info },
+                { id: "liga-resumen", label: "Resumen", icon: BarChart3 },
+                { id: "liga-pronosticos", label: "Mis Pronósticos", icon: Calendar },
+                ...(canCreateGroupPool ? [{ id: "liga-grupo", label: "Crear Polla Grupal", icon: Users }] : []),
+                { id: "liga-favoritos", label: "Favoritos", icon: Star },
+                { id: "liga-participar", label: "Participar", icon: CreditCard },
+                { id: "liga-ranking", label: "PolloRanking", icon: Trophy },
+                { id: "liga-asi-va", label: "Así va la Liga", icon: Globe },
+                { id: "liga-trivia", label: "Trivia", icon: CircleHelp },
+                { id: "liga-publicos", label: "Pronósticos Públicos", icon: Eye },
+                { id: "liga-favoritos-publicos", label: "Favoritos Públicos", icon: Star },
+                { id: "liga-reglas", label: "Premios", icon: Info },
+                { id: "liga-notificaciones", label: "Notificaciones", icon: Bell },
+                ...(isSuperAdminUser ? [{ id: "liga-admin", label: "Administración", icon: Settings }] : [])
+              ].map((item) => { const Icon = item.icon; const active = `liga-${ligaSection}` === item.id; return <button key={item.id} type="button" onClick={() => { navigateToLigaSection(item.id); setMobileMenuOpen(false); }} className={`flex min-h-12 items-center gap-2 rounded-xl px-3 text-left text-xs font-black ${active ? "bg-blue-500 text-blue-950" : "bg-slate-800 text-slate-200"}`}><Icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1">{item.label}</span></button>; })}
+            </div>}
           </div>
         </nav>
       )}
